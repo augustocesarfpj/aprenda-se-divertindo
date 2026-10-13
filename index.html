@@ -195,6 +195,19 @@ h1 em{font-style:normal;color:var(--money)}
 
 .confetti{position:fixed;inset:0;pointer-events:none;z-index:30}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* conta */
+.acct{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;padding:10px 12px;border:1.5px dashed var(--line);border-radius:6px;font-size:.9rem}
+.btn.sm{padding:8px 14px;font-size:.9rem}
+.linkbtn{background:none;border:0;padding:0;font:inherit;color:var(--ink);text-decoration:underline;cursor:pointer;font-weight:700}
+.tabs{display:flex;gap:4px;border-bottom:1.5px solid var(--line)}
+.tab{background:none;border:0;border-bottom:3px solid transparent;margin-bottom:-1.5px;padding:8px 12px;font:inherit;font-weight:700;color:var(--muted);cursor:pointer}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink)}
+.form{display:grid;gap:12px}
+.form label{display:grid;gap:4px;font-size:.85rem;font-weight:700}
+.form input{font:1rem var(--f-body);padding:11px 12px;border:1.5px solid var(--line);border-radius:6px;background:var(--sheet);color:var(--ink);width:100%}
+.form input:focus{outline:2px solid var(--ink);outline-offset:1px}
+#authMsg.err{color:var(--dropout)}
 </style>
 </head>
 <body>
@@ -206,6 +219,7 @@ h1 em{font-style:normal;color:var(--money)}
 <section id="start">
   <div class="cover">
     <div class="cover-head">
+      <div class="acct" id="acct" hidden></div>
       <div class="stamp"><span>Prova objetiva</span><span>Tipo 1</span><span>30 questões</span></div>
       <h1>Aprenda<br><em>se divertindo</em></h1>
       <p class="lede">Trinta questões de concursos, em quatro níveis: intermediária, difícil, muito difícil e desafio. Cada acerto sobe um degrau até R$ 1 milhão. Errou, leva metade. Ficou em dúvida, pare e leve o que já ganhou.</p>
@@ -325,6 +339,7 @@ h1 em{font-style:normal;color:var(--money)}
       <p class="lede" id="endMsg"></p>
       <div class="grid10" id="dailyGrid" hidden></div>
       <span class="streak" id="endStreak"></span>
+      <p class="small" id="endCloud" style="margin:0" hidden></p>
     </div>
     <div class="sheet panel">
       <h2>Desafie os amigos</h2>
@@ -369,6 +384,25 @@ h1 em{font-style:normal;color:var(--money)}
   <div class="sheet drawer">
     <div class="ladder-head"><span class="eyebrow">Escada de prêmios</span><button class="iconbtn" id="closeLadder">Fechar</button></div>
     <ol class="ladder" id="ladderB"></ol>
+  </div>
+</div>
+
+<!-- conta -->
+<div class="ov" id="ovAuth" hidden>
+  <div class="sheet dialog" role="dialog" aria-modal="true" aria-labelledby="aTitle">
+    <div class="tabs" role="tablist">
+      <button type="button" class="tab" id="tabIn" role="tab" aria-selected="true">Entrar</button>
+      <button type="button" class="tab" id="tabUp" role="tab" aria-selected="false">Criar conta</button>
+    </div>
+    <h3 id="aTitle">Entrar na sua conta</h3>
+    <form id="authForm" class="form" novalidate>
+      <label id="fNomeL" hidden>Seu nome (aparece no ranking)<input id="fNome" maxlength="30" autocomplete="nickname"></label>
+      <label>E-mail<input id="fEmail" type="email" autocomplete="email" inputmode="email"></label>
+      <label>Senha (mínimo 6 caracteres)<input id="fPass" type="password" autocomplete="current-password"></label>
+      <p class="small" id="authMsg" role="alert" style="margin:0"></p>
+      <div class="row"><button class="btn" id="authGo" type="submit">Entrar</button><button class="btn ghost" type="button" id="authClose">Fechar</button></div>
+    </form>
+    <p class="small" style="margin:0">A conta guarda seu progresso e seus resultados. Jogar sem conta continua liberado.</p>
   </div>
 </div>
 
@@ -2736,7 +2770,7 @@ function shareUI(el,text){
 function newDaily(){
   if(dailyDone()){renderStart();return}
   S={level:0,mode:"daily",daily:dailySet(),used:new Set(),subjects:trackSubs(),help:{skip:0,elim:0,poll:0,prof:0,risk:0},riskArmed:false,hist:[],cur:null,sel:null,locked:false,left:TIME,paused:false};
-  show("game");loadQuestion();
+  gameStart=Date.now();show("game");loadQuestion();
 }
 function finishDaily(){
   clearInterval(timerId);
@@ -2751,13 +2785,13 @@ function finishDaily(){
   $("endStreak").textContent=streakLine();
   $("btnAgain").textContent="Jogar a prova até o milhão";
   shareUI($("shareBox"),dailyText(d));
-  renderReview();show("end");
+  renderReview();show("end");recordResult("desafio",0);
   if(d.hits===DAILY_N){sfx.win();confetti()}
 }
 
 function newGame(){
   S={level:0,mode:"classic",used:new Set(),subjects:selectedSubjects(),help:{skip:3,elim:1,poll:1,prof:1,risk:1},riskArmed:false,hist:[],cur:null,sel:null,locked:false,left:TIME,paused:false};
-  show("game");loadQuestion();
+  gameStart=Date.now();show("game");loadQuestion();
 }
 function acc(){return S.level>0?PRIZES[S.level-1]:0}
 function errVal(){return S.level===LAST?0:Math.floor(acc()/2)}
@@ -2970,7 +3004,7 @@ function finish(how){
   $("dailyGrid").hidden=true;$("btnAgain").textContent="Fazer nova prova";
   $("endStreak").textContent=streakLine();
   shareUI($("shareBox"),(how==="win"?"Ganhei R$ 1 milhão":"Cheguei a "+fmt(prize))+" na trilha "+TRACKS[track].n+" do Aprenda se Divertindo, o quiz de concursos. Duvido você passar!\n"+SHARE_URL);
-  renderReview();show("end");
+  renderReview();show("end");recordResult("classico",prize);
   if(how==="win"){sfx.win();confetti()}
 }
 function renderReview(){
@@ -3071,7 +3105,145 @@ function confetti(){
     if(++f<260)requestAnimationFrame(loop);else{c.hidden=true}})();
 }
 
-setSoundLabel();applyTrack(track);
+
+/* ================= NUVEM · conta, progresso e questões (Supabase) ================= */
+const SB_URL="https://yanrzhogtthhqwsbeqnc.supabase.co";
+const SB_KEY="sb_publishable_nDmaVkG52OAxZfplzIkBUQ_lDIlluzx"; // chave pública: a segurança fica nas regras do banco
+const SB_LIB="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js";
+let sb=null,user=null,perfil=null,gameStart=0,lastResult=null,authMode="in";
+function loadCloud(){
+  const s=document.createElement("script");s.src=SB_LIB;s.async=true;
+  s.onload=initCloud;s.onerror=()=>{};document.head.appendChild(s);
+}
+async function initCloud(){
+  try{sb=window.supabase.createClient(SB_URL,SB_KEY)}catch(e){sb=null;return}
+  syncQuestions();
+  renderAcct();
+  try{const {data}=await sb.auth.getSession();await setUser(data&&data.session?data.session.user:null)}catch(e){}
+  sb.auth.onAuthStateChange((ev,s)=>{const u=s?s.user:null;if((u&&u.id)!==(user&&user.id))setTimeout(()=>setUser(u),0)});
+}
+async function syncQuestions(){
+  try{
+    const rows=[];
+    for(let from=0;;from+=1000){
+      const {data,error}=await sb.from("questoes").select("id,materia,nivel,enunciado,opcoes,explicacao").eq("ativa",true).order("id").range(from,from+999);
+      if(error)throw error;rows.push(...data);if(data.length<1000)break;
+    }
+    const ok=rows.filter(r=>SUBJ[r.materia]&&r.nivel>=1&&r.nivel<=4&&Array.isArray(r.opcoes)&&r.opcoes.length===4&&r.enunciado);
+    if(ok.length<500)return; // banco vazio ou incompleto: continua com as questões do arquivo
+    Q.length=0;ok.forEach(r=>Q.push({id:r.id,s:r.materia,d:r.nivel,t:r.enunciado,o:r.opcoes,e:r.explicacao||""}));
+    if(!$("start").hidden)updatePool();
+  }catch(e){}
+}
+async function setUser(u){
+  user=u||null;perfil=null;
+  if(user){
+    try{
+      let {data}=await sb.from("perfis").select("nome,progresso").eq("id",user.id).maybeSingle();
+      if(!data){const nome=((user.user_metadata&&user.user_metadata.nome)||"Jogador").slice(0,30);await sb.from("perfis").insert({id:user.id,nome});data={nome,progresso:{}}}
+      perfil=data;
+      if(mergeProgress(data.progresso)&&!$("start").hidden)renderStart();
+      pushProgress();
+      if(lastResult&&!lastResult.saved)cloudSave(lastResult);
+    }catch(e){}
+  }
+  renderAcct();
+}
+function mergeProgress(p){
+  if(!p||typeof p!=="object")return false;let ch=false;
+  if(p.stats&&typeof p.stats==="object"&&(p.stats.games||0)>(stats.games||0)){
+    const best=Math.max(stats.best||0,p.stats.best||0);stats=Object.assign({best:0,games:0,right:0,total:0,subj:{}},p.stats,{best});saveStats();ch=true;
+  }
+  const s=p.streak;
+  if(s&&s.last&&(!streak.last||s.last>streak.last||(s.last===streak.last&&(s.cur||0)>(streak.cur||0)))){
+    streak={last:s.last,cur:s.cur||0,best:Math.max(s.best||0,streak.best||0)};try{localStorage.setItem(STK,JSON.stringify(streak))}catch(e){}ch=true;
+  }
+  if(Array.isArray(p.seen)){const n=seen.size;p.seen.forEach(i=>{if(Number.isInteger(i))seen.add(i)});if(seen.size!==n){saveSeen();ch=true}}
+  return ch;
+}
+function pushProgress(){
+  if(!sb||!user)return;
+  sb.from("perfis").update({progresso:{stats,streak,seen:[...seen]},atualizado_em:new Date().toISOString()}).eq("id",user.id).then(()=>{},()=>{});
+}
+function recordResult(modo,premio){
+  const resp=S.hist.length,hits=S.hist.filter(h=>h.ok).length;
+  lastResult={modo,trilha:track,questao_final:Math.min(30,Math.max(1,modo==="desafio"?resp:S.level+1)),premio:Math.min(1000000,Math.max(0,premio|0)),
+    acertos:Math.min(40,hits),respondidas:Math.min(40,resp),tempo_seg:gameStart?Math.round((Date.now()-gameStart)/1000):null,saved:false};
+  cloudSave(lastResult);
+}
+async function cloudSave(r){
+  const el=$("endCloud");
+  if(!sb){el.hidden=true;return}
+  if(!user){el.hidden=false;el.innerHTML='Entre na sua conta para guardar este resultado. <button class="linkbtn" type="button" id="endLogin">Entrar ou criar conta</button>';$("endLogin").onclick=()=>openAuth("in");return}
+  const {saved,...row}=r;
+  try{
+    const {error}=await sb.from("partidas").insert(row);
+    r.saved=!error||error.code==="23505";
+    el.hidden=false;el.textContent=r.saved?"Resultado salvo na sua conta, "+(perfil?perfil.nome:"")+".":"Não foi possível salvar o resultado agora.";
+  }catch(e){el.hidden=false;el.textContent="Sem conexão: o resultado ficou só neste aparelho."}
+  pushProgress();
+}
+function renderAcct(){
+  const a=$("acct");if(!sb){a.hidden=true;return}
+  a.hidden=false;
+  if(user){
+    a.innerHTML='<span>Olá, <b></b> · seu progresso fica salvo na conta</span><button class="btn ghost sm" type="button" id="btnLogout">Sair</button>';
+    a.querySelector("b").textContent=perfil?perfil.nome:(user.email||"");
+    $("btnLogout").onclick=async()=>{sfx.click();try{await sb.auth.signOut()}catch(e){}setUser(null)};
+  }else{
+    a.innerHTML='<span>Crie uma conta grátis e salve seu progresso em qualquer aparelho.</span><button class="btn ghost sm" type="button" id="btnLogin">Entrar ou criar conta</button>';
+    $("btnLogin").onclick=()=>{sfx.click();openAuth("in")};
+  }
+}
+function setAuthMode(m){
+  authMode=m;const up=m==="up";
+  $("tabIn").setAttribute("aria-selected",!up);$("tabUp").setAttribute("aria-selected",up);
+  $("aTitle").textContent=up?"Criar sua conta":"Entrar na sua conta";
+  $("fNomeL").hidden=!up;$("authGo").textContent=up?"Criar conta":"Entrar";
+  $("fPass").autocomplete=up?"new-password":"current-password";
+  authMsg("");
+}
+function openAuth(m){setAuthMode(m);$("ovAuth").hidden=false;setTimeout(()=>(m==="up"?$("fNome"):$("fEmail")).focus(),50)}
+function authMsg(t,err){const p=$("authMsg");p.textContent=t;p.className="small"+(err?" err":"")}
+function authErr(e){
+  const m=(e&&e.message||"").toLowerCase();
+  if(m.includes("invalid login"))return"E-mail ou senha incorretos.";
+  if(m.includes("already registered")||m.includes("already been registered"))return"Este e-mail já tem conta. Use a aba Entrar.";
+  if(m.includes("email not confirmed"))return"Confirme o cadastro pelo link enviado ao seu e-mail.";
+  if(m.includes("password"))return"A senha precisa ter pelo menos 6 caracteres.";
+  if(m.includes("email")&&m.includes("invalid"))return"Confira o e-mail digitado.";
+  if(m.includes("rate")||m.includes("too many"))return"Muitas tentativas. Espere alguns minutos.";
+  if(m.includes("fetch")||m.includes("network"))return"Sem conexão com o servidor. Tente de novo.";
+  return"Não deu certo: "+(e&&e.message||"erro desconhecido");
+}
+$("tabIn").onclick=()=>setAuthMode("in");
+$("tabUp").onclick=()=>setAuthMode("up");
+$("authClose").onclick=()=>{$("ovAuth").hidden=true};
+$("authForm").onsubmit=async ev=>{
+  ev.preventDefault();if(!sb)return authMsg("Sem conexão com o servidor.",true);
+  const email=$("fEmail").value.trim(),password=$("fPass").value,nome=$("fNome").value.trim();
+  if(!/^\S+@\S+\.\S+$/.test(email))return authMsg("Confira o e-mail digitado.",true);
+  if(password.length<6)return authMsg("A senha precisa ter pelo menos 6 caracteres.",true);
+  if(authMode==="up"&&nome.length<2)return authMsg("Digite seu nome (pelo menos 2 letras).",true);
+  const go=$("authGo");go.disabled=true;authMsg("Aguarde…");
+  try{
+    if(authMode==="up"){
+      const {data,error}=await sb.auth.signUp({email,password,options:{data:{nome},emailRedirectTo:location.origin+location.pathname}});
+      if(error)throw error;
+      if(data.session){$("ovAuth").hidden=true;await setUser(data.session.user)}
+      else if(data.user&&Array.isArray(data.user.identities)&&!data.user.identities.length)authMsg("Este e-mail já tem conta. Use a aba Entrar.",true);
+      else authMsg("Conta criada. Abra o link que enviamos para "+email+" e depois entre aqui.");
+    }else{
+      const {data,error}=await sb.auth.signInWithPassword({email,password});
+      if(error)throw error;$("ovAuth").hidden=true;await setUser(data.user);
+    }
+    $("fPass").value="";
+  }catch(e){authMsg(authErr(e),true)}
+  go.disabled=false;
+};
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("ovAuth").hidden)$("authClose").click()});
+
+setSoundLabel();applyTrack(track);loadCloud();
 </script>
 
 </body>
