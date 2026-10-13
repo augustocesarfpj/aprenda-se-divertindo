@@ -232,6 +232,27 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
 .mono{font-family:var(--f-mono)}
 .btn.danger{background:var(--dropout);color:#fff}
 .acct .acts{display:flex;gap:6px;flex-wrap:wrap}
+.toprow{display:flex;align-items:center;gap:10px}
+.toprow .acct{flex:1;min-width:0}
+.menubtn{flex:none;margin-left:auto;display:inline-flex;align-items:center;gap:8px;border:1.5px solid var(--line);background:var(--sheet);color:var(--ink);border-radius:6px;padding:9px 12px;font-weight:700;font-size:.9rem;cursor:pointer}
+.menubtn:hover{border-color:var(--ink)}
+.menubtn svg{width:18px;height:18px}
+.drawer-ov{position:fixed;inset:0;background:rgba(10,14,24,.55);z-index:25;backdrop-filter:blur(2px)}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(340px,88vw);background:var(--sheet);color:var(--ink);border-left:1.5px solid var(--line);padding:22px 20px;display:flex;flex-direction:column;gap:16px;overflow:auto;animation:slidein .22s ease-out;z-index:26}
+@keyframes slidein{from{transform:translateX(100%)}to{transform:none}}
+@media (prefers-reduced-motion:reduce){.drawer{animation:none}}
+.drawer .dhead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.drawer .who{display:grid;gap:2px;padding:12px;border:1.5px dashed var(--line);border-radius:6px}
+.drawer .who b{font-size:1.05rem;overflow-wrap:anywhere}
+.drawer .who span{color:var(--muted);font-size:.85rem;overflow-wrap:anywhere}
+.drawer .dacts{display:grid;gap:8px}
+.drawer .dacts .btn{justify-content:center}
+.drawer .dfoot{margin-top:auto;font-size:.85rem}
+.drawer .dfoot a{color:var(--ink);font-weight:700}
+.subtracks{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 10px;border-left:3px solid var(--ink);background:var(--paper);border-radius:0 6px 6px 0}
+.subtracks .lbl{font-family:var(--f-mono);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-right:4px}
+.howto{margin:0;padding-left:20px;display:grid;gap:8px}
+.howto li::marker{font-weight:700}
 .foot{text-align:center;margin:22px 0 0}
 .foot a,.dialog .small a{color:var(--ink);font-weight:700}
 </style>
@@ -245,13 +266,16 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
 <section id="start">
   <div class="cover">
     <div class="cover-head">
-      <div class="acct" id="acct" hidden></div>
-      <div class="stamp"><span>Prova objetiva</span><span>Tipo 1</span><span>30 questões</span></div>
+      <div class="toprow">
+        <div class="acct" id="acct" hidden></div>
+        <button class="menubtn" type="button" id="btnMenu" aria-haspopup="dialog" aria-controls="drawer" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>Conta</button>
+      </div>
       <h1>Aprenda<br><em>se divertindo</em></h1>
-      <p class="lede">Trinta questões de concursos, em cinco níveis: fácil, intermediária, difícil, muito difícil e desafio. Cada acerto sobe um degrau até R$ 1 milhão. Errou, leva metade. Ficou em dúvida, pare e leve o que já ganhou.</p>
+      <p class="lede">Questões de concursos de verdade. Cada acerto sobe um degrau até R$ 1 milhão. Errou, leva metade. Ficou em dúvida, pare e leve o que já ganhou.</p>
       <div style="display:grid;gap:8px;margin-top:4px">
         <span class="eyebrow">Escolha sua trilha</span>
         <div class="tracks" id="tracks" role="group" aria-label="Trilha de concurso"></div>
+        <div class="subtracks" id="subtracks" role="group" aria-label="Concurso específico" hidden></div>
       </div>
       <div class="row" style="margin-top:6px">
         <button class="btn money" id="btnStart">Iniciar prova →</button>
@@ -482,6 +506,33 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
     <div class="row">
       <button class="btn danger" type="button" id="delYes">Excluir minha conta</button>
       <button class="btn ghost" type="button" id="delNo">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="drawer-ov" id="drawerOv" hidden></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drTitle" hidden>
+  <div class="dhead"><h3 id="drTitle" style="margin:0">Sua conta</h3><button class="btn ghost sm" type="button" id="drClose" aria-label="Fechar menu">✕</button></div>
+  <div id="drBody" style="display:grid;gap:16px"></div>
+  <p class="dfoot"><a href="privacidade.html">Política de privacidade</a></p>
+</aside>
+
+<div class="ov" id="ovHowto" hidden>
+  <div class="sheet dialog" role="dialog" aria-modal="true" aria-labelledby="hTitle">
+    <span class="eyebrow">Módulo de estudo · primeira vez</span>
+    <h3 id="hTitle" style="margin:0">Como funciona o estudo</h3>
+    <ol class="howto">
+      <li><b>Leia a pergunta e responda de cabeça.</b> Antes de ver a resposta, diga se você <b>sabe</b> ou <b>não sabe</b>.</li>
+      <li><b>Veja a resposta e o comentário.</b> Depois, marque com sinceridade se <b>acertou</b> ou <b>errou</b>.</li>
+      <li><b>O cartão volta na hora certa.</b> Disse que sabia e acertou? Ele demora cada vez mais para voltar (3, 7, 15, 30 e 60 dias). Acertou sem ter certeza? Fica onde está. Errou? Volta para o começo, aparece de novo ainda hoje e outra vez amanhã.</li>
+      <li><b>Cuidado com a falsa certeza.</b> Se disse que sabia e errou, o cartão ganha um alerta e volta logo.</li>
+      <li><b>Todo dia tem revisões e cartões novos.</b> As revisões vêm primeiro. Os novos seguem a sua trilha e a meta que você escolher (10, 20 ou 30 por dia).</li>
+      <li><b>Depois de 5 vezes seguidas dizendo que sabe e acertando</b>, o cartão fica <b>dominado</b> e só volta a cada 60 dias. Seu progresso fica salvo na conta.</li>
+    </ol>
+    <p class="small" style="margin:0">Dica: alguns minutos por dia rendem mais do que horas de uma vez só.</p>
+    <div class="row">
+      <button class="btn" type="button" id="howGo">Entendi, começar →</button>
+      <button class="btn ghost" type="button" id="howNo">Agora não</button>
     </div>
   </div>
 </div>
@@ -4372,8 +4423,8 @@ function rng(seed){let a=seed>>>0;return()=>{a=a+0x6D2B79F5|0;let t=Math.imul(a^
 /* ===== trilhas por carreira ===== */
 const TRACKS={
   geral:{n:"Geral",d:"Todas as matérias",s:Object.keys(SUBJ)},
-  pcba:{n:"PC-BA",d:"Investigador · edital 2026",s:["port","rl","inf","igual","ml","cont","adm","const","pen","ppen","leg","est"]},
-  trf4:{n:"TRF4",d:"Analista e Técnico · FCC 2025",s:["port","rl","pcd","ia","sust","const","adm","civ","pciv","pen","ppen","trib","prev","gest"]},
+  pcba:{n:"PC-BA",p:"policial",d:"Investigador · edital 2026",s:["port","rl","inf","igual","ml","cont","adm","const","pen","ppen","leg","est"]},
+  trf4:{n:"TRF4",p:"tribunais",d:"Analista e Técnico · FCC 2025",s:["port","rl","pcd","ia","sust","const","adm","civ","pciv","pen","ppen","trib","prev","gest"]},
   policial:{n:"Policial",d:"PC · PF · PRF · PM",s:["port","const","adm","pen","ppen","leg","dh","inf","rl","est","cont","ml","pcd","ia","sust"]},
   tribunais:{n:"Tribunais",d:"TJ · TRF · TRT · MP",s:["port","const","adm","civ","pciv","pen","ppen","arq","inf","rl","prev","pcd","ia","sust"]},
   fiscal:{n:"Fiscal",d:"Receita · Sefaz · ISS",s:["port","const","adm","trib","afo","cont","est","rl","inf","adua","eco","aud","dados","prev","pcd","ia","sust"]},
@@ -4706,16 +4757,28 @@ function applyTrack(k){
   track=k;try{localStorage.setItem("gm-track",k)}catch(e){}
   const subs=trackSubs();
   document.querySelectorAll("#chips input").forEach(i=>{i.checked=subs.includes(i.value);i.parentElement.hidden=k!=="geral"&&!subs.includes(i.value)});
-  document.querySelectorAll("#tracks .track").forEach(b=>b.setAttribute("aria-pressed",b.dataset.k===k?"true":"false"));
+  const grp=TRACKS[k].p||k;
+  document.querySelectorAll("#tracks .track").forEach(b=>b.setAttribute("aria-pressed",b.dataset.k===grp?"true":"false"));
+  renderSubtracks();
   $("subjTitle").textContent=k==="geral"?"Matérias da prova":"Matérias da trilha "+TRACKS[k].n;
   $("allSubj").textContent=k==="geral"?"Marcar todas":"Marcar todas da trilha";
   renderStart();
 }
 Object.entries(TRACKS).forEach(([k,t])=>{
+  if(t.p)return;
   const b=document.createElement("button");b.type="button";b.className="track";b.dataset.k=k;b.setAttribute("aria-pressed","false");
   b.innerHTML='<b></b><span></span>';b.querySelector("b").textContent=t.n;b.querySelector("span").textContent=t.d;
   b.onclick=()=>{sfx.click();applyTrack(k)};$("tracks").appendChild(b);
 });
+function renderSubtracks(){
+  const g=TRACKS[track].p||track,kids=Object.entries(TRACKS).filter(([,t])=>t.p===g),box=$("subtracks");
+  if(!kids.length){box.hidden=true;box.innerHTML="";return}
+  box.hidden=false;box.innerHTML='<span class="lbl">Concurso</span>';
+  [[g,{n:"Todos ("+TRACKS[g].n+")"}],...kids].forEach(([k,t])=>{
+    const b=document.createElement("button");b.type="button";b.className="chipbtn";b.dataset.k=k;b.setAttribute("aria-pressed",k===track?"true":"false");
+    b.textContent=t.n+(t.d&&t.p?" · "+t.d:"");b.onclick=()=>{sfx.click();applyTrack(k)};box.appendChild(b);
+  });
+}
 $("btnStart").onclick=()=>{sfx.click();newGame()};
 function setSoundLabel(){$("btnSound").textContent="Som: "+(soundOn?"ligado":"desligado");$("btnSound").setAttribute("aria-pressed",soundOn)}
 $("btnSound").onclick=()=>{soundOn=!soundOn;try{localStorage.setItem("gm-sound",soundOn?"1":"0")}catch(e){}setSoundLabel();sfx.click()};
@@ -4837,19 +4900,34 @@ async function cloudSave(r){
   pushProgress();
 }
 function renderAcct(){
-  const a=$("acct");if(!sb){a.hidden=true;return}
-  a.hidden=false;
+  const a=$("acct");if(!sb){a.hidden=true;$("btnMenu").hidden=true;return}
+  a.hidden=false;$("btnMenu").hidden=false;renderDrawer();
   if(user){
-    a.innerHTML='<span>Olá, <b></b> · seu progresso fica salvo na conta</span><span class="acts"><button class="btn ghost sm" type="button" id="btnLogout">Sair</button><button class="btn ghost sm" type="button" id="btnDelete">Excluir conta</button></span>';
+    a.innerHTML='<span>Olá, <b></b> · seu progresso fica salvo na conta</span>';
     a.querySelector("b").textContent=perfil?perfil.nome:(user.email||"");
-    $("btnLogout").onclick=async()=>{sfx.click();try{await sb.auth.signOut()}catch(e){}setUser(null)};
-    $("btnDelete").onclick=()=>{sfx.click();$("delMsg").textContent="";$("delMsg").className="small";$("delYes").disabled=false;$("ovDelete").hidden=false};
   }else{
     a.innerHTML=delNotice?'<span>Sua conta e seus dados foram excluídos.</span><button class="btn ghost sm" type="button" id="btnLogin">Criar nova conta</button>'
       :'<span>Crie uma conta grátis e salve seu progresso em qualquer aparelho.</span><button class="btn ghost sm" type="button" id="btnLogin">Entrar ou criar conta</button>';
     $("btnLogin").onclick=()=>{sfx.click();openAuth("in")};
   }
 }
+function renderDrawer(){
+  const d=$("drBody");
+  if(user){
+    d.innerHTML='<div class="who"><b></b><span></span><span>Progresso e estudo salvos na conta.</span></div><div class="dacts"><button class="btn ghost" type="button" id="btnLogout">Sair da conta</button><button class="btn danger" type="button" id="btnDelete">Excluir minha conta</button></div><p class="small" style="margin:0">Excluir apaga para sempre seu nome, e-mail, progresso, partidas e estudo.</p>';
+    d.querySelector(".who b").textContent=perfil?perfil.nome:"Sua conta";d.querySelector(".who span").textContent=user.email||"";
+    $("btnLogout").onclick=async()=>{sfx.click();closeDrawer();try{await sb.auth.signOut()}catch(e){}setUser(null)};
+    $("btnDelete").onclick=()=>{sfx.click();closeDrawer();$("delMsg").textContent="";$("delMsg").className="small";$("delYes").disabled=false;$("ovDelete").hidden=false};
+  }else{
+    d.innerHTML='<p class="small" style="margin:0">Você está jogando sem conta. Crie uma conta grátis para salvar o progresso em qualquer aparelho e liberar o módulo de estudo.</p><div class="dacts"><button class="btn" type="button" id="drLogin">Entrar ou criar conta</button></div>';
+    $("drLogin").onclick=()=>{sfx.click();closeDrawer();openAuth("in")};
+  }
+}
+let drawerFrom=null;
+function openDrawer(){renderDrawer();drawerFrom=document.activeElement;$("drawerOv").hidden=false;$("drawer").hidden=false;$("btnMenu").setAttribute("aria-expanded","true");$("drClose").focus()}
+function closeDrawer(){if($("drawer").hidden)return;$("drawerOv").hidden=true;$("drawer").hidden=true;$("btnMenu").setAttribute("aria-expanded","false");if(drawerFrom&&drawerFrom.focus)drawerFrom.focus()}
+$("btnMenu").onclick=()=>{sfx.click();openDrawer()};$("drClose").onclick=closeDrawer;$("drawerOv").onclick=closeDrawer;
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("drawer").hidden)closeDrawer()});
 function setAuthMode(m){
   authMode=m;const up=m==="up";
   $("tabIn").setAttribute("aria-selected",!up);$("tabUp").setAttribute("aria-selected",up);
@@ -4975,14 +5053,18 @@ function renderStudyBox(){
     (rev+nov?'<h2>Hoje: '+rev+' revis'+(rev===1?'ão':'ões')+' · '+nov+' novo'+(nov===1?'':'s')+' <span class="small">· ~'+min+' min</span></h2>':'<h2>Meta de hoje cumprida ✓</h2>')+
     (t.recovery?'<p class="small warnline" style="margin:0">Muitas revisões acumuladas: hoje é dia de colocar a revisão em dia. Os cartões novos voltam amanhã.</p>':'')+
     '<div class="stmini"><span><b>'+t.dom+'</b> dominadas</span><span><b>'+t.emEstudo+'</b> em estudo</span><span class="'+(t.alertas?"warn":"")+'"><b>'+t.alertas+'</b> falsas certezas</span><span><b>'+pct+'%</b> da trilha</span></div>'+
-    (rev+nov?'<div class="row"><button class="btn" type="button" id="stGo">Estudar agora →</button></div>':'')+'<div class="row"><span class="small">Cartões novos por dia:</span>'+metaBtns+'</div>';
-  if(rev+nov)$("stGo").onclick=()=>{sfx.click();startStudy()};
+    (rev+nov?'<div class="row"><button class="btn" type="button" id="stGo">Estudar agora →</button></div>':'')+'<div class="row"><span class="small">Cartões novos por dia:</span>'+metaBtns+'</div><p class="small" style="margin:0"><button class="linkbtn" type="button" id="stHow">Como funciona o estudo?</button></p>';
+  if(rev+nov)$("stGo").onclick=()=>{sfx.click();if(!ST.rows.size){$("ovHowto").hidden=false;$("howGo").focus()}else startStudy()};
+  const hl=$("stHow");if(hl)hl.onclick=()=>{sfx.click();$("ovHowto").hidden=false;$("howGo").focus()};
   box.querySelectorAll("[data-meta]").forEach(b=>b.onclick=async()=>{
     const v=+b.dataset.meta;if(v===ST.meta)return;const old=ST.meta;ST.meta=v;renderStudyBox();
     const {error}=await sb.from("perfis").update({meta_estudo:v}).eq("id",user.id);if(error){ST.meta=old;renderStudyBox()}
   });
 }
 function needsOptions(q){return /dest[ae]s|qual (frase|palavra|grafia|alternativa|op[cç][aã]o)|qual é a grafia|N[ÃA]O |EXCETO|correta(mente)?\?|qual destes|completa|complete/i.test(q.t)}
+$("howGo").onclick=()=>{sfx.click();$("ovHowto").hidden=true;startStudy()};
+$("howNo").onclick=()=>{$("ovHowto").hidden=true};
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("ovHowto").hidden)$("howNo").click()});
 function startStudy(){
   const t=studyToday();
   const revs=t.due.map(r=>({q:qById(r.questao_id),novo:false}));
