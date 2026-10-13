@@ -231,8 +231,25 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
 .flash{margin:0;padding:10px 12px;border-radius:6px;background:var(--dropout-soft);color:var(--dropout);font-weight:700;font-size:.9rem}
 .mono{font-family:var(--f-mono)}
 .btn.danger{background:var(--dropout);color:#fff}
-.acct .acts{display:flex;gap:6px;flex-wrap:wrap}
+
 .howto{margin:0;padding-left:20px;display:grid;gap:8px}
+#start{padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}
+#start:not([data-tab="jogo"]) .tab-jogo,#start:not([data-tab="estudo"]) .tab-estudo,#start:not([data-tab="conta"]) .tab-conta{display:none!important}
+.pane{display:grid;gap:14px;max-width:640px;margin:0 auto}
+.panehead{display:grid;gap:4px;padding-block:8px 4px}
+.panehead h2{font-family:var(--f-display);font-size:clamp(1.6rem,5vw,2.2rem);margin:0;line-height:1.1}
+.acctpanel{display:grid;gap:12px}
+.acctpanel .who{display:grid;gap:2px}
+.acctpanel .who b{font-size:1.15rem;overflow-wrap:anywhere}
+.acctpanel .who span{color:var(--muted);font-size:.9rem;overflow-wrap:anywhere}
+.acctpanel .acts{display:flex;gap:8px;flex-wrap:wrap}
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:12;display:grid;grid-template-columns:repeat(3,1fr);background:var(--sheet);border-top:1.5px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));box-shadow:0 -6px 18px rgba(10,14,24,.06)}
+.tabbar .tab{display:grid;justify-items:center;gap:3px;background:none;border:0;color:var(--muted);font:inherit;font-size:.82rem;font-weight:600;padding:6px 4px;border-radius:10px;cursor:pointer;min-height:52px}
+.tabbar .tab svg{width:24px;height:24px}
+.tabbar .tab[aria-current="page"]{color:var(--money)}
+.tabbar .tab[aria-current="page"] svg{stroke-width:2.4}
+.tabbar .tab:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+@media (min-width:861px){.tabbar{left:50%;right:auto;transform:translateX(-50%);bottom:14px;width:min(420px,calc(100% - 32px));border:1.5px solid var(--line);border-radius:14px;padding:6px 8px}}
 .howto li::marker{font-weight:700}
 .foot{text-align:center;margin:22px 0 0}
 .foot a,.dialog .small a{color:var(--ink);font-weight:700}
@@ -245,9 +262,8 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
 
 <!-- CAPA -->
 <section id="start">
-  <div class="cover">
+  <div class="cover tab-jogo">
     <div class="cover-head">
-      <div class="acct" id="acct" hidden></div>
       <h1>Aprenda<br><em>se divertindo</em></h1>
       <p class="lede">Questões de concursos de verdade. Cada acerto sobe um degrau até R$ 1 milhão. Errou, leva metade. Ficou em dúvida, pare e leve o que já ganhou.</p>
       <div style="display:grid;gap:8px;margin-top:4px">
@@ -263,7 +279,6 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
 
     <div style="display:grid;gap:14px">
       <div class="sheet daily" id="dailyBox"></div>
-      <div class="sheet daily studybox" id="studyBox" hidden></div>
       <div class="sheet instr">
         <h2>Instruções ao candidato</h2>
         <ol>
@@ -286,7 +301,25 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
     </div>
   </div>
 
-  <div class="sheet panel" style="margin-top:22px">
+  <div class="pane tab-estudo">
+    <div class="panehead">
+      <span class="eyebrow">Aprenda se divertindo</span>
+      <h2>Estudo com cartões</h2>
+    </div>
+    <div class="sheet panel" style="gap:10px">
+      <span class="eyebrow">Trilha do estudo</span>
+      <div class="chips" id="stTracks" role="group" aria-label="Trilha do estudo"></div>
+    </div>
+    <div class="sheet daily studybox" id="studyBox"></div>
+  </div>
+
+  <div class="pane tab-conta">
+    <div class="panehead">
+      <span class="eyebrow">Aprenda se divertindo</span>
+      <h2>Sua conta</h2>
+    </div>
+    <div class="sheet panel acctpanel" id="acct"></div>
+  <div class="sheet panel">
     <div class="row" style="justify-content:space-between">
       <h2>Seu desempenho</h2>
       <button class="iconbtn" id="resetStats">Zerar histórico</button>
@@ -305,6 +338,22 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
     </div>
   </div>
   <p class="small foot"><a href="privacidade.html">Política de privacidade</a> · Jogo gratuito, prêmios fictícios.</p>
+  </div>
+
+  <nav class="tabbar" aria-label="Seções">
+    <button type="button" class="tab" data-tab="jogo" aria-current="page">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>
+      <span>Jogo</span>
+    </button>
+    <button type="button" class="tab" data-tab="estudo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="14" height="14" rx="2"/><path d="M7 3h12a2 2 0 0 1 2 2v12"/><path d="M7 13l2.5 2.5L14 11"/></svg>
+      <span>Estudo</span>
+    </button>
+    <button type="button" class="tab" data-tab="conta">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+      <span>Conta</span>
+    </button>
+  </nav>
 </section>
 
 <!-- JOGO -->
@@ -4696,6 +4745,19 @@ $("btnAgain").onclick=()=>{sfx.click();newGame()};
 $("btnHome").onclick=()=>{renderStart();show("start")};
 
 function show(id){["start","game","end","study"].forEach(s=>$(s).hidden=s!==id);window.scrollTo(0,0)}
+let homeTab="jogo";try{const t=localStorage.getItem("gm-tab");if(["jogo","estudo","conta"].includes(t))homeTab=t}catch(e){}
+function setTab(t){
+  homeTab=t;try{localStorage.setItem("gm-tab",t)}catch(e){}
+  $("start").dataset.tab=t;
+  document.querySelectorAll(".tabbar .tab").forEach(b=>{if(b.dataset.tab===t)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current")});
+  if(t==="estudo")renderStudyBox();
+  window.scrollTo(0,0);
+}
+document.querySelectorAll(".tabbar .tab").forEach(b=>b.onclick=()=>{sfx.click();setTab(b.dataset.tab)});
+function renderStTracks(){
+  const box=$("stTracks");if(!box)return;box.innerHTML="";
+  Object.entries(TRACKS).forEach(([k,t])=>{const b=document.createElement("button");b.type="button";b.className="chipbtn";b.textContent=t.n;b.setAttribute("aria-pressed",k===track?"true":"false");b.onclick=()=>{sfx.click();applyTrack(k)};box.appendChild(b)});
+}
 
 /* capa */
 function renderStart(){
@@ -4741,6 +4803,7 @@ function applyTrack(k){
   const subs=trackSubs();
   document.querySelectorAll("#chips input").forEach(i=>{i.checked=subs.includes(i.value);i.parentElement.hidden=k!=="geral"&&!subs.includes(i.value)});
   document.querySelectorAll("#tracks .track").forEach(b=>b.setAttribute("aria-pressed",b.dataset.k===k?"true":"false"));
+  renderStTracks();
   $("subjTitle").textContent=k==="geral"?"Matérias da prova":"Matérias da trilha "+TRACKS[k].n;
   $("allSubj").textContent=k==="geral"?"Marcar todas":"Marcar todas da trilha";
   renderStart();
@@ -4872,16 +4935,16 @@ async function cloudSave(r){
   pushProgress();
 }
 function renderAcct(){
-  const a=$("acct");if(!sb){a.hidden=true;return}
-  a.hidden=false;
+  const a=$("acct");
+  if(!sb){a.innerHTML='<p class="small" style="margin:0">As contas estão indisponíveis no momento. Seu histórico continua salvo neste aparelho.</p>';return}
   if(user){
-    a.innerHTML='<span>Olá, <b></b> · seu progresso fica salvo na conta</span><span class="acts"><button class="btn ghost sm" type="button" id="btnLogout">Sair</button><button class="btn ghost sm" type="button" id="btnDelete">Excluir conta</button></span>';
-    a.querySelector("b").textContent=perfil?perfil.nome:(user.email||"");
+    a.innerHTML='<div class="who"><b></b><span></span><span>Progresso, partidas e estudo salvos na conta.</span></div><div class="acts"><button class="btn ghost" type="button" id="btnLogout">Sair da conta</button><button class="btn danger" type="button" id="btnDelete">Excluir conta</button></div><p class="small" style="margin:0">Excluir apaga para sempre seu nome, e-mail, progresso, partidas e estudo.</p>';
+    a.querySelector(".who b").textContent=perfil?perfil.nome:"Sua conta";a.querySelector(".who span").textContent=user.email||"";
     $("btnLogout").onclick=async()=>{sfx.click();try{await sb.auth.signOut()}catch(e){}setUser(null)};
     $("btnDelete").onclick=()=>{sfx.click();$("delMsg").textContent="";$("delMsg").className="small";$("delYes").disabled=false;$("ovDelete").hidden=false};
   }else{
-    a.innerHTML=delNotice?'<span>Sua conta e seus dados foram excluídos.</span><button class="btn ghost sm" type="button" id="btnLogin">Criar nova conta</button>'
-      :'<span>Crie uma conta grátis e salve seu progresso em qualquer aparelho.</span><button class="btn ghost sm" type="button" id="btnLogin">Entrar ou criar conta</button>';
+    a.innerHTML=delNotice?'<span>Sua conta e seus dados foram excluídos.</span><div class="acts"><button class="btn" type="button" id="btnLogin">Criar nova conta</button></div>'
+      :'<span>Crie uma conta grátis para salvar seu progresso em qualquer aparelho e liberar o módulo de estudo.</span><div class="acts"><button class="btn" type="button" id="btnLogin">Entrar ou criar conta</button></div>';
     $("btnLogin").onclick=()=>{sfx.click();openAuth("in")};
   }
 }
@@ -5008,7 +5071,7 @@ function pickNew(n){
 }
 function renderStudyBox(){
   const box=$("studyBox");if(!box)return;
-  if(!sb){box.hidden=true;return}
+  if(!sb){box.innerHTML='<span class="eyebrow">Módulo de estudo</span><p class="small" style="margin:0">O estudo com cartões está indisponível no momento. Tente de novo mais tarde.</p>';return}
   box.hidden=false;
   if(!user){
     box.innerHTML='<span class="eyebrow">Módulo de estudo · exclusivo para quem tem conta</span><h2>Estude com cartões que voltam na hora certa</h2><p class="small" style="margin:0">Você diz se sabe, vê a resposta e marca se acertou. O que você domina aparece cada vez menos; o que erra volta logo. E o jogo avisa quando você tinha certeza, mas errou.</p><div class="row"><button class="btn" type="button" id="stSignup">Criar conta grátis</button><button class="btn ghost" type="button" id="stLogin">Já tenho conta</button></div>';
@@ -5159,7 +5222,7 @@ document.addEventListener("keydown",e=>{
 });
 window.addEventListener("online",flushStudy);
 
-setSoundLabel();applyTrack(track);loadCloud();
+setSoundLabel();setTab(homeTab);applyTrack(track);loadCloud();
 </script>
 
 </body>
