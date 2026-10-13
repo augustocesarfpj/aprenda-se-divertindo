@@ -208,6 +208,28 @@ h1 em{font-style:normal;color:var(--money)}
 .form input{font:1rem var(--f-body);padding:11px 12px;border:1.5px solid var(--line);border-radius:6px;background:var(--sheet);color:var(--ink);width:100%}
 .form input:focus{outline:2px solid var(--ink);outline-offset:1px}
 #authMsg.err,#delMsg.err{color:var(--dropout)}
+/* estudo */
+.studybox{border-color:var(--money)}
+.stmini{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.85rem;color:var(--muted)}
+.stmini b{color:var(--ink);font-family:var(--f-mono)}
+.stmini .warn b,.warnline{color:var(--dropout)}
+.chipbtn{border:1.5px solid var(--line);background:var(--sheet);color:var(--ink);border-radius:999px;padding:6px 11px;font:inherit;font-size:.8rem;cursor:pointer}
+.chipbtn[aria-pressed="true"]{background:var(--ink);color:var(--sheet);border-color:var(--ink)}
+.studywrap{max-width:720px;margin:0 auto;display:grid;gap:14px}
+.sbar{height:6px;background:var(--line);border-radius:99px;overflow:hidden}
+.sbar i{display:block;height:100%;width:0;background:var(--money);transition:width .3s}
+.scard{padding:24px clamp(18px,4vw,30px);display:grid;gap:16px}
+.sq{font:700 clamp(1.15rem,3.6vw,1.45rem)/1.35 var(--f-body);margin:0}
+.sopts{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+.sopts li{border:1.5px solid var(--line);border-radius:8px;padding:10px 12px;font-size:.95rem}
+.sopts li.ok{border-color:var(--money);background:var(--money-soft)}
+.sacts{display:grid;gap:10px;border-top:1px dashed var(--line);padding-top:14px}
+.sans{display:grid;gap:8px;background:var(--money-soft);border-radius:8px;padding:14px}
+.sright{margin:0;font-weight:700;font-size:1.1rem;color:var(--ink)}
+.eyebrow.again{color:var(--dropout)}
+kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid currentColor;border-radius:4px;padding:0 4px;margin-left:4px}
+.flash{margin:0;padding:10px 12px;border-radius:6px;background:var(--dropout-soft);color:var(--dropout);font-weight:700;font-size:.9rem}
+.mono{font-family:var(--f-mono)}
 .btn.danger{background:var(--dropout);color:#fff}
 .acct .acts{display:flex;gap:6px;flex-wrap:wrap}
 .foot{text-align:center;margin:22px 0 0}
@@ -240,6 +262,7 @@ h1 em{font-style:normal;color:var(--money)}
 
     <div style="display:grid;gap:14px">
       <div class="sheet daily" id="dailyBox"></div>
+      <div class="sheet daily studybox" id="studyBox" hidden></div>
       <div class="sheet instr">
         <h2>Instruções ao candidato</h2>
         <ol>
@@ -356,6 +379,44 @@ h1 em{font-style:normal;color:var(--money)}
     </div>
     <h2 style="font-family:var(--f-display);margin:12px 0 0">Correção da prova</h2>
     <div class="review" id="review"></div>
+  </div>
+</section>
+
+<!-- ESTUDO -->
+<section id="study" hidden>
+  <div class="studywrap">
+    <div class="row" style="justify-content:space-between">
+      <button class="iconbtn" type="button" id="sBack">← Voltar à capa</button>
+      <span class="small mono" id="sProg"></span>
+    </div>
+    <div class="sbar"><i id="sBar"></i></div>
+    <p class="small warnline" id="sSync" hidden style="margin:0">Sem conexão: suas respostas serão salvas quando a internet voltar.</p>
+    <p class="flash" id="sFlash" hidden></p>
+    <div class="sheet scard" id="studyCard">
+      <span class="eyebrow" id="sKind"></span>
+      <p class="sq" id="sQ"></p>
+      <ul class="sopts" id="sOpts" hidden></ul>
+      <div id="sAsk" class="sacts">
+        <p class="small" style="margin:0">Pense na resposta. Você sabe?</p>
+        <div class="row"><button class="btn" type="button" id="sKnow">Sei <kbd>1</kbd></button><button class="btn ghost" type="button" id="sDont">Não sei <kbd>2</kbd></button></div>
+      </div>
+      <div id="sAnswer" class="sans" hidden>
+        <span class="eyebrow">Resposta</span>
+        <p class="sright" id="sCorrect"></p>
+        <p class="expl" id="sExpl"></p>
+      </div>
+      <div id="sGrade" class="sacts" hidden>
+        <p class="small" style="margin:0" id="sGradeTip"></p>
+        <div class="row"><button class="btn money" type="button" id="sOk">Acertei <kbd>1</kbd></button><button class="btn danger" type="button" id="sBad">Errei <kbd>2</kbd></button></div>
+      </div>
+    </div>
+    <div class="sheet panel" id="studyEnd" hidden>
+      <span class="eyebrow">Módulo de estudo</span>
+      <h2 id="seTitle"></h2>
+      <div class="stats" id="seStats"></div>
+      <p class="small" id="seMsg" style="margin:0"></p>
+      <div class="row"><button class="btn" type="button" id="seHome">Voltar à capa</button></div>
+    </div>
   </div>
 </section>
 </div>
@@ -3784,7 +3845,7 @@ function renderReview(){
 $("btnAgain").onclick=()=>{sfx.click();newGame()};
 $("btnHome").onclick=()=>{renderStart();show("start")};
 
-function show(id){["start","game","end"].forEach(s=>$(s).hidden=s!==id);window.scrollTo(0,0)}
+function show(id){["start","game","end","study"].forEach(s=>$(s).hidden=s!==id);window.scrollTo(0,0)}
 
 /* capa */
 function renderStart(){
@@ -3809,6 +3870,7 @@ function renderStart(){
     r.firstChild.textContent=SUBJ[k];b.appendChild(r);
   });
   updatePool();
+  renderStudyBox();
 }
 function updatePool(){
   const sel=selectedSubjects();const inSel=Q.filter(q=>sel.includes(q.s));const n=inSel.length;
@@ -3921,7 +3983,7 @@ async function setUser(u){
       if(lastResult&&!lastResult.saved)cloudSave(lastResult);
     }catch(e){}
   }
-  renderAcct();
+  studyReset();renderAcct();renderStudyBox();if(user)loadStudy(true);
 }
 function mergeProgress(p){
   if(!p||typeof p!=="object")return false;let ch=false;
@@ -4030,6 +4092,172 @@ $("delYes").onclick=async()=>{
     lastResult=null;delNotice=true;await setUser(null);$("ovDelete").hidden=true;
   }catch(e){m.className="small err";m.textContent="Não foi possível excluir agora. Tente de novo em instantes.";b.disabled=false}
 };
+
+/* ================= ESTUDO · cartões com repetição espaçada (só com conta) ================= */
+const INTERVAL=[0,1,3,7,15,30,60]; // dias por caixa; caixa 6 = dominada
+const META_OPTS={10:"Leve",20:"Moderado",30:"Intenso"};
+const ST={rows:new Map(),loaded:false,loading:false,missing:false,meta:10,error:false,queue:[],cur:null,phase:"ask",conf:null,done:{rev:0,novo:0,falsa:0},plan:{rev:0,novo:0},pending:new Map(),firstPass:new Set()};
+const addDays=(n)=>{const d=new Date();d.setDate(d.getDate()+n);return dayKey(d)};
+function studyReset(){ST.rows=new Map();ST.loaded=false;ST.missing=false;ST.error=false;ST.meta=10}
+async function loadStudy(force){
+  if(!sb||!user||ST.loading||(ST.loaded&&!force))return;
+  ST.loading=true;ST.error=false;
+  try{
+    const rows=new Map();
+    for(let from=0;;from+=1000){
+      const {data,error}=await sb.from("estudo").select("questao_id,caixa,vence,alerta,vistas,acertos,falsas_certezas,primeira_vez").order("questao_id").range(from,from+999);
+      if(error)throw error;data.forEach(r=>rows.set(r.questao_id,r));if(data.length<1000)break;
+    }
+    ST.rows=rows;ST.missing=false;
+    const {data:p}=await sb.from("perfis").select("meta_estudo").eq("id",user.id).maybeSingle();
+    if(p&&META_OPTS[p.meta_estudo])ST.meta=p.meta_estudo;
+    ST.loaded=true;
+  }catch(e){
+    const msg=((e&&e.message)||"")+" "+((e&&e.code)||"");
+    if(/estudo|42P01|PGRST20|does not exist|schema cache/i.test(msg))ST.missing=true;else ST.error=true;
+  }
+  ST.loading=false;renderStudyBox();
+}
+const qById=id=>Q.find(q=>q.id===id);
+function studyToday(){
+  const subs=trackSubs(),today=dayKey();
+  const inTrack=q=>q&&subs.includes(q.s);
+  const due=[];ST.rows.forEach(r=>{if(r.caixa<6&&r.vence<=today){const q=qById(r.questao_id);if(inTrack(q))due.push(r)}else if(r.caixa===6&&r.vence<=today){const q=qById(r.questao_id);if(inTrack(q))due.push(r)}});
+  due.sort((a,b)=>(b.alerta-a.alerta)||(a.vence<b.vence?-1:a.vence>b.vence?1:0));
+  let novosHoje=0;ST.rows.forEach(r=>{if(r.primeira_vez===today)novosHoje++});
+  const recovery=due.length>3*ST.meta;
+  const novosRestantes=recovery?0:Math.max(0,ST.meta-novosHoje);
+  let dom=0,alertas=0,emEstudo=0;ST.rows.forEach(r=>{const q=qById(r.questao_id);if(!inTrack(q))return;if(r.caixa===6)dom++;else emEstudo++;if(r.alerta)alertas++});
+  const total=Q.filter(inTrack).length;
+  return {due,novosHoje,novosRestantes,recovery,dom,alertas,emEstudo,total};
+}
+function pickNew(n){
+  const subs=trackSubs();
+  const pool=Q.filter(q=>subs.includes(q.s)&&!ST.rows.has(q.id));
+  const W=[35,30,20,10,5],out=[],used=new Set();
+  for(let i=0;i<n;i++){
+    const tiers=[0,1,2,3,4].filter(t=>pool.some(q=>q.d===t&&!used.has(q.id)));if(!tiers.length)break;
+    let x=Math.random()*tiers.reduce((s,t)=>s+W[t],0),t=tiers[0];for(const k of tiers){x-=W[k];if(x<=0){t=k;break}}
+    const q=evenPick(pool.filter(q=>q.d===t&&!used.has(q.id)),Math.random);used.add(q.id);out.push(q);
+  }
+  return out;
+}
+function renderStudyBox(){
+  const box=$("studyBox");if(!box)return;
+  if(!sb){box.hidden=true;return}
+  box.hidden=false;
+  if(!user){
+    box.innerHTML='<span class="eyebrow">Módulo de estudo · exclusivo para quem tem conta</span><h2>Estude com cartões que voltam na hora certa</h2><p class="small" style="margin:0">Você diz se sabe, vê a resposta e marca se acertou. O que você domina aparece cada vez menos; o que erra volta logo. E o jogo avisa quando você tinha certeza, mas errou.</p><div class="row"><button class="btn" type="button" id="stSignup">Criar conta grátis</button><button class="btn ghost" type="button" id="stLogin">Já tenho conta</button></div>';
+    $("stSignup").onclick=()=>{sfx.click();openAuth("up")};$("stLogin").onclick=()=>{sfx.click();openAuth("in")};return;
+  }
+  if(ST.missing){box.innerHTML='<span class="eyebrow">Módulo de estudo</span><h2>Em preparação</h2><p class="small" style="margin:0">O estudo com cartões estará disponível em breve.</p>';return}
+  if(!ST.loaded){box.innerHTML='<span class="eyebrow">Módulo de estudo</span><p class="small" style="margin:0">'+(ST.error?'Não foi possível carregar seu estudo agora. <button class="linkbtn" type="button" id="stRetry">Tentar de novo</button>':'Carregando seu estudo…')+'</p>';if(ST.error)$("stRetry").onclick=()=>loadStudy(true);else loadStudy();return}
+  const t=studyToday(),rev=t.due.length,nov=t.novosRestantes,min=Math.max(1,Math.round((rev+nov)*15/60));
+  const metaBtns=Object.entries(META_OPTS).map(([v,n])=>'<button type="button" class="chipbtn" data-meta="'+v+'" aria-pressed="'+(+v===ST.meta)+'">'+n+' · '+v+'</button>').join("");
+  const pct=t.total?Math.round(t.dom/t.total*100):0;
+  box.innerHTML='<span class="eyebrow">Módulo de estudo · Trilha '+TRACKS[track].n+'</span>'+
+    (rev+nov?'<h2>Hoje: '+rev+' revis'+(rev===1?'ão':'ões')+' · '+nov+' novo'+(nov===1?'':'s')+' <span class="small">· ~'+min+' min</span></h2>':'<h2>Meta de hoje cumprida ✓</h2>')+
+    (t.recovery?'<p class="small warnline" style="margin:0">Muitas revisões acumuladas: hoje é dia de colocar a revisão em dia. Os cartões novos voltam amanhã.</p>':'')+
+    '<div class="stmini"><span><b>'+t.dom+'</b> dominadas</span><span><b>'+t.emEstudo+'</b> em estudo</span><span class="'+(t.alertas?"warn":"")+'"><b>'+t.alertas+'</b> falsas certezas</span><span><b>'+pct+'%</b> da trilha</span></div>'+
+    (rev+nov?'<div class="row"><button class="btn" type="button" id="stGo">Estudar agora →</button></div>':'')+'<div class="row"><span class="small">Cartões novos por dia:</span>'+metaBtns+'</div>';
+  if(rev+nov)$("stGo").onclick=()=>{sfx.click();startStudy()};
+  box.querySelectorAll("[data-meta]").forEach(b=>b.onclick=async()=>{
+    const v=+b.dataset.meta;if(v===ST.meta)return;const old=ST.meta;ST.meta=v;renderStudyBox();
+    const {error}=await sb.from("perfis").update({meta_estudo:v}).eq("id",user.id);if(error){ST.meta=old;renderStudyBox()}
+  });
+}
+function needsOptions(q){return /dest[ae]s|qual (frase|palavra|grafia|alternativa|op[cç][aã]o)|qual é a grafia|N[ÃA]O |EXCETO|correta(mente)?\?|qual destes|completa|complete/i.test(q.t)}
+function startStudy(){
+  const t=studyToday();
+  const revs=t.due.map(r=>({q:qById(r.questao_id),novo:false}));
+  const novos=pickNew(t.novosRestantes).map(q=>({q,novo:true}));
+  ST.queue=[...revs,...novos];ST.plan={rev:revs.length,novo:novos.length};ST.done={rev:0,novo:0,falsa:0};ST.firstPass=new Set();ST.relearn=0;
+  if(!ST.queue.length){renderStudyBox();return}
+  show("study");$("studyEnd").hidden=true;$("studyCard").hidden=false;nextCard();
+}
+function nextCard(){
+  if(!ST.queue.length){finishStudy();return}
+  ST.cur=ST.queue.shift();ST.phase="ask";ST.conf=null;
+  const q=ST.cur.q;
+  $("sKind").textContent=(ST.cur.again?"De novo":ST.cur.novo?"Novo":"Revisão")+" · "+SUBJ[q.s]+" · "+TIER[q.d];
+  $("sKind").className="eyebrow"+(ST.cur.again?" again":"");
+  $("sQ").textContent=q.t;
+  const ul=$("sOpts");ul.innerHTML="";
+  if(needsOptions(q)){shuffle(q.o.map((t,i)=>({t,i}))).forEach(o=>{const li=document.createElement("li");li.textContent=o.t;li.dataset.ok=o.i===0?"1":"";ul.appendChild(li)});ul.hidden=false}else ul.hidden=true;
+  $("sAnswer").hidden=true;$("sAsk").hidden=false;$("sGrade").hidden=true;
+  renderStudyProgress();
+}
+function renderStudyProgress(){
+  const p=ST.plan,d=ST.done;
+  $("sProg").textContent="Revisões "+d.rev+"/"+p.rev+" · Novos "+d.novo+"/"+p.novo+(ST.queue.length?" · faltam "+(ST.queue.length+1):"");
+  const tot=p.rev+p.novo,fe=d.rev+d.novo;$("sBar").style.width=(tot?Math.round(fe/tot*100):100)+"%";
+}
+function reveal(conf){
+  if(ST.phase!=="ask")return;ST.phase="grade";ST.conf=conf;sfx.click();
+  const q=ST.cur.q;$("sCorrect").textContent=q.o[0];$("sExpl").textContent=q.e||"";
+  $("sAnswer").hidden=false;$("sAsk").hidden=true;$("sGrade").hidden=false;
+  $("sOpts").querySelectorAll("li").forEach(li=>{if(li.dataset.ok)li.classList.add("ok")});
+  $("sGradeTip").textContent=conf?"Você disse que sabia. Acertou de verdade?":"Você disse que não sabia. Mesmo assim, acertou?";
+}
+function grade(ok){
+  if(ST.phase!=="grade")return;ST.phase="saving";
+  const c=ST.cur,q=c.q,sabia=ST.conf,today=dayKey();
+  const prev=ST.rows.get(q.id);
+  const first=!ST.firstPass.has(q.id);ST.firstPass.add(q.id);
+  let r=prev?{...prev}:{questao_id:q.id,caixa:1,vence:today,alerta:false,vistas:0,acertos:0,falsas_certezas:0,primeira_vez:today};
+  r.vistas++;if(ok)r.acertos++;
+  if(first){
+    if(ok&&sabia){r.caixa=c.novo?2:Math.min(6,r.caixa+1);if(!c.novo)r.alerta=false}
+    else if(ok&&!sabia){r.caixa=Math.max(1,r.caixa)}
+    else{r.caixa=1;if(sabia){r.alerta=true;r.falsas_certezas++;ST.done.falsa++}}
+    r.vence=addDays(INTERVAL[r.caixa]);
+    if(c.novo)ST.done.novo++;else ST.done.rev++;
+  }
+  if(!ok){ // volta na mesma sessão, alguns cartões depois
+    const pos=Math.min(ST.queue.length,4);ST.queue.splice(pos,0,{q,novo:c.novo,again:true});
+    sfx.wrong&&tone(330,.12,"triangle");
+  }else{sfx.right&&tone(660,.1,"triangle")}
+  ST.rows.set(q.id,r);saveStudyRow(r);
+  if(first&&!ok&&sabia){$("sFlash").textContent="⚠️ Falsa certeza: este cartão vai aparecer de novo logo.";$("sFlash").hidden=false;setTimeout(()=>{$("sFlash").hidden=true},2600)}
+  nextCard();
+}
+function saveStudyRow(r){
+  if(!sb||!user)return;
+  const row={user_id:user.id,questao_id:r.questao_id,caixa:r.caixa,vence:r.vence,alerta:r.alerta,vistas:r.vistas,acertos:r.acertos,falsas_certezas:r.falsas_certezas,primeira_vez:r.primeira_vez,atualizado_em:new Date().toISOString()};
+  ST.pending.set(r.questao_id,row);flushStudy();
+}
+let flushing=false;
+async function flushStudy(){
+  if(flushing||!ST.pending.size||!sb||!user)return;flushing=true;
+  const batch=[...ST.pending.values()];
+  try{const {error}=await sb.from("estudo").upsert(batch,{onConflict:"user_id,questao_id"});if(!error)batch.forEach(b=>{if(ST.pending.get(b.questao_id)===b)ST.pending.delete(b.questao_id)});$("sSync").hidden=!error}
+  catch(e){$("sSync").hidden=false}
+  flushing=false;if(ST.pending.size&&$("sSync").hidden)flushStudy();
+}
+function finishStudy(){
+  flushStudy();
+  const d=ST.done,t=studyToday(),cumprida=!t.due.length&&!t.novosRestantes;
+  if(cumprida){bumpStreak()}
+  $("studyCard").hidden=true;$("studyEnd").hidden=false;
+  $("seTitle").textContent=cumprida?"Meta de hoje cumprida!":"Sessão concluída";
+  $("seStats").innerHTML='<div class="stat"><b>'+d.rev+'</b><span>revisões</span></div><div class="stat"><b>'+d.novo+'</b><span>cartões novos</span></div><div class="stat"><b>'+d.falsa+'</b><span>falsas certezas</span></div><div class="stat"><b>'+t.dom+'</b><span>dominadas na trilha</span></div>';
+  $("seMsg").textContent=(d.falsa?"Atenção às falsas certezas: são os pontos em que você erraria na prova achando que acertou. Elas voltam amanhã. ":"")+(cumprida?"Sua sequência de dias foi mantida.":"");
+  if(cumprida){sfx.win();}
+  renderStudyProgress();
+}
+function leaveStudy(){flushStudy();renderStart();show("start")}
+$("sKnow").onclick=()=>reveal(true);
+$("sDont").onclick=()=>reveal(false);
+$("sOk").onclick=()=>grade(true);
+$("sBad").onclick=()=>grade(false);
+$("sBack").onclick=()=>{sfx.click();leaveStudy()};
+$("seHome").onclick=()=>{sfx.click();leaveStudy()};
+document.addEventListener("keydown",e=>{
+  if($("study").hidden||$("studyCard").hidden)return;
+  if(ST.phase==="ask"){if(e.key==="1"){e.preventDefault();reveal(true)}else if(e.key==="2"){e.preventDefault();reveal(false)}}
+  else if(ST.phase==="grade"){if(e.key==="1"){e.preventDefault();grade(true)}else if(e.key==="2"){e.preventDefault();grade(false)}}
+});
+window.addEventListener("online",flushStudy);
 
 setSoundLabel();applyTrack(track);loadCloud();
 </script>
