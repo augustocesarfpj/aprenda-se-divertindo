@@ -17,6 +17,6 @@ O jogo funciona sozinho, mas quando o Supabase está configurado ele passa a:
 - permitir criar conta com e-mail e senha;
 - salvar o progresso (estatísticas, sequência de dias, questões vistas) e as partidas (base do ranking).
 
-Para configurar, rode no SQL Editor, nesta ordem, os arquivos da pasta `supabase/`: `1-estrutura.sql`, `2-questoes-parte1.sql`, `3-questoes-parte2.sql`, `4-questoes-parte3.sql`, `5-questoes-faceis.sql` e `6-excluir-conta.sql`.
+Para configurar, rode no SQL Editor, nesta ordem, os arquivos da pasta `supabase/`: `1-estrutura.sql`, `2-questoes-parte1.sql`, `3-questoes-parte2.sql`, `4-questoes-parte3.sql`, `5-questoes-faceis.sql`, `6-excluir-conta.sql` e `7-contador.sql`. O resumo diário de visitantes e partidas fica na visão `resumo_diario`.
 
 A política de privacidade fica em `privacidade.html`.

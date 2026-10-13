@@ -3515,7 +3515,7 @@ function setSoundLabel(){$("btnSound").textContent="Som: "+(soundOn?"ligado":"de
 $("btnSound").onclick=()=>{soundOn=!soundOn;try{localStorage.setItem("gm-sound",soundOn?"1":"0")}catch(e){}setSoundLabel();sfx.click()};
 $("resetStats").onclick=()=>{$("resetConfirm").hidden=false};
 $("resetNo").onclick=()=>{$("resetConfirm").hidden=true};
-$("resetYes").onclick=()=>{stats={best:0,games:0,right:0,total:0,subj:{}};saveStats();seen.clear();saveSeen();streak={last:null,cur:0,best:0};try{localStorage.setItem(STK,JSON.stringify(streak))}catch(e){}$("resetConfirm").hidden=true;renderStart()};
+$("resetYes").onclick=()=>{stats={best:0,games:0,right:0,total:0,subj:{}};saveStats();seen.clear();saveSeen();streak={last:null,cur:0,best:0};try{localStorage.setItem(STK,JSON.stringify(streak));localStorage.removeItem("gm-device");localStorage.removeItem("gm-visit")}catch(e){}$("resetConfirm").hidden=true;renderStart()};
 
 /* teclado: A–D ou 1–4 */
 document.addEventListener("keydown",e=>{
@@ -3544,6 +3544,15 @@ const SB_URL="https://yanrzhogtthhqwsbeqnc.supabase.co";
 const SB_KEY="sb_publishable_nDmaVkG52OAxZfplzIkBUQ_lDIlluzx"; // chave pública: a segurança fica nas regras do banco
 const SB_LIB="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js";
 let sb=null,user=null,perfil=null,gameStart=0,lastResult=null,authMode="in",delNotice=false;
+// código aleatório do aparelho, só para contar visitas e partidas sem conta (não identifica ninguém)
+const DEVICE=(()=>{try{let d=localStorage.getItem("gm-device");if(!/^[0-9a-f-]{36}$/.test(d||"")){d=crypto.randomUUID?crypto.randomUUID():"10000000-1000-4000-8000-100000000000".replace(/[018]/g,c=>(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16));localStorage.setItem("gm-device",d)}return d}catch(e){return null}})();
+function logVisit(){
+  if(!sb||!DEVICE)return;
+  try{if(localStorage.getItem("gm-visit")===dayKey())return}catch(e){}
+  sb.from("visitas").insert({aparelho:DEVICE,logado:!!user}).then(({error})=>{
+    if(!error||error.code==="23505"){try{localStorage.setItem("gm-visit",dayKey())}catch(e){}}
+  },()=>{});
+}
 function loadCloud(){
   const s=document.createElement("script");s.src=SB_LIB;s.async=true;
   s.onload=initCloud;s.onerror=()=>{};document.head.appendChild(s);
@@ -3553,6 +3562,7 @@ async function initCloud(){
   syncQuestions();
   renderAcct();
   try{const {data}=await sb.auth.getSession();await setUser(data&&data.session?data.session.user:null)}catch(e){}
+  logVisit();
   sb.auth.onAuthStateChange((ev,s)=>{const u=s?s.user:null;if((u&&u.id)!==(user&&user.id))setTimeout(()=>setUser(u),0)});
 }
 async function syncQuestions(){
@@ -3605,6 +3615,7 @@ function recordResult(modo,premio){
   const resp=S.hist.length,hits=S.hist.filter(h=>h.ok).length;
   lastResult={modo,trilha:track,questao_final:Math.min(30,Math.max(1,modo==="desafio"?resp:S.level+1)),premio:Math.min(1000000,Math.max(0,premio|0)),
     acertos:Math.min(40,hits),respondidas:Math.min(40,resp),tempo_seg:gameStart?Math.round((Date.now()-gameStart)/1000):null,saved:false};
+  if(sb&&!user&&DEVICE){const {saved,...row}=lastResult;sb.from("partidas_anonimas").insert({...row,aparelho:DEVICE}).then(()=>{},()=>{})}
   cloudSave(lastResult);
 }
 async function cloudSave(r){
