@@ -233,6 +233,13 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
 .btn.danger{background:var(--dropout);color:#fff}
 
 .howto{margin:0;padding-left:20px;display:grid;gap:8px}
+.shead{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.stime{flex:none;font-family:var(--f-mono);font-size:.85rem;font-weight:700;border:1.5px solid var(--line);border-radius:999px;padding:2px 10px;min-width:3.6em;text-align:center}
+.stime.low{color:var(--dropout);border-color:var(--dropout)}
+.stbar{height:4px;border-radius:4px;background:var(--line);overflow:hidden;margin-top:-4px}
+.stbar i{display:block;height:100%;width:100%;background:var(--money);transform-origin:left;transition:transform 1s linear}
+.stbar.low i{background:var(--dropout)}
+.scard[data-phase="grade"] .stbar,.scard[data-phase="grade"] .stime{visibility:hidden}
 #start{padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}
 #start:not([data-tab="jogo"]) .tab-jogo,#start:not([data-tab="estudo"]) .tab-estudo,#start:not([data-tab="conta"]) .tab-conta{display:none!important}
 .pane{display:grid;gap:14px;max-width:640px;margin:0 auto}
@@ -443,7 +450,8 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
     <p class="small warnline" id="sSync" hidden style="margin:0">Sem conexão: suas respostas serão salvas quando a internet voltar.</p>
     <p class="flash" id="sFlash" hidden></p>
     <div class="sheet scard" id="studyCard">
-      <span class="eyebrow" id="sKind"></span>
+      <div class="shead"><span class="eyebrow" id="sKind"></span><span class="stime" id="sTime" role="timer" aria-label="Tempo para pensar">45s</span></div>
+      <div class="stbar" aria-hidden="true"><i id="sTBar"></i></div>
       <p class="sq" id="sQ"></p>
       <ul class="sopts" id="sOpts" hidden></ul>
       <div id="sAsk" class="sacts">
@@ -556,7 +564,7 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
     <span class="eyebrow">Módulo de estudo · primeira vez</span>
     <h3 id="hTitle" style="margin:0">Como funciona o estudo</h3>
     <ol class="howto">
-      <li><b>Leia a pergunta e responda de cabeça.</b> Antes de ver a resposta, diga se você <b>sabe</b> ou <b>não sabe</b>.</li>
+      <li><b>Leia a pergunta e responda de cabeça.</b> Antes de ver a resposta, diga se você <b>sabe</b> ou <b>não sabe</b>. Você tem <b>45 segundos</b>; se o tempo acabar, a resposta aparece e conta como "não sei".</li>
       <li><b>Veja a resposta e o comentário.</b> Depois, marque com sinceridade se <b>acertou</b> ou <b>errou</b>.</li>
       <li><b>O cartão volta na hora certa.</b> Disse que sabia e acertou? Ele demora cada vez mais para voltar (3, 7, 15, 30 e 60 dias). Acertou sem ter certeza? Fica onde está. Errou? Volta para o começo, aparece de novo ainda hoje e outra vez amanhã.</li>
       <li><b>Cuidado com a falsa certeza.</b> Se disse que sabia e errou, o cartão ganha um alerta e volta logo.</li>
@@ -5148,19 +5156,37 @@ function nextCard(){
   const ul=$("sOpts");ul.innerHTML="";
   if(needsOptions(q)){shuffle(q.o.map((t,i)=>({t,i}))).forEach(o=>{const li=document.createElement("li");li.textContent=o.t;li.dataset.ok=o.i===0?"1":"";ul.appendChild(li)});ul.hidden=false}else ul.hidden=true;
   $("sAnswer").hidden=true;$("sAsk").hidden=false;$("sGrade").hidden=true;
-  renderStudyProgress();
+  renderStudyProgress();startSTimer();
+}
+/* 45 segundos para pensar; se acabar, mostra a resposta como "não sei" */
+const S_TIME=45;let sTimer=null,sDeadline=0;
+function stopSTimer(){if(sTimer){clearInterval(sTimer);sTimer=null}}
+function drawSTimer(left){
+  const low=left<=10;$("sTime").textContent=left+"s";$("sTime").classList.toggle("low",low);
+  $("sTBar").parentElement.classList.toggle("low",low);$("sTBar").style.transform="scaleX("+Math.max(0,left/S_TIME)+")";
+}
+function startSTimer(){
+  stopSTimer();$("studyCard").dataset.phase="ask";
+  $("sTBar").style.transition="none";drawSTimer(S_TIME);void $("sTBar").offsetWidth;$("sTBar").style.transition="";
+  sDeadline=Date.now()+S_TIME*1000;
+  sTimer=setInterval(()=>{
+    if(ST.phase!=="ask"||$("study").hidden){stopSTimer();return}
+    const left=Math.max(0,Math.ceil((sDeadline-Date.now())/1000));drawSTimer(left);
+    if(left<=0){stopSTimer();reveal(false,true)}
+  },250);
 }
 function renderStudyProgress(){
   const p=ST.plan,d=ST.done;
   $("sProg").textContent="Revisões "+d.rev+"/"+p.rev+" · Novos "+d.novo+"/"+p.novo+(ST.queue.length?" · faltam "+(ST.queue.length+1):"");
   const tot=p.rev+p.novo,fe=d.rev+d.novo;$("sBar").style.width=(tot?Math.round(fe/tot*100):100)+"%";
 }
-function reveal(conf){
-  if(ST.phase!=="ask")return;ST.phase="grade";ST.conf=conf;sfx.click();
+function reveal(conf,timeout){
+  if(ST.phase!=="ask")return;stopSTimer();ST.phase="grade";ST.conf=conf;$("studyCard").dataset.phase="grade";
+  if(timeout)tone(330,.15,"triangle");else sfx.click();
   const q=ST.cur.q;$("sCorrect").textContent=q.o[0];$("sExpl").textContent=q.e||"";
   $("sAnswer").hidden=false;$("sAsk").hidden=true;$("sGrade").hidden=false;
   $("sOpts").querySelectorAll("li").forEach(li=>{if(li.dataset.ok)li.classList.add("ok")});
-  $("sGradeTip").textContent=conf?"Você disse que sabia. Acertou de verdade?":"Você disse que não sabia. Mesmo assim, acertou?";
+  $("sGradeTip").textContent=timeout?"O tempo acabou e contou como \"não sei\". Mesmo assim, a resposta que você pensou estava certa?":conf?"Você disse que sabia. Acertou de verdade?":"Você disse que não sabia. Mesmo assim, acertou?";
 }
 function grade(ok){
   if(ST.phase!=="grade")return;ST.phase="saving";
@@ -5208,7 +5234,7 @@ function finishStudy(){
   if(cumprida){sfx.win();}
   renderStudyProgress();
 }
-function leaveStudy(){flushStudy();renderStart();show("start")}
+function leaveStudy(){stopSTimer();flushStudy();renderStart();show("start")}
 $("sKnow").onclick=()=>reveal(true);
 $("sDont").onclick=()=>reveal(false);
 $("sOk").onclick=()=>grade(true);
