@@ -490,7 +490,7 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
 
 <script>
 /* ================= BANCO DE QUESTÕES ================= */
-const SUBJ={port:"Português",const:"Dir. Constitucional",adm:"Dir. Administrativo",pen:"Dir. Penal",ppen:"Processo Penal",leg:"Legislação Especial",inf:"Informática",rl:"Raciocínio Lógico",est:"Estatística",cont:"Contabilidade",dh:"Direitos Humanos",civ:"Direito Civil",pciv:"Processo Civil",trib:"Dir. Tributário",afo:"AFO",gest:"Adm. Pública",arq:"Arquivologia"};
+const SUBJ={port:"Português",const:"Dir. Constitucional",adm:"Dir. Administrativo",pen:"Dir. Penal",ppen:"Processo Penal",leg:"Legislação Especial",inf:"Informática",rl:"Raciocínio Lógico",est:"Estatística",cont:"Contabilidade",dh:"Direitos Humanos",civ:"Direito Civil",pciv:"Processo Civil",trib:"Dir. Tributário",afo:"AFO",gest:"Adm. Pública",arq:"Arquivologia",ml:"Medicina Legal",igual:"Igualdade Racial e de Gênero"};
 const TIER=["Fácil","Intermediária","Difícil","Muito difícil","Desafio"];
 // q(matéria, nível, enunciado, [correta, erradas...], comentário)
 const Q=[];let _id=0;
@@ -3691,6 +3691,108 @@ q("gest",1,"No programa 5S, o Seiso corresponde ao senso de:",["Limpeza","Utiliz
 q("gest",2,"No programa 5S, o Shitsuke corresponde ao senso de:",["Autodisciplina","Limpeza","Organização","Utilização"],"É o S que mantém os demais funcionando.");
 q("est",1,"Se todos os valores de um conjunto são iguais, o desvio padrão é:",["0","1","Igual à média","Impossível de calcular"],"Não há dispersão.");
 
+/* ================= EDITAL PC-BA 2026 · INVESTIGADOR (intermediária e difícil) ================= */
+q("ml",1,"A rigidez cadavérica costuma começar pela:",["Mandíbula e nuca","Ponta dos pés","Mãos","Região abdominal"],"Segue sentido craniocaudal (lei de Nysten).");
+q("ml",1,"Os livores cadavéricos se formam nas regiões:",["De declive do corpo","Mais altas do corpo","Somente no rosto","Ao redor das feridas"],"O sangue desce por gravidade.");
+q("ml",2,"Os livores cadavéricos se fixam, em regra, depois de cerca de:",["12 horas","1 hora","3 dias","30 minutos"],"Antes disso, mudam de lugar se o corpo for virado.");
+q("ml",2,"A mancha verde abdominal, primeiro sinal da putrefação, surge em geral na fossa ilíaca:",["Direita","Esquerda","Torácica","Lombar"],"Aparece em torno de 18 a 24 horas após a morte.");
+q("ml",1,"Cronotanatognose é:",["A estimativa do tempo de morte","A identificação do cadáver","O estudo das asfixias mecânicas e químicas","A exumação"],"Usa fenômenos cadavéricos como rigidez, livores e temperatura.");
+q("ml",1,"Premoriência é:",["A morte comprovada de uma pessoa antes de outra","A morte simultânea de várias pessoas num acidente","A morte encefálica","A morte presumida"],"Comoriência é quando não se sabe quem morreu primeiro.");
+q("ml",1,"Uma faca de ponta produz ferida:",["Perfuroincisa","Contusa","Puntiforme","Incisa pura"],"Instrumento perfurocortante.");
+q("ml",1,"Uma navalha produz ferida:",["Incisa","Contusa","Perfurocontusa","Lacerocontusa"],"Instrumento cortante.");
+q("ml",1,"O projétil de arma de fogo produz ferida:",["Perfurocontusa","Incisa","Cortocontusa","Perfuroincisa"],"Instrumento perfurocontundente.");
+q("ml",2,"O machado e o facão produzem, em regra, ferida:",["Cortocontusa","Puntiforme","Perfurocontusa","Incisa pura"],"Instrumentos cortocontundentes.");
+q("ml",1,"Prego e agulha produzem ferida:",["Punctória (puntiforme)","Incisa","Cortocontusa","Contusa"],"Instrumentos perfurantes.");
+q("ml",2,"Em disparo a curta distância, além do orifício, a pele apresenta:",["Zonas de tatuagem e de esfumaçamento","Só o orifício limpo","Apenas escoriação","Nenhum sinal"],"Resíduos da pólvora atingem a pele.");
+q("ml",2,"A orla de enxugo, no orifício de entrada do projétil, se forma pela:",["Limpeza das impurezas do projétil na pele","Queima da pele pelos gases quentes da pólvora","Saída do projétil","Hemorragia interna"],"O projétil deixa sujeira na borda do orifício.");
+q("ml",1,"Em regra, o orifício de saída do projétil, comparado ao de entrada, é:",["Maior, irregular e com bordas evertidas","Menor e com bordas invertidas","Igual ao de entrada, com zona de tatuagem ao redor","Sempre circular e regular"],"Na saída não há orlas de contusão e enxugo.");
+q("ml",2,"O sinal de Werkgaertner (desenho da boca do cano na pele) indica disparo:",["Encostado","À longa distância","Acidental","De arma branca"],"A pele se queima com o formato do cano.");
+q("ml",2,"A câmara de mina de Hoffmann ocorre em disparo:",["Encostado sobre plano ósseo, como o crânio","À longa distância","Com arma branca","Dentro da água"],"Os gases descolam o tecido e rompem a pele.");
+q("ml",1,"O enforcamento é a constrição do pescoço por laço acionado:",["Pelo peso do próprio corpo","Pelas mãos de outra pessoa","Por outra força externa","Pela água"],"No estrangulamento, a força não é o peso do corpo.");
+q("ml",1,"A esganadura é a constrição do pescoço feita:",["Com as mãos","Com laço e peso do corpo","Com laço apertado por força externa","Com líquido"],"Deixa marcas de unhas e dedos.");
+q("ml",2,"No enforcamento típico, o sulco no pescoço costuma ser:",["Oblíquo e interrompido na altura do nó","Horizontal, contínuo e de profundidade uniforme","Sempre ausente","Em forma de dedos"],"No estrangulamento, o sulco é horizontal e contínuo.");
+q("ml",1,"O afogamento é asfixia por:",["Entrada de líquido nas vias respiratórias","Constrição do pescoço","Compressão do tórax por peso ou soterramento","Ar rarefeito"],"É asfixia por modificação do meio.");
+q("ml",2,"Os critérios de morte encefálica no Brasil são definidos pelo:",["Conselho Federal de Medicina","Ministério da Justiça e Segurança Pública","STF","Congresso Nacional"],"Resolução CFM 2.173/2017.");
+q("ml",1,"Exumação é:",["Retirar o cadáver da sepultura para exame","Sepultar o corpo","Embalsamar o corpo para o velório","Cremar"],"Feita por determinação da autoridade.");
+q("ml",2,"Diferentemente do laudo, o auto médico-legal é:",["Ditado pelo perito ao escrivão diante da autoridade","Redigido depois, só pelo perito, em seu gabinete","Um atestado médico comum","Uma certidão de óbito"],"O laudo é redigido pelo próprio perito.");
+q("ml",1,"O método de identificação baseado nos desenhos das pontas dos dedos é a:",["Datiloscopia","Antropometria de Bertillon","Odontologia legal","Fotografia sinalética"],"É o principal método de identificação civil e criminal.");
+q("ml",2,"O sistema datiloscópico adotado no Brasil é o de:",["Vucetich","Bertillon","Lombroso","Lacassagne"],"Juan Vucetich, criado na Argentina.");
+q("ml",2,"No sistema de Vucetich, os quatro tipos fundamentais são:",["Arco, presilha interna, presilha externa e verticilo","Círculo, linha, ponto e espiral","Delta, núcleo, sulco, crista e linhas papilares","Alfa, beta, gama e delta"],"Representados por A, I, E e V nos polegares.");
+q("ml",1,"O que diferencia o infanticídio do homicídio é a mãe agir sob influência do:",["Estado puerperal","Álcool","Medo da desonra perante a família","Pai da criança"],"Art. 123 do Código Penal.");
+q("ml",2,"A docimásia hidrostática de Galeno verifica se o recém-nascido:",["Respirou, ou seja, nasceu com vida","Tinha alguma doença genética grave","Era prematuro","Foi envenenado"],"Pulmões que respiraram flutuam na água.");
+q("ml",1,"A queimadura de 2º grau se caracteriza por:",["Bolhas (flictenas)","Só vermelhidão","Carbonização","Escara preta profunda"],"1º grau: eritema; 3º: escara; 4º: carbonização.");
+q("ml",2,"A marca elétrica de Jellinek é típica de lesão por:",["Eletricidade industrial (eletroplessão)","Raio","Calor intenso do sol","Frio intenso"],"Raios causam fulguração ou fulminação.");
+q("ml",2,"As baropatias são lesões causadas por:",["Variações da pressão atmosférica","Calor intenso do ambiente","Eletricidade","Ácidos"],"Ex.: doença descompressiva de mergulhadores.");
+q("ml",2,"No estupro de vulnerável, o vestígio de material biológico deve ser coletado respeitando a:",["Cadeia de custódia","Ordem de chegada da vítima","Vontade do suspeito","Agenda do juiz"],"Arts. 158-A e seguintes do CPP.");
+q("igual",1,"Segundo o edital da PC-BA, a Lei 7.437/1985 (Lei Caó) incluiu entre as contravenções práticas resultantes de preconceito de:",["Raça, cor, sexo ou estado civil","Renda, profissão ou nível de escolaridade","Religião apenas","Idade apenas"],"Ela alterou a antiga Lei Afonso Arinos.");
+q("igual",2,"Desde a Lei 14.532/2023, a injúria racial:",["Foi equiparada ao racismo, sendo inafiançável e imprescritível","Continua sendo injúria simples do Código Penal, com pena menor","Virou contravenção","Deixou de ser crime"],"Passou para a Lei 7.716/1989.");
+q("igual",2,"Após 2023, a injúria racial está tipificada no:",["Art. 2º-A da Lei 7.716/1989","Art. 140, § 3º, do Código Penal, apenas","Art. 147 do Código Penal","Art. 20 do Estatuto da Igualdade Racial"],"Pena de reclusão de 2 a 5 anos e multa.");
+q("igual",3,"Após 2023, o art. 140, § 3º, do Código Penal trata de injúria com elementos referentes a:",["Religião ou condição de pessoa idosa ou com deficiência","Raça, cor, etnia e procedência nacional","Etnia","Procedência nacional"],"Raça, cor, etnia e procedência foram para a Lei 7.716/1989.");
+q("igual",1,"Pelo Estatuto da Igualdade Racial, ações afirmativas são:",["Programas e medidas especiais para corrigir desigualdades raciais","Punições penais a quem pratica atos de racismo","Leis penais","Cotas só em empresas privadas"],"Art. 1º, parágrafo único, VI, da Lei 12.288/2010.");
+q("igual",1,"O Estatuto da Igualdade Racial garante às religiões de matriz africana:",["Liberdade de consciência, de crença e de culto","Proibição de cultos públicos","Registro obrigatório dos templos na polícia","Isenção apenas de IPTU"],"Arts. 23 e 24 da Lei 12.288/2010.");
+q("igual",2,"A Convenção sobre a Eliminação de Todas as Formas de Discriminação Racial foi promulgada pelo Decreto:",["65.810/1969","4.377/2002","678/1992","4.886/2003"],"O 4.377/2002 promulgou a convenção sobre a mulher.");
+q("igual",2,"A Convenção sobre a Eliminação de Todas as Formas de Discriminação contra a Mulher foi promulgada pelo Decreto:",["4.377/2002","65.810/1969","678/1992","4.886/2003"],"Conhecida pela sigla CEDAW.");
+q("igual",2,"O Decreto 4.886/2003 instituiu a:",["Política Nacional de Promoção da Igualdade Racial","Lei Maria da Penha","Secretaria Nacional de Direitos Humanos","Lei de Cotas"],"Política coordenada pelo governo federal.");
+q("igual",2,"A Lei 10.678/2003 criou a:",["Secretaria Especial de Políticas de Promoção da Igualdade Racial","Lei Caó","Lei de Cotas","Fundação Cultural Palmares"],"A Seppir, ligada à Presidência.");
+q("igual",2,"A Lei 14.600/2023, que organizou os ministérios, inclui o Ministério:",["Da Igualdade Racial","Do Petróleo","Da Defesa Civil","Dos Esportes Radicais"],"Também o das Mulheres e o dos Povos Indígenas.");
+q("igual",1,"Pela Lei 7.716/1989, impedir alguém de entrar em estabelecimento comercial por causa da raça é:",["Crime","Mera infração civil","Contravenção","Fato atípico"],"Crime resultante de preconceito.");
+q("igual",1,"Os crimes da Lei 7.716/1989 são punidos com:",["Reclusão","Detenção","Prisão simples","Somente multa"],"Também são inafiançáveis e imprescritíveis.");
+q("igual",2,"Pela Lei 7.716/1989, praticar discriminação por meio de comunicação social ou redes tem pena de:",["Reclusão de 2 a 5 anos e multa","Reclusão de 1 a 3 anos, sem aumento","Somente multa","Detenção de 1 mês"],"Art. 20, § 2º.");
+q("igual",2,"Pela Lei 2.889/1956, a pena do genocídio aumenta se o crime é cometido por:",["Governante ou funcionário público","Pessoa com mais de 60 anos","Estrangeiro","Estudante"],"Aumento de 1/3 (art. 4º).");
+q("igual",1,"O genocídio busca destruir, no todo ou em parte, grupo:",["Nacional, étnico, racial ou religioso","Político, partidário ou ideológico","Profissional","Esportivo"],"Art. 1º da Lei 2.889/1956.");
+q("igual",2,"Pela CEDAW, a discriminação contra a mulher é a distinção baseada no sexo que prejudica:",["O exercício dos direitos humanos da mulher","Só o direito ao voto e de ser votada","Só o trabalho","Só o casamento"],"Art. 1º da Convenção.");
+q("igual",1,"Pela Lei Maria da Penha, a violência moral é:",["Calúnia, difamação ou injúria","Agressão física com marcas visíveis","Retenção de bens","Coação sexual"],"Art. 7º, V.");
+q("igual",2,"Pela Lei Maria da Penha, a violência sexual inclui:",["Impedir o uso de método contraceptivo","Xingar a vítima em público","Reter documentos","Dar socos"],"Art. 7º, III.");
+q("igual",1,"Pela Constituição, é objetivo da República promover o bem de todos, sem preconceitos de:",["Origem, raça, sexo, cor, idade e outras formas de discriminação","Apenas religião","Apenas renda","Apenas nacionalidade estrangeira"],"Art. 3º, IV.");
+q("igual",1,"Nas relações internacionais, o Brasil se rege, entre outros, pelo repúdio ao:",["Terrorismo e ao racismo","Comércio exterior com países vizinhos","Turismo","Capital estrangeiro"],"Art. 4º, VIII.");
+q("igual",2,"Na Constituição da Bahia, o capítulo “Do Negro” é o capítulo:",["XXIII","V","X","I"],"Conforme o conteúdo programático do edital da PC-BA.");
+q("igual",2,"A Lei Estadual 13.182/2014 instituiu na Bahia o:",["Estatuto da Igualdade Racial e de Combate à Intolerância Religiosa","Código de Trânsito estadual da Bahia","Estatuto do Servidor","Plano Diretor de Salvador"],"Conforme o edital da PC-BA.");
+q("ml",1,"O esfriamento do cadáver (algor mortis) é um fenômeno cadavérico:",["Abiótico consecutivo","Transformativo destrutivo","Conservador","Vital"],"Assim como a rigidez e os livores.");
+q("ml",2,"A maceração é fenômeno cadavérico típico de:",["Fetos mortos no útero e corpos em meio líquido","Corpos em locais muito secos e quentes","Corpos congelados","Cadáveres embalsamados"],"É um fenômeno transformativo destrutivo.");
+q("ml",2,"A mumificação natural ocorre, em regra, em ambiente:",["Quente, seco e arejado","Úmido, frio e sem circulação de ar","Submerso","Fechado e úmido"],"É um fenômeno conservador.");
+q("ml",2,"A saponificação (adipocera) ocorre em ambiente:",["Úmido e pouco arejado","Seco, quente e muito ventilado","Muito ventilado","Congelado"],"A gordura do corpo vira uma substância parecida com sabão.");
+q("ml",1,"Quanto à causa jurídica, a morte pode ser:",["Natural, acidental, suicida ou homicida","Rápida, lenta ou agônica, conforme a duração","Diurna ou noturna","Urbana ou rural"],"A causa médica é outra classificação.");
+q("ml",1,"A lesão contusa em que pequenos vasos se rompem sob a pele, deixando mancha, é a:",["Equimose","Escoriação","Ferida incisa","Fratura"],"O popular “roxo”.");
+q("ml",1,"A escoriação é a lesão que atinge:",["A epiderme, arrancando a camada superficial","O osso","Somente os músculos mais profundos","Os órgãos internos"],"O popular “ralado”.");
+q("ml",2,"O espectro das cores da equimose ajuda a estimar:",["A idade aproximada da lesão","O tipo sanguíneo","A arma usada","O sexo e a altura do agressor"],"Do vermelho-violáceo ao amarelo, com o passar dos dias.");
+q("leg",1,"Pela Lei 5.553/1968, reter documento de identificação de outra pessoa é:",["Contravenção penal","Crime hediondo","Permitido por até 30 dias","Infração de trânsito"],"Art. 3º da Lei 5.553/1968.");
+q("leg",2,"Pela Lei 5.553/1968, para entrar num prédio, quem exige o documento deve:",["Anotar os dados no ato e devolver o documento imediatamente","Reter o documento até a saída do visitante, devolvendo na portaria","Fotocopiar e ficar com o original","Recusar a entrada de quem não deixar o documento"],"Art. 2º, § 2º, da Lei 5.553/1968.");
+q("leg",1,"Pela Lei 12.037/2009, o civilmente identificado, em regra:",["Não será submetido à identificação criminal","Sempre será identificado criminalmente, por fotografia e digitais","Deve sempre fornecer DNA","Perde o direito a advogado"],"Art. 5º, LVIII, da CF e art. 1º da Lei 12.037/2009.");
+q("leg",2,"Pela Lei 12.830/2013, o indiciamento é ato privativo do delegado e deve ser:",["Fundamentado, com análise técnico-jurídica do fato","Verbal, sem necessidade de justificativa escrita","Feito pelo juiz","Decidido pelo Ministério Público"],"Art. 2º, § 6º, da Lei 12.830/2013.");
+q("leg",2,"Pela Lei 12.830/2013, o inquérito em curso só pode ser avocado ou redistribuído:",["Por superior hierárquico, em despacho fundamentado","Pelo juiz, de ofício, a qualquer tempo","Por qualquer policial","Pelo advogado da vítima"],"Art. 2º, § 4º, da Lei 12.830/2013.");
+q("leg",1,"Pela Lei 12.830/2013, o delegado recebe o mesmo tratamento protocolar dos:",["Magistrados, membros da Defensoria, do MP e advogados","Vereadores","Prefeitos","Oficiais militares"],"Art. 3º da Lei 12.830/2013.");
+q("leg",1,"A Lei 9.807/1999 trata da proteção a:",["Vítimas e testemunhas ameaçadas e réus colaboradores","Idosos em situação de risco social ou abandono","Consumidores","Animais silvestres"],"Programas especiais de proteção.");
+q("leg",2,"Pela Lei 9.807/1999, a permanência no programa de proteção dura, em regra, até:",["2 anos, prorrogáveis em casos excepcionais","6 meses","10 anos","O resto da vida, sem revisão periódica"],"Art. 11 da Lei 9.807/1999.");
+q("leg",2,"Pela LEP, o réu primário em crime sem violência progride de regime após cumprir ao menos:",["16% da pena","1/6 da pena","25% da pena","40% da pena"],"Art. 112, I, com redação da Lei 13.964/2019.");
+q("leg",1,"Pela LEP, o trabalho do preso é remunerado com, no mínimo:",["3/4 do salário mínimo","1 salário mínimo","Metade do salário mínimo","Nada"],"Art. 29 da Lei 7.210/1984.");
+q("leg",1,"Pela LEP, a remição pelo trabalho desconta 1 dia de pena a cada:",["3 dias de trabalho","2 dias de trabalho","5 dias de trabalho","7 dias de trabalho"],"Art. 126, § 1º, II, da LEP.");
+q("leg",2,"Pela LEP, a remição pelo estudo desconta 1 dia de pena a cada:",["12 horas de frequência escolar, em no mínimo 3 dias","3 horas de aula","24 horas seguidas de estudo comprovado pela escola","8 horas em um só dia"],"Art. 126, § 1º, I, da LEP.");
+q("leg",1,"Pela Lei das Contravenções Penais, a tentativa de contravenção é punível?",["Não","Sim, sempre","Só se dolosa","Só no jogo do bicho"],"Art. 4º do Decreto-Lei 3.688/1941.");
+q("leg",2,"Na contravenção penal, a prisão simples é cumprida:",["Em regime semiaberto ou aberto, sem rigor penitenciário","Em regime fechado","Sempre em prisão domiciliar com tornozeleira","No regime disciplinar diferenciado"],"Art. 6º da Lei das Contravenções Penais.");
+q("leg",2,"Desde 2012, a Lei de Lavagem de Dinheiro exige que os bens venham de:",["Qualquer infração penal","Somente tráfico de drogas","Só crimes contra a Administração","Só crimes hediondos"],"A Lei 12.683/2012 acabou com o rol fechado de crimes antecedentes.");
+q("leg",1,"A Lei 7.492/1986 trata dos crimes contra o:",["Sistema Financeiro Nacional","Meio ambiente e o patrimônio genético","Consumidor","Trânsito"],"Conhecida como Lei dos Crimes do Colarinho Branco.");
+q("leg",2,"Pelo CDC, fazer afirmação falsa sobre a natureza ou a qualidade de um produto é:",["Crime contra as relações de consumo","Só infração administrativa, punida pelo Procon","Fato atípico","Contravenção"],"Art. 66 do CDC.");
+q("leg",1,"A Lei 10.259/2001 criou os Juizados Especiais no âmbito da:",["Justiça Federal","Justiça Estadual","Justiça Militar","Justiça Eleitoral"],"Inclusive criminais, para infrações federais de menor potencial ofensivo.");
+q("leg",2,"Pela Lei Geral do Esporte (14.597/2023), promover tumulto ou violência em evento esportivo é:",["Crime","Só infração civil","Fato atípico","Contravenção sem pena"],"Lei 14.597/2023, parte penal.");
+q("cont",1,"Comprar um móvel à vista, sem alterar o patrimônio líquido, é um fato:",["Permutativo","Modificativo aumentativo","Misto","Modificativo diminutivo"],"Só troca elementos do ativo.");
+q("cont",2,"Pagar uma dívida com juros é um fato:",["Misto diminutivo","Permutativo","Modificativo aumentativo","Misto aumentativo"],"Troca elementos e reduz o PL pela despesa de juros.");
+q("cont",1,"A conciliação bancária compara:",["O extrato do banco com o saldo da conta Bancos na contabilidade","Receitas e despesas do mês","Ativo e passivo","Estoques e vendas"],"Explica diferenças como cheques não compensados.");
+q("cont",1,"Para as empresas, o livro Diário é:",["Obrigatório","Facultativo","Proibido","Exigido só de bancos"],"Código Civil, art. 1.180.");
+q("cont",2,"O estorno de um lançamento errado consiste em:",["Fazer um lançamento inverso que anule o errado","Apagar o registro no livro","Rasurar o valor","Ignorar o erro"],"Rasuras são proibidas na escrituração.");
+q("cont",2,"O capital circulante líquido é:",["Ativo circulante menos passivo circulante","Ativo total menos o passivo exigível de longo prazo","Lucro menos impostos","Caixa mais estoques"],"Indica a folga financeira de curto prazo.");
+q("cont",1,"As notas explicativas servem para:",["Complementar e detalhar as demonstrações contábeis","Substituir o balanço patrimonial nas pequenas empresas","Registrar vendas","Pagar tributos"],"Fazem parte das demonstrações.");
+q("est",2,"Uma distribuição mais achatada que a normal é chamada de:",["Platicúrtica","Leptocúrtica","Mesocúrtica","Simétrica"],"Platô: achatada.");
+q("est",2,"Uma distribuição mais alongada (pontiaguda) que a normal é:",["Leptocúrtica","Platicúrtica","Mesocúrtica","Bimodal"],"A normal é mesocúrtica.");
+q("est",2,"O Teorema de Bayes permite:",["Atualizar a probabilidade de uma causa após observar um efeito","Calcular médias","Somar probabilidades de eventos independentes","Medir a curtose"],"Usa probabilidades condicionais.");
+q("est",1,"Quanto maior a variabilidade da população, o tamanho da amostra necessário é:",["Maior","Menor","Igual","Zero"],"Mais dispersão pede mais observações.");
+q("inf",1,"No Windows 11, o atalho Windows + V abre:",["O histórico da área de transferência","O Explorador de Arquivos do Windows","As Configurações","O menu Iniciar"],"Precisa estar ativado nas configurações.");
+q("inf",1,"No Windows 11, o atalho Windows + I abre:",["As Configurações","O navegador","A Lixeira","O Bloco de Notas"],"I de “informações/settings”.");
+q("inf",1,"No PowerPoint, o Slide Mestre serve para:",["Definir o padrão visual de todos os slides","Apagar slides","Gravar a tela durante a apresentação","Criar planilhas"],"Alterações nele valem para os slides ligados ao layout.");
+q("inf",2,"No PowerPoint, F5 inicia a apresentação:",["Do primeiro slide","Do slide atual","Pelo último slide","Em modo de edição"],"Shift + F5 começa do slide atual.");
+q("inf",1,"A Deep Web é:",["A parte da internet não indexada pelos buscadores","Uma rede feita só para crimes e acessível por qualquer navegador","Um tipo de vírus","Um navegador"],"Inclui e-mails, bancos e sistemas com login.");
+q("inf",2,"A Dark Web costuma ser acessada por meio de:",["Navegadores específicos, como o Tor","Qualquer navegador comum, sem configuração","Apenas e-mail","Rede elétrica"],"É uma parte da Deep Web com anonimato.");
+q("inf",1,"No Word, o recurso que repete um texto no topo de todas as páginas é o:",["Cabeçalho","Rodapé","Sumário","Nota de fim"],"O rodapé fica na parte de baixo.");
+
 /* ================= REGRAS ================= */
 const PRIZES=[1000,2000,3000,4000,5000,7000,10000,15000,20000,25000,30000,40000,50000,60000,75000,100000,125000,150000,200000,250000,300000,350000,400000,450000,500000,600000,700000,800000,900000,1000000];
 const LAST=PRIZES.length-1;
@@ -3764,7 +3866,8 @@ function rng(seed){let a=seed>>>0;return()=>{a=a+0x6D2B79F5|0;let t=Math.imul(a^
 /* ===== trilhas por carreira ===== */
 const TRACKS={
   geral:{n:"Geral",d:"Todas as matérias",s:Object.keys(SUBJ)},
-  policial:{n:"Policial",d:"PC · PF · PRF · PM",s:["port","const","adm","pen","ppen","leg","dh","inf","rl","est","cont"]},
+  pcba:{n:"PC-BA",d:"Investigador · edital 2026",s:["port","rl","inf","igual","ml","cont","adm","const","pen","ppen","leg","est"]},
+  policial:{n:"Policial",d:"PC · PF · PRF · PM",s:["port","const","adm","pen","ppen","leg","dh","inf","rl","est","cont","ml"]},
   tribunais:{n:"Tribunais",d:"TJ · TRF · TRT · MP",s:["port","const","adm","civ","pciv","pen","ppen","arq","inf","rl"]},
   fiscal:{n:"Fiscal",d:"Receita · Sefaz · ISS",s:["port","const","adm","trib","afo","cont","est","rl","inf"]},
   administrativa:{n:"Administrativa",d:"INSS · prefeituras · órgãos",s:["port","const","adm","gest","arq","afo","inf","rl"]}
