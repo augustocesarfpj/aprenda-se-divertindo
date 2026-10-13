@@ -233,10 +233,6 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
 .btn.danger{background:var(--dropout);color:#fff}
 .acct .acts{display:flex;gap:6px;flex-wrap:wrap}
 .howto{margin:0;padding-left:20px;display:grid;gap:8px}
-.stsubj{border:1.5px solid var(--line);border-radius:8px;padding:10px 12px;display:grid;gap:10px}
-.stsubj summary{cursor:pointer;font-size:.92rem;list-style-position:inside}
-.stsubj[open]{gap:10px}
-.stchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .howto li::marker{font-weight:700}
 .foot{text-align:center;margin:22px 0 0}
 .foot a,.dialog .small a{color:var(--ink);font-weight:700}
@@ -487,6 +483,20 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
     <div class="row">
       <button class="btn danger" type="button" id="delYes">Excluir minha conta</button>
       <button class="btn ghost" type="button" id="delNo">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="ov" id="ovStSubj" hidden>
+  <div class="sheet dialog" role="dialog" aria-modal="true" aria-labelledby="ssTitle">
+    <span class="eyebrow">Módulo de estudo · o que estudar hoje</span>
+    <h3 id="ssTitle" style="margin:0">Matérias da trilha</h3>
+    <p class="small" style="margin:0">Marque as matérias que entram nos cartões. Revisões e cartões novos seguem essa escolha.</p>
+    <div class="chips" id="ssChips" role="group" aria-label="Matérias do estudo"></div>
+    <div class="row" style="align-items:center"><button class="linkbtn" type="button" id="ssAll">Marcar todas</button><span class="small" id="ssCount" aria-live="polite"></span></div>
+    <div class="row">
+      <button class="btn" type="button" id="ssGo">Começar estudo →</button>
+      <button class="btn ghost" type="button" id="ssNo">Voltar</button>
     </div>
   </div>
 </div>
@@ -5008,21 +5018,14 @@ function renderStudyBox(){
   const metaBtns=Object.entries(META_OPTS).map(([v,n])=>'<button type="button" class="chipbtn" data-meta="'+v+'" aria-pressed="'+(+v===ST.meta)+'">'+n+' · '+v+'</button>').join("");
   const pct=t.total?Math.round(t.dom/t.total*100):0;
   const av=studyAvail(),pk=studyPicked(),all=pk.length===av.length;
-  const subjHtml='<details class="stsubj"'+(ST.subjOpen?' open':'')+'><summary>Matérias do estudo: <b>'+(all?'todas da trilha':pk.length+' de '+av.length)+'</b></summary><div class="stchips"><button type="button" class="chipbtn" data-sall aria-pressed="'+all+'">Todas</button>'+av.map(k=>'<button type="button" class="chipbtn" data-subj="'+k+'" aria-pressed="'+(!all&&pk.includes(k))+'">'+SUBJ[k]+'</button>').join("")+'</div><p class="small" style="margin:0">Toque nas matérias que quer estudar. Revisões e cartões novos seguem essa escolha.</p></details>';
+  const subjHtml='<p class="small" style="margin:0">Matérias do estudo: <b>'+(all?'todas da trilha':pk.length+' de '+av.length)+'</b></p>';
   box.innerHTML='<span class="eyebrow">Módulo de estudo · Trilha '+TRACKS[track].n+'</span>'+
     (rev+nov?'<h2>Hoje: '+rev+' revis'+(rev===1?'ão':'ões')+' · '+nov+' novo'+(nov===1?'':'s')+' <span class="small">· ~'+min+' min</span></h2>':'<h2>Meta de hoje cumprida ✓</h2>')+
     (t.recovery?'<p class="small warnline" style="margin:0">Muitas revisões acumuladas: hoje é dia de colocar a revisão em dia. Os cartões novos voltam amanhã.</p>':'')+
     subjHtml+
     '<div class="stmini"><span><b>'+t.dom+'</b> dominadas</span><span><b>'+t.emEstudo+'</b> em estudo</span><span class="'+(t.alertas?"warn":"")+'"><b>'+t.alertas+'</b> falsas certezas</span><span><b>'+pct+'%</b> '+(all?'da trilha':'das matérias escolhidas')+'</span></div>'+
-    (rev+nov?'<div class="row"><button class="btn" type="button" id="stGo">Estudar agora →</button></div>':'')+'<div class="row"><span class="small">Cartões novos por dia:</span>'+metaBtns+'</div><p class="small" style="margin:0"><button class="linkbtn" type="button" id="stHow">Como funciona o estudo?</button></p>';
-  if(rev+nov)$("stGo").onclick=()=>{sfx.click();if(!ST.rows.size){$("ovHowto").hidden=false;$("howGo").focus()}else startStudy()};
-  const det=box.querySelector(".stsubj");if(det)det.ontoggle=()=>{ST.subjOpen=det.open};
-  box.querySelectorAll("[data-subj]").forEach(b=>b.onclick=()=>{
-    sfx.click();const k=b.dataset.subj,av=studyAvail();let pk=studyPicked();
-    if(pk.length===av.length)pk=[k];else if(pk.includes(k))pk=pk.filter(x=>x!==k);else pk=[...pk,k];
-    setStudyPicked(pk);ST.subjOpen=true;renderStudyBox();
-  });
-  const sa=box.querySelector("[data-sall]");if(sa)sa.onclick=()=>{sfx.click();setStudyPicked([]);ST.subjOpen=true;renderStudyBox()};
+    '<div class="row"><button class="btn'+(rev+nov?'':' ghost')+'" type="button" id="stGo">'+(rev+nov?'Estudar agora →':'Escolher outras matérias →')+'</button></div>'+'<div class="row"><span class="small">Cartões novos por dia:</span>'+metaBtns+'</div><p class="small" style="margin:0"><button class="linkbtn" type="button" id="stHow">Como funciona o estudo?</button></p>';
+  $("stGo").onclick=()=>{sfx.click();openStudySubj()};
   const hl=$("stHow");if(hl)hl.onclick=()=>{sfx.click();$("ovHowto").hidden=false;$("howGo").focus()};
   box.querySelectorAll("[data-meta]").forEach(b=>b.onclick=async()=>{
     const v=+b.dataset.meta;if(v===ST.meta)return;const old=ST.meta;ST.meta=v;renderStudyBox();
@@ -5030,6 +5033,33 @@ function renderStudyBox(){
   });
 }
 function needsOptions(q){return /dest[ae]s|qual (frase|palavra|grafia|alternativa|op[cç][aã]o)|qual é a grafia|N[ÃA]O |EXCETO|correta(mente)?\?|qual destes|completa|complete/i.test(q.t)}
+function openStudySubj(){
+  const av=studyAvail(),pk=studyPicked(),box=$("ssChips");box.innerHTML="";
+  $("ssTitle").textContent="Matérias da trilha "+TRACKS[track].n;
+  av.forEach(k=>{
+    const n=Q.filter(q=>q.s===k&&q.d>=1&&q.d<=3).length,done=[...ST.rows.keys()].filter(id=>{const q=qById(id);return q&&q.s===k}).length;
+    const l=document.createElement("label");l.className="chip";
+    l.innerHTML='<input type="checkbox" value="'+k+'"><span class="dot"></span><span></span>';
+    l.querySelector("input").checked=pk.includes(k);l.lastChild.textContent=SUBJ[k];
+    l.title=done+" de "+n+" cartões já vistos";l.querySelector("input").onchange=ssUpdate;box.appendChild(l);
+  });
+  ssUpdate();$("ovStSubj").hidden=false;setTimeout(()=>{const f=box.querySelector("input");if(f)f.focus()},50);
+}
+function ssSel(){return [...document.querySelectorAll("#ssChips input:checked")].map(i=>i.value)}
+function ssUpdate(){
+  const sel=ssSel(),av=studyAvail();
+  $("ssAll").textContent=sel.length===av.length?"Desmarcar todas":"Marcar todas";
+  $("ssCount").textContent=sel.length?(sel.length===av.length?"Todas as "+av.length+" matérias":sel.length+" de "+av.length+" matérias"):"Escolha pelo menos uma matéria.";
+  $("ssGo").disabled=!sel.length;
+}
+$("ssAll").onclick=()=>{const av=studyAvail(),all=ssSel().length===av.length;document.querySelectorAll("#ssChips input").forEach(i=>i.checked=!all);ssUpdate()};
+$("ssNo").onclick=()=>{$("ovStSubj").hidden=true};
+$("ssGo").onclick=()=>{
+  const sel=ssSel();if(!sel.length)return;sfx.click();setStudyPicked(sel);$("ovStSubj").hidden=true;
+  if(!studyToday().due.length&&!studyToday().novosRestantes){renderStudyBox();return}
+  if(!ST.rows.size){$("ovHowto").hidden=false;$("howGo").focus()}else startStudy();
+};
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("ovStSubj").hidden)$("ssNo").click()});
 $("howGo").onclick=()=>{sfx.click();$("ovHowto").hidden=true;startStudy()};
 $("howNo").onclick=()=>{$("ovHowto").hidden=true};
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("ovHowto").hidden)$("howNo").click()});
