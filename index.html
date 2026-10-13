@@ -207,7 +207,11 @@ h1 em{font-style:normal;color:var(--money)}
 .form label{display:grid;gap:4px;font-size:.85rem;font-weight:700}
 .form input{font:1rem var(--f-body);padding:11px 12px;border:1.5px solid var(--line);border-radius:6px;background:var(--sheet);color:var(--ink);width:100%}
 .form input:focus{outline:2px solid var(--ink);outline-offset:1px}
-#authMsg.err{color:var(--dropout)}
+#authMsg.err,#delMsg.err{color:var(--dropout)}
+.btn.danger{background:var(--dropout);color:#fff}
+.acct .acts{display:flex;gap:6px;flex-wrap:wrap}
+.foot{text-align:center;margin:22px 0 0}
+.foot a,.dialog .small a{color:var(--ink);font-weight:700}
 </style>
 </head>
 <body>
@@ -276,6 +280,7 @@ h1 em{font-style:normal;color:var(--money)}
       <button class="iconbtn" id="resetNo">Cancelar</button>
     </div>
   </div>
+  <p class="small foot"><a href="privacidade.html">Política de privacidade</a> · Jogo gratuito, prêmios fictícios.</p>
 </section>
 
 <!-- JOGO -->
@@ -402,7 +407,21 @@ h1 em{font-style:normal;color:var(--money)}
       <p class="small" id="authMsg" role="alert" style="margin:0"></p>
       <div class="row"><button class="btn" id="authGo" type="submit">Entrar</button><button class="btn ghost" type="button" id="authClose">Fechar</button></div>
     </form>
-    <p class="small" style="margin:0">A conta guarda seu progresso e seus resultados. Jogar sem conta continua liberado.</p>
+    <p class="small" style="margin:0">A conta guarda seu progresso e seus resultados. Ao criar a conta, você concorda com a <a href="privacidade.html" target="_blank" rel="noopener">Política de privacidade</a>. Jogar sem conta continua liberado.</p>
+  </div>
+</div>
+
+<!-- excluir conta -->
+<div class="ov" id="ovDelete" hidden>
+  <div class="sheet dialog" role="dialog" aria-modal="true" aria-labelledby="dTitle">
+    <span class="eyebrow">Sua conta</span>
+    <h3 id="dTitle">Excluir sua conta?</h3>
+    <p class="small" style="margin:0">Isso apaga para sempre seu nome, e-mail, progresso salvo e todas as partidas. Não dá para desfazer. O histórico guardado neste aparelho continua aqui até você usar “Zerar histórico”.</p>
+    <p class="small" id="delMsg" role="alert" style="margin:0"></p>
+    <div class="row">
+      <button class="btn danger" type="button" id="delYes">Excluir minha conta</button>
+      <button class="btn ghost" type="button" id="delNo">Cancelar</button>
+    </div>
   </div>
 </div>
 
@@ -3524,7 +3543,7 @@ function confetti(){
 const SB_URL="https://yanrzhogtthhqwsbeqnc.supabase.co";
 const SB_KEY="sb_publishable_nDmaVkG52OAxZfplzIkBUQ_lDIlluzx"; // chave pública: a segurança fica nas regras do banco
 const SB_LIB="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js";
-let sb=null,user=null,perfil=null,gameStart=0,lastResult=null,authMode="in";
+let sb=null,user=null,perfil=null,gameStart=0,lastResult=null,authMode="in",delNotice=false;
 function loadCloud(){
   const s=document.createElement("script");s.src=SB_LIB;s.async=true;
   s.onload=initCloud;s.onerror=()=>{};document.head.appendChild(s);
@@ -3553,7 +3572,7 @@ async function syncQuestions(){
   }catch(e){}
 }
 async function setUser(u){
-  user=u||null;perfil=null;
+  user=u||null;perfil=null;if(user)delNotice=false;
   if(user){
     try{
       let {data}=await sb.from("perfis").select("nome,progresso").eq("id",user.id).maybeSingle();
@@ -3604,11 +3623,13 @@ function renderAcct(){
   const a=$("acct");if(!sb){a.hidden=true;return}
   a.hidden=false;
   if(user){
-    a.innerHTML='<span>Olá, <b></b> · seu progresso fica salvo na conta</span><button class="btn ghost sm" type="button" id="btnLogout">Sair</button>';
+    a.innerHTML='<span>Olá, <b></b> · seu progresso fica salvo na conta</span><span class="acts"><button class="btn ghost sm" type="button" id="btnLogout">Sair</button><button class="btn ghost sm" type="button" id="btnDelete">Excluir conta</button></span>';
     a.querySelector("b").textContent=perfil?perfil.nome:(user.email||"");
     $("btnLogout").onclick=async()=>{sfx.click();try{await sb.auth.signOut()}catch(e){}setUser(null)};
+    $("btnDelete").onclick=()=>{sfx.click();$("delMsg").textContent="";$("delMsg").className="small";$("delYes").disabled=false;$("ovDelete").hidden=false};
   }else{
-    a.innerHTML='<span>Crie uma conta grátis e salve seu progresso em qualquer aparelho.</span><button class="btn ghost sm" type="button" id="btnLogin">Entrar ou criar conta</button>';
+    a.innerHTML=delNotice?'<span>Sua conta e seus dados foram excluídos.</span><button class="btn ghost sm" type="button" id="btnLogin">Criar nova conta</button>'
+      :'<span>Crie uma conta grátis e salve seu progresso em qualquer aparelho.</span><button class="btn ghost sm" type="button" id="btnLogin">Entrar ou criar conta</button>';
     $("btnLogin").onclick=()=>{sfx.click();openAuth("in")};
   }
 }
@@ -3658,7 +3679,18 @@ $("authForm").onsubmit=async ev=>{
   }catch(e){authMsg(authErr(e),true)}
   go.disabled=false;
 };
-document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("ovAuth").hidden)$("authClose").click()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("ovAuth").hidden)$("authClose").click();if(e.key==="Escape"&&!$("ovDelete").hidden)$("delNo").click()});
+$("delNo").onclick=()=>{$("ovDelete").hidden=true};
+$("delYes").onclick=async()=>{
+  if(!sb||!user)return;
+  const b=$("delYes"),m=$("delMsg");b.disabled=true;m.className="small";m.textContent="Excluindo…";
+  try{
+    const {error}=await sb.rpc("excluir_minha_conta");
+    if(error)throw error;
+    try{await sb.auth.signOut({scope:"local"})}catch(e){}
+    lastResult=null;delNotice=true;await setUser(null);$("ovDelete").hidden=true;
+  }catch(e){m.className="small err";m.textContent="Não foi possível excluir agora. Tente de novo em instantes.";b.disabled=false}
+};
 
 setSoundLabel();applyTrack(track);loadCloud();
 </script>
