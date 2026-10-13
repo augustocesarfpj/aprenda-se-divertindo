@@ -2,7 +2,7 @@
 
 Jogo de perguntas de concursos públicos em 30 níveis, até R$ 1 milhão (fictício).
 
-- 3.239 questões em 23 matérias e 5 níveis (fácil, intermediária, difícil, muito difícil e desafio)
+- 3.339 questões em 23 matérias e 5 níveis (fácil, intermediária, difícil, muito difícil e desafio)
 - Trilhas: PC-BA (Investigador, edital 2026), Policial, Tribunais, Fiscal, Administrativa e Geral
 - Desafio do dia, sequência de dias e compartilhamento do resultado
 - Ajudas: pular, eliminar duas, turma, professor e resposta de risco
@@ -18,6 +18,6 @@ O jogo funciona sozinho, mas quando o Supabase está configurado ele passa a:
 - permitir criar conta com e-mail e senha;
 - salvar o progresso (estatísticas, sequência de dias, questões vistas) e as partidas (base do ranking).
 
-Para configurar, rode no SQL Editor, nesta ordem, os arquivos da pasta `supabase/`: `1-estrutura.sql`, `2-questoes-parte1.sql`, `3-questoes-parte2.sql`, `4-questoes-parte3.sql`, `5-questoes-faceis.sql`, `6-excluir-conta.sql`, `7-contador.sql`, `8-questoes-faceis-2.sql`, `9-questoes-intermediarias.sql`, `10-questoes-faceis-3.sql`, `11-estudo.sql`, `12-cartoes-estudo.sql`, `13-topicos-que-mais-caem.sql`, `14-edital-pcba.sql`, `15-edital-pcba-2.sql` e `16-edital-trf4.sql`. O resumo diário de visitantes e partidas fica na visão `resumo_diario`.
+Para configurar, rode no SQL Editor, nesta ordem, os arquivos da pasta `supabase/`: `1-estrutura.sql`, `2-questoes-parte1.sql`, `3-questoes-parte2.sql`, `4-questoes-parte3.sql`, `5-questoes-faceis.sql`, `6-excluir-conta.sql`, `7-contador.sql`, `8-questoes-faceis-2.sql`, `9-questoes-intermediarias.sql`, `10-questoes-faceis-3.sql`, `11-estudo.sql`, `12-cartoes-estudo.sql`, `13-topicos-que-mais-caem.sql`, `14-edital-pcba.sql`, `15-edital-pcba-2.sql`, `16-edital-trf4.sql` e `17-edital-trf4-2.sql`. O resumo diário de visitantes e partidas fica na visão `resumo_diario`.
 
 A política de privacidade fica em `privacidade.html`.
