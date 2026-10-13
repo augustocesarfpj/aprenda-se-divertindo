@@ -233,6 +233,10 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
 .btn.danger{background:var(--dropout);color:#fff}
 .acct .acts{display:flex;gap:6px;flex-wrap:wrap}
 .howto{margin:0;padding-left:20px;display:grid;gap:8px}
+.stsubj{border:1.5px solid var(--line);border-radius:8px;padding:10px 12px;display:grid;gap:10px}
+.stsubj summary{cursor:pointer;font-size:.92rem;list-style-position:inside}
+.stsubj[open]{gap:10px}
+.stchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .howto li::marker{font-weight:700}
 .foot{text-align:center;margin:22px 0 0}
 .foot a,.dialog .small a{color:var(--ink);font-weight:700}
@@ -4955,8 +4959,20 @@ async function loadStudy(force){
   ST.loading=false;renderStudyBox();
 }
 const qById=id=>Q.find(q=>q.id===id);
+/* matérias escolhidas para o estudo, por trilha (fica neste aparelho) */
+const SSK="gm-study-subj";
+function studyAvail(){return trackSubs().filter(k=>Q.some(q=>q.s===k&&q.d>=1&&q.d<=3))}
+function studyPicked(){
+  const av=studyAvail();let m={};try{m=JSON.parse(localStorage.getItem(SSK))||{}}catch(e){}
+  const sel=(m[track]||[]).filter(k=>av.includes(k));return sel.length?sel:av;
+}
+function setStudyPicked(list){
+  let m={};try{m=JSON.parse(localStorage.getItem(SSK))||{}}catch(e){}
+  const av=studyAvail();if(!list.length||list.length===av.length)delete m[track];else m[track]=list;
+  try{localStorage.setItem(SSK,JSON.stringify(m))}catch(e){}
+}
 function studyToday(){
-  const subs=trackSubs(),today=dayKey();
+  const subs=studyPicked(),today=dayKey();
   const inTrack=q=>q&&subs.includes(q.s);
   const due=[];ST.rows.forEach(r=>{if(r.caixa<6&&r.vence<=today){const q=qById(r.questao_id);if(inTrack(q))due.push(r)}else if(r.caixa===6&&r.vence<=today){const q=qById(r.questao_id);if(inTrack(q))due.push(r)}});
   due.sort((a,b)=>(b.alerta-a.alerta)||(a.vence<b.vence?-1:a.vence>b.vence?1:0));
@@ -4968,7 +4984,7 @@ function studyToday(){
   return {due,novosHoje,novosRestantes,recovery,dom,alertas,emEstudo,total};
 }
 function pickNew(n){
-  const subs=trackSubs();
+  const subs=studyPicked();
   const pool=Q.filter(q=>subs.includes(q.s)&&!ST.rows.has(q.id));
   const W=[0,40,35,25,0],out=[],used=new Set(); // estudo usa intermediária, difícil e muito difícil
   for(let i=0;i<n;i++){
@@ -4991,12 +5007,22 @@ function renderStudyBox(){
   const t=studyToday(),rev=t.due.length,nov=t.novosRestantes,min=Math.max(1,Math.round((rev+nov)*15/60));
   const metaBtns=Object.entries(META_OPTS).map(([v,n])=>'<button type="button" class="chipbtn" data-meta="'+v+'" aria-pressed="'+(+v===ST.meta)+'">'+n+' · '+v+'</button>').join("");
   const pct=t.total?Math.round(t.dom/t.total*100):0;
+  const av=studyAvail(),pk=studyPicked(),all=pk.length===av.length;
+  const subjHtml='<details class="stsubj"'+(ST.subjOpen?' open':'')+'><summary>Matérias do estudo: <b>'+(all?'todas da trilha':pk.length+' de '+av.length)+'</b></summary><div class="stchips"><button type="button" class="chipbtn" data-sall aria-pressed="'+all+'">Todas</button>'+av.map(k=>'<button type="button" class="chipbtn" data-subj="'+k+'" aria-pressed="'+(!all&&pk.includes(k))+'">'+SUBJ[k]+'</button>').join("")+'</div><p class="small" style="margin:0">Toque nas matérias que quer estudar. Revisões e cartões novos seguem essa escolha.</p></details>';
   box.innerHTML='<span class="eyebrow">Módulo de estudo · Trilha '+TRACKS[track].n+'</span>'+
     (rev+nov?'<h2>Hoje: '+rev+' revis'+(rev===1?'ão':'ões')+' · '+nov+' novo'+(nov===1?'':'s')+' <span class="small">· ~'+min+' min</span></h2>':'<h2>Meta de hoje cumprida ✓</h2>')+
     (t.recovery?'<p class="small warnline" style="margin:0">Muitas revisões acumuladas: hoje é dia de colocar a revisão em dia. Os cartões novos voltam amanhã.</p>':'')+
-    '<div class="stmini"><span><b>'+t.dom+'</b> dominadas</span><span><b>'+t.emEstudo+'</b> em estudo</span><span class="'+(t.alertas?"warn":"")+'"><b>'+t.alertas+'</b> falsas certezas</span><span><b>'+pct+'%</b> da trilha</span></div>'+
+    subjHtml+
+    '<div class="stmini"><span><b>'+t.dom+'</b> dominadas</span><span><b>'+t.emEstudo+'</b> em estudo</span><span class="'+(t.alertas?"warn":"")+'"><b>'+t.alertas+'</b> falsas certezas</span><span><b>'+pct+'%</b> '+(all?'da trilha':'das matérias escolhidas')+'</span></div>'+
     (rev+nov?'<div class="row"><button class="btn" type="button" id="stGo">Estudar agora →</button></div>':'')+'<div class="row"><span class="small">Cartões novos por dia:</span>'+metaBtns+'</div><p class="small" style="margin:0"><button class="linkbtn" type="button" id="stHow">Como funciona o estudo?</button></p>';
   if(rev+nov)$("stGo").onclick=()=>{sfx.click();if(!ST.rows.size){$("ovHowto").hidden=false;$("howGo").focus()}else startStudy()};
+  const det=box.querySelector(".stsubj");if(det)det.ontoggle=()=>{ST.subjOpen=det.open};
+  box.querySelectorAll("[data-subj]").forEach(b=>b.onclick=()=>{
+    sfx.click();const k=b.dataset.subj,av=studyAvail();let pk=studyPicked();
+    if(pk.length===av.length)pk=[k];else if(pk.includes(k))pk=pk.filter(x=>x!==k);else pk=[...pk,k];
+    setStudyPicked(pk);ST.subjOpen=true;renderStudyBox();
+  });
+  const sa=box.querySelector("[data-sall]");if(sa)sa.onclick=()=>{sfx.click();setStudyPicked([]);ST.subjOpen=true;renderStudyBox()};
   const hl=$("stHow");if(hl)hl.onclick=()=>{sfx.click();$("ovHowto").hidden=false;$("howGo").focus()};
   box.querySelectorAll("[data-meta]").forEach(b=>b.onclick=async()=>{
     const v=+b.dataset.meta;if(v===ST.meta)return;const old=ST.meta;ST.meta=v;renderStudyBox();
