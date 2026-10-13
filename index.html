@@ -2682,7 +2682,7 @@ q("arq",4,"A laminação e o reforço de folhas danificadas são medidas de:",["
 q("arq",4,"Pela Lei 8.159/1991, os documentos de valor permanente de órgãos públicos extintos devem ser:",["Recolhidos à instituição arquivística pública","Eliminados depois de feito um inventário","Vendidos em leilão público","Entregues aos ex-servidores e dirigentes do órgão extinto"],"Art. 7º, § 2º.");
 q("arq",4,"O documento de arquivo se distingue do documento de biblioteca porque é produzido:",["Organicamente, em razão das atividades de uma entidade","Para fins culturais e de divulgação ampla ao público","Em várias cópias idênticas, para venda ou distribuição","Por compra ou doação de terceiros à instituição"],"Arquivos são orgânicos; bibliotecas reúnem coleções.");
 
-/* ================= NÍVEL 0 · FÁCIL (questões 1 a 6) ================= */
+/* ================= NÍVEL 0 · FÁCIL (questões 1 a 8) ================= */
 q("port",0,"Qual é o plural correto de “cidadão”?",["Cidadãos","Cidadões","Cidadães","Cidadãoes"],"“Cidadão” faz o plural em -ãos, como “irmãos” e “cristãos”.");
 q("port",0,"Qual palavra está escrita corretamente?",["Exceção","Excessão","Esceção","Exeção"],"Escreve-se “exceção”, com XC e Ç. A forma com SS é um erro comum.");
 q("port",0,"Complete: “Moro nesta cidade ___ dois anos.”",["há","a","à","ah"],"Para indicar tempo já decorrido usa-se o verbo haver: “há dois anos”. Daria para trocar por “faz dois anos”.");
@@ -3099,10 +3099,10 @@ q("arq",0,"A Lei de Acesso à Informação é a Lei:",["12.527/2011","8.159/1991
 /* ================= REGRAS ================= */
 const PRIZES=[1000,2000,3000,4000,5000,7000,10000,15000,20000,25000,30000,40000,50000,60000,75000,100000,125000,150000,200000,250000,300000,350000,400000,450000,500000,600000,700000,800000,900000,1000000];
 const LAST=PRIZES.length-1;
-const SAFE=new Set([5,13,21,26,LAST]); // fim de cada faixa de dificuldade
+const SAFE=new Set([7,14,20,25,LAST]); // fim de cada faixa de dificuldade
 const TIME=45;
 const fmt=v=>v>=1000000?"R$ 1 milhão":"R$ "+v.toLocaleString("pt-BR");
-const tierOf=l=>l<6?0:l<14?1:l<22?2:l<27?3:4; // 1–6 fácil · 7–14 intermediária · 15–22 difícil · 23–27 muito difícil · 28–30 desafio
+const tierOf=l=>l<8?0:l<15?1:l<21?2:l<26?3:4; // 1–8 fácil · 9–15 intermediária · 16–21 difícil · 22–26 muito difícil · 27–30 desafio
 const $=id=>document.getElementById(id);
 
 /* armazenamento */
