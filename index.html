@@ -272,7 +272,7 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
   <div class="cover tab-jogo">
     <div class="cover-head">
       <h1>Aprenda<br><em>se divertindo</em></h1>
-      <p class="lede">Questões de concursos de verdade. Cada acerto sobe um degrau até R$ 1 milhão. Errou, leva metade. Ficou em dúvida, pare e leve o que já ganhou.</p>
+      <p class="lede">Questões de concursos e do Enem. Cada acerto sobe um degrau até R$ 1 milhão. Errou, leva metade. Ficou em dúvida, pare e leve o que já ganhou.</p>
       <div style="display:grid;gap:8px;margin-top:4px">
         <span class="eyebrow">Escolha sua trilha</span>
         <div class="tracks" id="tracks" role="group" aria-label="Trilha de concurso"></div>
@@ -599,7 +599,8 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
 
 <script>
 /* ================= BANCO DE QUESTÕES ================= */
-const SUBJ={port:"Português",const:"Dir. Constitucional",adm:"Dir. Administrativo",pen:"Dir. Penal",ppen:"Processo Penal",leg:"Legislação Especial",inf:"Informática",rl:"Raciocínio Lógico",est:"Estatística",cont:"Contabilidade",dh:"Direitos Humanos",civ:"Direito Civil",pciv:"Processo Civil",trib:"Dir. Tributário",afo:"AFO",gest:"Adm. Pública",arq:"Arquivologia",ml:"Medicina Legal",igual:"Igualdade Racial e de Gênero",prev:"Dir. Previdenciário",pcd:"Pessoas com Deficiência",ia:"IA e Inovação",sust:"Sustentabilidade",adua:"Leg. Aduaneira",eco:"Economia e Finanças",aud:"Auditoria",dados:"Fluência em Dados"};
+const SUBJ={port:"Português",const:"Dir. Constitucional",adm:"Dir. Administrativo",pen:"Dir. Penal",ppen:"Processo Penal",leg:"Legislação Especial",inf:"Informática",rl:"Raciocínio Lógico",est:"Estatística",cont:"Contabilidade",dh:"Direitos Humanos",civ:"Direito Civil",pciv:"Processo Civil",trib:"Dir. Tributário",afo:"AFO",gest:"Adm. Pública",arq:"Arquivologia",ml:"Medicina Legal",igual:"Igualdade Racial e de Gênero",prev:"Dir. Previdenciário",pcd:"Pessoas com Deficiência",ia:"IA e Inovação",sust:"Sustentabilidade",adua:"Leg. Aduaneira",eco:"Economia e Finanças",aud:"Auditoria",dados:"Fluência em Dados",ling:"Linguagens",mat:"Matemática",fis:"Física",qui:"Química",bio:"Biologia",his:"História",geo:"Geografia",fil:"Filosofia e Sociologia"};
+const ENEM_S=["ling","mat","fis","qui","bio","his","geo","fil"];
 const TIER=["Fácil","Intermediária","Difícil","Muito difícil","Desafio"];
 // q(matéria, nível, enunciado, [correta, erradas...], comentário)
 const Q=[];let _id=0;
@@ -4408,6 +4409,107 @@ q("eco",1,"O PIB nominal se diferencia do PIB real porque o nominal:",["É medid
 q("eco",2,"A diferença entre o PIB e o PNB está:",["Na renda líquida enviada ou recebida do exterior","Nos impostos indiretos sobre o consumo das famílias","Na depreciação do capital fixo","Nos gastos correntes do governo"],"PNB = PIB − renda líquida enviada ao exterior.");
 q("aud",2,"Na NBC TA 505, a confirmação negativa é aquela em que o terceiro responde:",["Apenas se discordar das informações enviadas","Sempre, concordando ou não","Somente por telefone ao auditor","Somente ao cliente, e não diretamente ao auditor"],"Na confirmação positiva, a resposta é pedida em qualquer caso.");
 q("prev",3,"Na Lei 8.212/1991, os limites mínimo e máximo do salário de contribuição são, respectivamente:",["O salário mínimo (ou piso) e o teto do RGPS","Meio salário mínimo e dez salários mínimos por mês","Zero e o subsídio de ministro do STF","Um salário mínimo e cinco salários mínimos"],"Art. 28, §§ 3º e 5º.");
+/* ================= ENEM · MATRIZ DE REFERÊNCIA (4 áreas) ================= */
+q("ling",0,"Em uma conversa entre amigos, o uso de gírias é exemplo de variação linguística:",["Adequada à situação informal","Sempre errada em qualquer contexto","Proibida pela norma-padrão","Restrita à escrita formal"],"A adequação depende do contexto; gírias cabem em situações informais.");
+q("ling",0,"Um texto cujo principal objetivo é convencer o leitor a comprar um produto tem função:",["Apelativa (conativa)","Referencial","Metalinguística","Fática, que mantém o canal aberto"],"A função apelativa busca influenciar o comportamento do interlocutor.");
+q("ling",0,"Charges e tirinhas costumam combinar:",["Linguagem verbal e não verbal","Apenas números e gráficos","Somente textos científicos","Apenas sons e músicas"],"Texto e imagem constroem juntos o sentido.");
+q("ling",0,"Dizer 'Ela tem um coração de pedra' é usar uma:",["Metáfora","Hipérbole","Onomatopeia","Antítese"],"Comparação implícita: o coração é 'duro' como pedra.");
+q("ling",0,"O gênero textual que relata fatos recentes de forma objetiva, publicado em jornais, é a:",["Notícia","Crônica","Fábula","Poesia"],"A crônica mistura fato e opinião em tom leve.");
+q("ling",1,"Quando um texto fala sobre a própria linguagem, como um verbete de dicionário, predomina a função:",["Metalinguística","Emotiva","Poética","Apelativa"],"A linguagem explica a própria linguagem.");
+q("ling",1,"'Alô? Está me ouvindo?' é exemplo de função da linguagem:",["Fática","Referencial","Poética","Metalinguística"],"Serve para testar ou manter o canal de comunicação.");
+q("ling",1,"O Modernismo brasileiro teve como marco inicial a:",["Semana de Arte Moderna de 1922","Fundação da Academia Brasileira de Letras","Publicação de Os Lusíadas","Proclamação da República"],"Rompeu com padrões acadêmicos e valorizou a identidade nacional.");
+q("ling",1,"Intertextualidade ocorre quando um texto:",["Retoma ou dialoga com outro texto","Usa apenas palavras estrangeiras e termos técnicos","Não tem título","É escrito em versos livres"],"Ex.: paródias e paráfrases de poemas conhecidos.");
+q("ling",2,"A paródia se diferencia da paráfrase porque:",["Subverte o sentido do texto original, muitas vezes com humor ou crítica","Mantém fielmente o sentido do texto original","Traduz o texto para outra língua","Resume o texto em poucas linhas"],"A paráfrase reafirma o sentido com outras palavras.");
+q("ling",2,"O Romantismo brasileiro, em sua primeira geração, valorizou especialmente:",["O nacionalismo e a figura do indígena idealizado","A crítica social e o determinismo","A arte pela arte e a forma perfeita","O fluxo de consciência e a linguagem coloquial urbana"],"Ex.: Gonçalves Dias e José de Alencar.");
+q("ling",3,"O Realismo de Machado de Assis se destaca por:",["Ironia e análise psicológica das personagens","Exaltação da natureza e do herói nacional","Linguagem rebuscada sem crítica social","Rejeição de qualquer narrador em primeira pessoa"],"Ex.: Memórias Póstumas de Brás Cubas e Dom Casmurro.");
+q("ling",3,"No Naturalismo, as personagens costumam ser explicadas pelo:",["Determinismo do meio, da raça e do momento histórico","Livre-arbítrio absoluto","Destino traçado pelos deuses","Amor idealizado e a fuga para a natureza"],"Ex.: O Cortiço, de Aluísio Azevedo.");
+q("ling",4,"Em 'O mar serenou quando ela pisou na areia', o recurso que atribui ação humana ao mar é a:",["Prosopopeia (personificação)","Metonímia","Catacrese","Elipse"],"Serenar é atribuído ao mar como se fosse um ser animado.");
+q("mat",0,"Uma camiseta de R$ 40,00 está com 10% de desconto. O desconto é de:",["R$ 4,00","R$ 10,00","R$ 36,00","R$ 0,40"],"10% de 40 = 4. O preço final fica R$ 36,00.");
+q("mat",0,"A área de um retângulo de 5 m por 3 m é:",["15 m²","8 m²","16 m²","30 m²"],"Área = base × altura.");
+q("mat",0,"Se 1 kg de arroz custa R$ 6,00, 3,5 kg custam:",["R$ 21,00","R$ 18,00","R$ 24,00","R$ 19,50"],"6 × 3,5 = 21.");
+q("mat",0,"Em uma escala de 1:100, 1 cm no desenho corresponde a:",["1 m no real","10 cm no real","100 m no real","1 km no real"],"100 cm = 1 m.");
+q("mat",1,"A mediana do conjunto 1, 4, 9, 10, 20 é:",["9","10","8,8","4"],"Com os dados em ordem, é o valor central.");
+q("mat",1,"Ao lançar um dado comum, a probabilidade de sair um número par é:",["1/2","1/3","1/6","2/3"],"3 casos favoráveis (2, 4, 6) em 6 possíveis.");
+q("mat",1,"O volume de um cubo de aresta 3 cm é:",["27 cm³","9 cm³","18 cm³","81 cm³"],"Volume = aresta³.");
+q("mat",2,"Uma escada de 5 m está apoiada em um muro, com o pé a 3 m da base do muro. A altura alcançada no muro é:",["4 m","2 m","3,5 m","8 m"],"Teorema de Pitágoras: 5² = 3² + h², logo h = 4.");
+q("mat",2,"Na função f(x) = 2x + 3, o valor de f(5) é:",["13","10","16","8"],"2 × 5 + 3 = 13.");
+q("mat",3,"Um reservatório perde 10% da água a cada dia, em relação ao dia anterior. Depois de 2 dias, resta, do volume inicial:",["81%","80%","90%","79%"],"0,9 × 0,9 = 0,81.");
+q("mat",4,"A probabilidade de, em dois lançamentos de uma moeda honesta, sair pelo menos uma cara é:",["3/4","1/2","1/4","2/3"],"1 − P(duas coroas) = 1 − 1/4.");
+q("mat",4,"Um mapa tem escala 1:50.000. Uma distância real de 4 km aparece no mapa com:",["8 cm","80 cm","2 cm","0,8 cm"],"4 km = 400.000 cm; 400.000 / 50.000 = 8 cm.");
+q("fis",0,"A unidade de medida de força no Sistema Internacional é o:",["Newton","Joule","Watt","Pascal"],"Joule mede energia; watt, potência; pascal, pressão.");
+q("fis",0,"Um carro percorre 120 km em 2 horas. Sua velocidade média é:",["60 km/h","120 km/h","240 km/h","30 km/h"],"v = distância / tempo.");
+q("fis",0,"O som não se propaga no:",["Vácuo","Ar","Água","Metal"],"O som precisa de um meio material.");
+q("fis",1,"A energia que um corpo possui por estar em movimento é a energia:",["Cinética","Potencial gravitacional","Elástica","Química"],"Ec = m·v²/2.");
+q("fis",1,"Pela primeira lei de Newton (inércia), um corpo sem força resultante:",["Permanece em repouso ou em movimento retilíneo uniforme","Sempre para","Acelera continuamente","Muda de direção a cada instante, em movimento circular"],"A força resultante nula não altera o estado de movimento.");
+q("fis",2,"A potência elétrica de um aparelho ligado em 220 V com corrente de 5 A é:",["1.100 W","44 W","225 W","215 W"],"P = U · i.");
+q("fis",2,"Em uma usina hidrelétrica, a principal transformação de energia é de:",["Potencial gravitacional em elétrica","Química em nuclear","Térmica em luminosa","Elétrica em química, como numa bateria"],"A queda da água gira as turbinas ligadas aos geradores.");
+q("fis",3,"Um chuveiro de 5.000 W ligado 30 minutos por dia consome, em 30 dias:",["75 kWh","150 kWh","2,5 kWh","750 kWh"],"5 kW × 0,5 h × 30 = 75 kWh.");
+q("fis",3,"A refração da luz ocorre quando ela:",["Muda de meio e altera sua velocidade","Volta para o mesmo meio após bater em uma superfície","É totalmente absorvida","Se divide em cargas elétricas"],"Ex.: o lápis que parece 'quebrado' dentro do copo d'água.");
+q("fis",4,"Um corpo de 2 kg, em queda livre a partir do repouso, atinge após 3 s a velocidade de (g = 10 m/s²):",["30 m/s","20 m/s","60 m/s","15 m/s"],"v = g·t = 10 × 3. A massa não interfere.");
+q("qui",0,"A fórmula química da água é:",["H₂O","CO₂","O₂","NaCl"],"Dois átomos de hidrogênio e um de oxigênio.");
+q("qui",0,"A passagem do estado líquido para o gasoso chama-se:",["Vaporização","Solidificação","Fusão","Condensação"],"Condensação é o inverso: gasoso para líquido.");
+q("qui",0,"Uma solução com pH 2 é:",["Ácida","Básica","Neutra","Salina, sempre"],"pH < 7 é ácido; pH > 7, básico.");
+q("qui",1,"Misturar água e óleo resulta em uma mistura:",["Heterogênea","Homogênea","Pura","Azeotrópica"],"As fases são visíveis e não se misturam.");
+q("qui",1,"O gás mais associado ao efeito estufa por queima de combustíveis fósseis é o:",["Dióxido de carbono (CO₂)","Oxigênio (O₂)","Nitrogênio (N₂)","Hélio (He)"],"Também o metano tem forte efeito estufa.");
+q("qui",2,"A destilação simples é indicada para separar:",["Um sólido dissolvido de um líquido, como sal e água","Dois líquidos imiscíveis, como água e óleo","Areia e pedras","Gases do ar atmosférico, como oxigênio e nitrogênio"],"O líquido evapora e é condensado; o sólido fica.");
+q("qui",2,"Na combustão completa de um hidrocarboneto, formam-se:",["Gás carbônico e água","Apenas monóxido de carbono","Oxigênio e hidrogênio","Carvão e metano"],"Com pouco oxigênio, a combustão é incompleta e forma CO.");
+q("qui",3,"Ao adicionar mais água a uma solução, sem mudar a quantidade de soluto, a concentração:",["Diminui","Aumenta","Permanece igual","Dobra sempre"],"Diluição: mesma massa de soluto em volume maior.");
+q("qui",3,"A chuva ácida está associada principalmente à emissão de óxidos de:",["Enxofre e nitrogênio","Hélio e neônio","Ferro e cobre, liberados pelas indústrias","Sódio e potássio"],"Formam ácidos sulfúrico e nítrico na atmosfera.");
+q("qui",4,"Em 100 mL de uma solução com 20 g/L de açúcar, há:",["2 g de açúcar","20 g de açúcar","0,2 g de açúcar","200 g de açúcar"],"20 g/L × 0,1 L = 2 g.");
+q("bio",0,"A organela responsável pela fotossíntese é o:",["Cloroplasto","Ribossomo","Núcleo","Lisossomo"],"Contém clorofila e capta energia luminosa.");
+q("bio",0,"A doença transmitida pela picada do mosquito Aedes aegypti é a:",["Dengue","Tuberculose","Sarampo","Tétano"],"O mesmo mosquito transmite zika e chikungunya.");
+q("bio",0,"Os seres que produzem seu próprio alimento são chamados de:",["Produtores (autótrofos)","Decompositores","Consumidores secundários","Parasitas"],"Ex.: plantas e algas.");
+q("bio",0,"A vacina age estimulando o organismo a produzir:",["Anticorpos","Antibióticos","Hormônios sexuais","Enzimas digestivas"],"Prepara a imunidade antes do contato com o agente.");
+q("bio",1,"A molécula que guarda a informação genética é o:",["DNA","ATP","Amido","Colesterol"],"Ácido desoxirribonucleico.");
+q("bio",1,"Antibióticos são eficazes contra:",["Bactérias","Vírus","Fungos, apenas","Todos os microrganismos"],"Não agem contra vírus, como o da gripe.");
+q("bio",1,"Na cadeia capim → gafanhoto → sapo → cobra, o sapo é consumidor:",["Secundário","Primário","Terciário","Produtor"],"Come o gafanhoto, que é o consumidor primário.");
+q("bio",2,"No cruzamento Aa × Aa, a proporção esperada de descendentes aa é:",["1/4","1/2","3/4","0"],"Resultados: AA, Aa, Aa, aa.");
+q("bio",2,"A relação em que duas espécies se beneficiam e dependem uma da outra é o:",["Mutualismo","Parasitismo","Predatismo","Competição"],"Ex.: líquens (alga + fungo).");
+q("bio",3,"A eutrofização de lagos é causada principalmente pelo excesso de:",["Nutrientes, como nitratos e fosfatos, vindos de esgoto e fertilizantes","Oxigênio dissolvido","Peixes predadores","Sal marinho trazido pelos rios até os lagos de água doce"],"Algas proliferam, e depois a decomposição consome o oxigênio.");
+q("bio",3,"Pela teoria de Darwin, a evolução ocorre principalmente por:",["Seleção natural","Uso e desuso dos órgãos","Geração espontânea","Herança de caracteres adquiridos"],"Uso e desuso é a ideia de Lamarck.");
+q("bio",4,"Bactérias resistentes a antibióticos se espalham porque o uso do remédio:",["Seleciona as que já tinham resistência, que sobrevivem e se reproduzem","Faz cada bactéria aprender a resistir","Transforma vírus em bactérias","Aumenta o tamanho das bactérias e as torna visíveis a olho nu"],"Exemplo atual de seleção natural.");
+q("his",0,"A chegada da esquadra de Pedro Álvares Cabral ao Brasil ocorreu em:",["1500","1492","1822","1889"],"1492 é a chegada de Colombo à América.");
+q("his",0,"A independência do Brasil foi proclamada em:",["1822","1500","1888","1889"],"Por D. Pedro I, em 7 de setembro.");
+q("his",0,"O período de 1964 a 1985 no Brasil é conhecido como:",["Ditadura militar","Era Vargas","República Velha","Período Regencial"],"Terminou com a eleição indireta de Tancredo Neves.");
+q("his",1,"A Revolução Francesa (1789) teve como lema:",["Liberdade, igualdade e fraternidade","Ordem e progresso","Paz, terra e pão","Deus, pátria e família, acima de tudo"],"'Paz, terra e pão' é da Revolução Russa.");
+q("his",1,"A Revolução Industrial começou no século XVIII na:",["Inglaterra","França","Rússia","Espanha"],"Com máquinas a vapor e a indústria têxtil.");
+q("his",1,"A Era Vargas (1930–1945) ficou marcada, entre outros pontos, pela:",["Criação da CLT e de leis trabalhistas","Abolição da escravidão","Mudança da capital do Rio de Janeiro para Brasília","Proclamação da República"],"A CLT é de 1943.");
+q("his",2,"A Guerra Fria foi a disputa, após 1945, entre:",["Estados Unidos e União Soviética","Inglaterra e França","Alemanha e Japão","China e Índia"],"Conflito ideológico entre capitalismo e socialismo.");
+q("his",2,"O AI-5, de 1968, ficou conhecido por:",["Endurecer a ditadura, fechando o Congresso e suspendendo garantias","Convocar eleições diretas","Encerrar a censura à imprensa e às artes","Anistiar os presos políticos e permitir a volta dos exilados ao país"],"Suspendeu inclusive o habeas corpus para crimes políticos.");
+q("his",2,"A economia colonial brasileira nos séculos XVI e XVII baseou-se principalmente na produção de:",["Açúcar, com mão de obra escravizada","Café, com trabalho assalariado de imigrantes europeus","Borracha, com imigrantes","Soja, com mecanização"],"O ciclo do ouro viria no século XVIII.");
+q("his",3,"O movimento 'Diretas Já' (1983–1984) reivindicava:",["Eleições diretas para presidente","O fim da escravidão","A volta da monarquia","A independência do Brasil"],"A emenda Dante de Oliveira foi rejeitada em 1984.");
+q("his",4,"A Lei de Terras, de 1850, contribuiu para:",["Dificultar o acesso à terra, que passou a ser adquirida apenas por compra","Distribuir terras gratuitamente aos escravizados libertos e aos imigrantes","Proibir latifúndios","Criar a reforma agrária"],"Mesmo ano da Lei Eusébio de Queirós, que proibiu o tráfico de escravizados.");
+q("his",4,"O imperialismo europeu do século XIX levou, na Conferência de Berlim (1884–1885), à:",["Partilha da África entre potências europeias","Independência imediata das colônias africanas","Criação da ONU","Unificação da Alemanha"],"Fronteiras traçadas sem respeitar povos locais.");
+q("geo",0,"O maior bioma brasileiro em área é a:",["Amazônia","Caatinga","Mata Atlântica","Pampa"],"Ocupa cerca de metade do território.");
+q("geo",0,"A linha imaginária que divide a Terra em hemisférios Norte e Sul é o:",["Equador","Meridiano de Greenwich","Trópico de Capricórnio","Círculo Polar Ártico"],"Greenwich divide Leste e Oeste.");
+q("geo",0,"O bioma típico do semiárido nordestino é a:",["Caatinga","Pampa","Mata de Araucárias","Pantanal"],"Vegetação adaptada à seca.");
+q("geo",1,"O êxodo rural é o deslocamento de pessoas:",["Do campo para a cidade","Da cidade para o campo","De um país para outro","Entre bairros de uma cidade"],"Intenso no Brasil na segunda metade do século XX.");
+q("geo",1,"O desmatamento contribui para a erosão do solo porque:",["Deixa o solo exposto à chuva e ao vento","Aumenta a infiltração da água","Torna o solo mais rico","Reduz o escoamento superficial"],"Sem cobertura, a água escorre e leva o solo.");
+q("geo",2,"A ilha de calor nas grandes cidades é causada principalmente:",["Pela concentração de asfalto, concreto e pouca vegetação","Pelo aumento das chuvas","Pela proximidade do mar","Pela altitude elevada das capitais e pelo clima de montanha"],"Esses materiais absorvem e liberam calor.");
+q("geo",2,"A globalização se caracteriza, entre outros aspectos, por:",["Maior integração econômica, financeira e de informações entre países","Fechamento das fronteiras comerciais e redução das trocas de informação","Fim do comércio internacional","Isolamento cultural dos países"],"Impulsionada pelas tecnologias de comunicação e transporte.");
+q("geo",2,"A transição demográfica brasileira mostra, nas últimas décadas:",["Queda da natalidade e envelhecimento da população","Aumento da natalidade e população mais jovem","Crescimento da mortalidade infantil","Estabilidade total da pirâmide etária"],"A base da pirâmide se estreita.");
+q("geo",3,"O fuso horário de Brasília (UTC−3) está atrasado em relação a Londres (UTC 0) em:",["3 horas","2 horas","4 horas","5 horas"],"Quando é meio-dia em Londres, são 9h em Brasília.");
+q("geo",3,"A matriz elétrica brasileira se destaca, em comparação com a média mundial, por:",["Grande participação de fontes renováveis, sobretudo hidrelétrica","Dependência quase total do carvão mineral importado de outros países","Predomínio da energia nuclear","Ausência de energia eólica"],"Eólica e solar também cresceram nos últimos anos.");
+q("geo",4,"A conurbação ocorre quando:",["Cidades vizinhas crescem até suas malhas urbanas se unirem","A população rural supera a urbana em toda a região metropolitana","Uma cidade perde habitantes","O campo é mecanizado"],"Comum nas regiões metropolitanas.");
+q("geo",4,"O El Niño é o aquecimento anormal das águas do Oceano Pacífico, que no Brasil costuma provocar:",["Secas no Nordeste e chuvas acima da média no Sul","Neve na Amazônia","Fim das chuvas no Sul","Terremotos e tsunamis no litoral do Sudeste"],"A La Niña tem efeitos geralmente opostos.");
+q("fil",0,"A frase 'Só sei que nada sei' é atribuída a:",["Sócrates","Aristóteles","Descartes","Marx"],"Expressa a consciência da própria ignorância.");
+q("fil",0,"A Sociologia estuda principalmente:",["A sociedade e as relações sociais","Os astros e planetas","As rochas e minerais","As reações químicas"],"Surgiu no século XIX com Comte, Durkheim, Weber e Marx.");
+q("fil",0,"'Penso, logo existo' é a frase de:",["René Descartes","Platão","Karl Marx","Nietzsche"],"Base do racionalismo moderno.");
+q("fil",1,"Para Karl Marx, a história das sociedades é marcada pela:",["Luta de classes","Seleção natural","Vontade divina","Harmonia entre as classes"],"Ex.: burguesia e proletariado.");
+q("fil",1,"Para Émile Durkheim, fato social é algo:",["Exterior, geral e coercitivo sobre os indivíduos","Individual e passageiro","Exclusivamente econômico","Biológico e hereditário, transmitido de pais para filhos"],"Ex.: regras, costumes e leis.");
+q("fil",1,"O 'mito da caverna' foi escrito por:",["Platão","Aristóteles","Kant","Rousseau"],"Está no livro A República.");
+q("fil",2,"Etnocentrismo é a atitude de:",["Julgar outras culturas a partir dos valores da própria cultura","Respeitar todas as culturas igualmente, sem julgá-las pelos próprios valores","Estudar apenas culturas antigas","Defender a mistura de raças"],"O relativismo cultural é a postura oposta.");
+q("fil",2,"Para Rousseau, a sociedade deve se organizar por meio de um:",["Contrato social baseado na vontade geral","Governo absoluto de um rei","Estado sem leis","Poder divino da Igreja sobre os governantes"],"Obra: O Contrato Social (1762).");
+q("fil",3,"Para Thomas Hobbes, sem o Estado, os homens viveriam em:",["Guerra de todos contra todos","Harmonia natural","Plena igualdade pacífica e cooperação","Sociedade sem conflitos"],"Por isso defende um soberano forte (o Leviatã).");
+q("fil",3,"Kant propõe o imperativo categórico, segundo o qual devemos agir:",["Como se nossa ação pudesse virar lei universal","Sempre buscando o próprio prazer","Conforme a vontade da maioria","Apenas segundo a tradição"],"Ética do dever.");
+q("fil",4,"O conceito de 'indústria cultural', da Escola de Frankfurt, critica:",["A produção da cultura como mercadoria padronizada para o consumo de massa","A preservação das tradições populares","O ensino de filosofia nas escolas","O fim dos meios de comunicação de massa e a volta da cultura oral nas comunidades"],"Termo de Adorno e Horkheimer.");
+q("mat",0,"Um triângulo tem dois ângulos de 50° e 60°. O terceiro ângulo mede:",["70°","80°","90°","110°"],"A soma dos ângulos internos de um triângulo é 180°.");
+q("mat",1,"Uma receita usa 3 ovos para 4 pessoas. Para 12 pessoas, são necessários:",["9 ovos","12 ovos","6 ovos","16 ovos"],"12 é o triplo de 4; 3 × 3 = 9.");
+q("mat",3,"Uma pizza de 30 cm de diâmetro tem área aproximada de (use π = 3):",["675 cm²","900 cm²","90 cm²","2.700 cm²"],"Raio 15 cm: 3 × 15² = 675.");
+q("mat",4,"As vendas de uma loja passaram de 200 em janeiro para 260 em fevereiro. O aumento percentual foi de:",["30%","60%","26%","13%"],"Aumento de 60 sobre 200 = 0,30.");
+q("mat",2,"Em uma turma de 30 alunos, 18 são meninas. A porcentagem de meninas é:",["60%","18%","40%","50%"],"18 / 30 = 0,6.");
+q("his",1,"O Quilombo dos Palmares, símbolo da resistência à escravidão, teve como líder mais conhecido:",["Zumbi","Tiradentes","Dom Pedro II","Duque de Caxias"],"O 20 de novembro, Dia da Consciência Negra, lembra sua morte.");
+q("fil",1,"Para Aristóteles, o ser humano é por natureza um animal:",["Político","Solitário","Sem razão","Apenas instintivo"],"Vive na pólis e se realiza na vida em comunidade.");
 /* ================= REGRAS ================= */
 const PRIZES=[1000,2000,3000,4000,5000,7000,10000,15000,20000,25000,30000,40000,50000,60000,75000,100000,125000,150000,200000,250000,300000,350000,400000,450000,500000,600000,700000,800000,900000,1000000];
 const LAST=PRIZES.length-1;
@@ -4480,10 +4582,11 @@ function hashStr(s){let h=2166136261;for(const c of s){h^=c.charCodeAt(0);h=Math
 function rng(seed){let a=seed>>>0;return()=>{a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 /* ===== trilhas por carreira ===== */
 const TRACKS={
-  geral:{n:"Geral",d:"Todas as matérias",s:Object.keys(SUBJ)},
+  geral:{n:"Geral",d:"Todas as matérias de concurso",s:Object.keys(SUBJ).filter(k=>!ENEM_S.includes(k))},
   policial:{n:"Policial",d:"PC · PF · PRF · PM · PC-BA",s:["port","const","adm","pen","ppen","leg","dh","inf","rl","est","cont","ml","igual","pcd","ia","sust"]},
   tribunais:{n:"Tribunais",d:"TJ · TRF · TRT · MP · TRF4",s:["port","const","adm","civ","pciv","pen","ppen","arq","inf","rl","prev","trib","gest","pcd","ia","sust"]},
   fiscal:{n:"Fiscal",d:"Receita · Sefaz · ISS",s:["port","const","adm","trib","afo","cont","est","rl","inf","adua","eco","aud","dados","prev","pcd","ia","sust"]},
+  enem:{n:"Enem",d:"Linguagens · Matemática · Natureza · Humanas",s:ENEM_S},
   administrativa:{n:"Administrativa",d:"INSS · prefeituras · órgãos",s:["port","const","adm","gest","arq","afo","inf","rl","prev","pcd","ia","sust"]}
 };
 let track="geral";try{let t=localStorage.getItem("gm-track");t={pcba:"policial",trf4:"tribunais"}[t]||t;if(TRACKS[t])track=t}catch(e){}
@@ -4825,7 +4928,7 @@ $("allSubj").onclick=()=>{document.querySelectorAll("#chips input").forEach(i=>i
 function applyTrack(k){
   track=k;try{localStorage.setItem("gm-track",k)}catch(e){}
   const subs=trackSubs();
-  document.querySelectorAll("#chips input").forEach(i=>{i.checked=subs.includes(i.value);i.parentElement.hidden=k!=="geral"&&!subs.includes(i.value)});
+  document.querySelectorAll("#chips input").forEach(i=>{i.checked=subs.includes(i.value);i.parentElement.hidden=!subs.includes(i.value)&&(k!=="geral"||ENEM_S.includes(i.value))});
   document.querySelectorAll("#tracks .track").forEach(b=>b.setAttribute("aria-pressed",b.dataset.k===k?"true":"false"));
   renderStTracks();
   $("subjTitle").textContent=k==="geral"?"Matérias da prova":"Matérias da trilha "+TRACKS[k].n;
