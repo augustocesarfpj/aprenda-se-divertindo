@@ -274,6 +274,7 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
 .duelbtn:hover{border-color:var(--money)}
 .rklist li.hasduel{grid-template-columns:2.2em 1fr auto auto}
 @media (max-width:440px){.rklist li{gap:8px;padding:9px 10px}.rklist li.hasduel{grid-template-columns:1.7em 1fr auto auto}.rklist .pr{font-size:.92rem}.duelbtn{padding:7px}}
+.rkbonus{border-collapse:collapse;width:100%;max-width:280px}.rkbonus td{padding:3px 6px;border-bottom:1px solid var(--line)}.rkbonus td:last-child{text-align:right;font-family:var(--f-mono)}
 .rkchamp{margin:0;padding:0;list-style:none;display:grid;gap:4px;font-size:.85rem}
 .anoninfo b{color:var(--money)}
 .shead{display:flex;align-items:center;justify-content:space-between;gap:10px}
@@ -480,6 +481,7 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
       <div class="big mono" id="endPrize"></div>
       <p class="lede" id="endMsg"></p>
       <div class="grid10" id="dailyGrid" hidden></div>
+      <p class="small" id="endPts" style="margin:0;font-weight:700;color:var(--money)" hidden></p>
       <span class="streak" id="endStreak"></span>
       <p class="small" id="endCloud" style="margin:0" hidden></p>
       <div class="row" id="endDuelAct" hidden></div>
@@ -5732,7 +5734,7 @@ function newDaily(){
   gameStart=Date.now();show("game");loadQuestion();
 }
 function finishDaily(){
-  clearInterval(timerId);$("endDuelAct").hidden=true;
+  clearInterval(timerId);$("endDuelAct").hidden=true;$("endPts").hidden=true;
   const d={date:dayKey(),track,hits:S.hist.filter(h=>h.ok).length,grid:S.hist.map(h=>h.ok?1:0)};
   const store=dailyStore();store.res[track]={hits:d.hits,grid:d.grid};
   try{localStorage.setItem(DK,JSON.stringify(store))}catch(e){}
@@ -5744,12 +5746,16 @@ function finishDaily(){
   $("endStreak").textContent=streakLine();
   $("btnAgain").textContent="Jogar a prova até o milhão";
   shareUI($("shareBox"),dailyText(d));
+  {const t=ptsLine(0,d.hits,"desafio");$("endPts").textContent=t;$("endPts").hidden=!t}
   renderReview();show("end");recordResult("desafio",0);
   if(d.hits===DAILY_N){sfx.win();confetti()}
 }
 
 /* ===== ranking com amigos ===== */
 const RK_MAX=3,RK={list:null,sel:null,week:0,rows:null,champs:null,err:null,busy:false,inv:false,leave:false,mng:false,del:false,msg:""};
+const RK_BONUS=[[30,30,100],[29,29,75],[28,28,65],[27,27,55],[26,26,45],[22,25,30],[17,21,15],[10,16,5],[5,9,2]];
+function rkBonus(v){for(const [a,b,p] of RK_BONUS)if(v>=a)return p;return 0}
+function ptsLine(vencidas,hits,modo){if(!user)return"";const b=modo==="desafio"?0:rkBonus(vencidas);return"No ranking: +"+(hits+b)+" ponto"+(hits+b===1?"":"s")+" ("+hits+" de acertos"+(b?" + "+b+" de bônus por vencer "+vencidas+" questões":"")+")."+(!b&&modo!=="desafio"&&vencidas<5?" Vença 5 questões para começar a ganhar bônus.":"")}
 const RK_ROLE={admin:["👑","Administrador"],lider:["⭐","Líder"],vice:["🔹","Vice-líder"],membro:["","Membro"]};
 const rkGestor=r=>r&&(r.papel==="admin"||r.papel==="lider");
 function rkWeekLeft(){const now=Date.now(),t=new Date(now-3*36e5),dd=(8-t.getUTCDay())%7||7;
@@ -5817,9 +5823,10 @@ function renderRanking(){
     else{
       const any=RK.rows.some(x=>x.pontos>0);
       h+='<ol class="rklist" aria-label="Classificação">'+RK.rows.map((x,i)=>{const pct=x.respondidas?Math.round(x.acertos/x.respondidas*100):0;const pos=x.pontos?(i<3?["🥇","🥈","🥉"][i]:(i+1)+"º"):"–";
-        return '<li class="'+(x.sou_eu?'me':'hasduel')+'"><span class="pos">'+pos+'</span><span class="who"><b></b><span>'+x.partidas+' partida'+(x.partidas===1?'':'s')+(x.partidas?' · '+pct+'%':'')+((x.vitorias||x.empates||x.derrotas)?' · ⚔️ '+(x.vitorias||0)+'V '+(x.empates||0)+'E '+(x.derrotas||0)+'D':'')+'</span></span><span class="pr">'+x.pontos+' pt'+(x.pontos===1?'':'s')+'</span>'+(x.sou_eu?'':'<button type="button" class="duelbtn" data-dl="'+i+'">⚔️</button>')+'</li>'}).join("")+'</ol>';
+        return '<li class="'+(x.sou_eu?'me':'hasduel')+'"><span class="pos">'+pos+'</span><span class="who"><b></b><span>'+x.partidas+' partida'+(x.partidas===1?'':'s')+(x.partidas?' · '+pct+'%':'')+(x.mais_longe?' · '+(x.milhoes?'💰 Milhão'+(x.milhoes>1?' ×'+x.milhoes:''):'🏁 Q'+x.mais_longe):'')+((x.vitorias||x.empates||x.derrotas)?' · ⚔️ '+(x.vitorias||0)+'V '+(x.empates||0)+'E '+(x.derrotas||0)+'D':'')+'</span></span><span class="pr">'+x.pontos+' pt'+(x.pontos===1?'':'s')+'</span>'+(x.sou_eu?'':'<button type="button" class="duelbtn" data-dl="'+i+'">⚔️</button>')+'</li>'}).join("")+'</ol>';
       if(RK.rows.length>1)h+='<p class="small" style="margin:0">Toque em ⚔️ para desafiar alguém no Show do Milhão com as mesmas questões.</p>';
-      h+='<p class="small" style="margin:0">'+(any?'Pontos: 1 por acerto nas partidas com a conta (prova, desafio do dia e disputas), +5 por vitória e +2 por empate em disputa. Zera toda segunda às 00h.':(RK.week?'Ninguém pontuou na semana passada.':'Ninguém pontuou nesta semana ainda. Cada acerto vale 1 ponto e cada vitória em disputa vale 5: que tal começar?'))+'</p>';
+      h+='<details class="small"><summary style="cursor:pointer;font-weight:700">Como a pontuação funciona</summary><div style="display:grid;gap:6px;margin-top:6px"><span>1 ponto por acerto em qualquer partida feita com a conta (prova, desafio do dia e disputas).</span><span><b>Bônus de distância</b> em cada prova até o milhão e em cada disputa, pelas questões vencidas:</span><table class="rkbonus"><tbody>'+RK_BONUS.map(([a,b,p])=>'<tr><td>'+(a===b?(a===30?'💰 Milhão (30)':'Q'+a):a+' a '+b)+'</td><td><b>+'+p+'</b></td></tr>').join("")+'</tbody></table><span>Disputa: +5 por vitória e +2 por empate. 🏁 mostra a questão mais longe que cada um alcançou na semana. Tudo zera toda segunda às 00h.</span></div></details>';
+      h+='<p class="small" style="margin:0">'+(any?'Quem chega mais longe na prova ganha bônus: o milhão vale +100 pontos. Toque em "Como a pontuação funciona" para ver a tabela.':(RK.week?'Ninguém pontuou na semana passada.':'Ninguém pontuou nesta semana ainda. Cada acerto vale 1 ponto e cada vitória em disputa vale 5: que tal começar?'))+'</p>';
       if(RK.feed){
         h+='<span class="eyebrow" style="margin-top:4px">⚔️ Disputas dos últimos 7 dias</span>';
         h+=RK.feed.length?'<ul class="rkfeed" id="rkFeed">'+RK.feed.map((f,i)=>{const me=user&&(f.desafiante===user.id||f.desafiado===user.id);return '<li class="'+(me?'me':'')+'" data-fi="'+i+'"><span class="tx"></span><span class="meta"></span>'+(me&&f.status==="concluida"?'<button type="button" class="btn ghost" data-rv="'+i+'">⚔️ Revanche</button>':'')+'</li>'}).join("")+'</ul>'
@@ -6017,6 +6024,7 @@ async function finishDuel(how){
   $("endPrize").textContent=fmt(prize);
   $("dailyGrid").hidden=true;$("btnAgain").textContent="Fazer nova prova";$("endStreak").textContent=streakLine();
   $("endMsg").textContent="Enviando seu resultado…";$("shareBox").innerHTML="";
+  {const t=ptsLine(how==="win"?30:S.level,hits,"disputa");$("endPts").textContent=t;$("endPts").hidden=!t}
   renderReview();show("end");recordResult("disputa",prize);
   if(how==="win"){sfx.win();confetti()}
   const args={p_id:D.id,p_premio:prize,p_nivel:Math.min(30,S.level+1),p_acertos:Math.min(30,hits),p_respondidas:Math.min(30,S.hist.length),p_tempo:Math.round((Date.now()-gameStart)/1000)};
@@ -6285,6 +6293,7 @@ function finish(how){
   $("dailyGrid").hidden=true;$("btnAgain").textContent="Fazer nova prova";
   $("endStreak").textContent=streakLine();
   shareUI($("shareBox"),(how==="win"?"Ganhei R$ 1 milhão":"Cheguei a "+fmt(prize))+" na trilha "+TRACKS[track].n+" do Aprenda se Divertindo, o quiz de concursos. Duvido você passar!\n"+SHARE_URL);
+  {const t=ptsLine(how==="win"?30:S.level,hits,"classico");$("endPts").textContent=t;$("endPts").hidden=!t}
   renderReview();show("end");recordResult("classico",prize);
   if(how==="win"){sfx.win();confetti()}
 }
