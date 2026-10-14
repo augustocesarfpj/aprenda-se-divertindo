@@ -523,7 +523,7 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
       <label id="fNomeL" hidden>Seu nome (aparece no ranking)<input id="fNome" maxlength="30" autocomplete="nickname"></label>
       <label>E-mail<input id="fEmail" type="email" autocomplete="email" inputmode="email"></label>
       <label id="fPassL">Senha (mínimo 6 caracteres)<input id="fPass" type="password" autocomplete="current-password"></label>
-      <p class="small" id="authHint" hidden style="margin:0">Digite o e-mail da sua conta. Vamos enviar um link para você criar uma senha nova.</p>
+      <p class="small" id="authHint" hidden style="margin:0">Digite o e-mail da sua conta e toque em "Pedir nova senha". Vai abrir um e-mail pronto para o suporte; é só enviar. Respondemos com uma senha provisória, que você pode trocar depois.</p>
       <p class="small" id="authMsg" role="alert" style="margin:0"></p>
       <div class="row"><button class="btn" id="authGo" type="submit">Entrar</button><button class="btn ghost" type="button" id="authClose">Fechar</button></div>
       <p class="small" style="margin:0"><button class="linkbtn" type="button" id="authForgot">Esqueci minha senha</button></p>
@@ -4889,7 +4889,7 @@ const CONTATO="augustocesarfpj@gmail.com";
 const URLH=(location.hash||"")+"&"+(location.search||"");
 const RECOVERY=/type=recovery/.test(URLH),LINKERR=/error_code=otp_expired|error=access_denied/.test(URLH);
 function cleanUrl(){try{history.replaceState(null,"",location.pathname)}catch(e){}}
-function openNewPass(){$("npMsg").textContent="";$("npMsg").className="small";$("npPass").value="";$("npPass2").value="";$("ovNewPass").hidden=false;$("npPass").focus()}
+function openNewPass(){$("npTitle").textContent="Crie sua senha nova";$("npTitle").previousElementSibling.textContent="Recuperar senha";$("npMsg").textContent="";$("npMsg").className="small";$("npPass").value="";$("npPass2").value="";$("ovNewPass").hidden=false;$("npPass").focus()}
 async function initCloud(){
   try{sb=window.supabase.createClient(SB_URL,SB_KEY)}catch(e){sb=null;return}
   syncQuestions();
@@ -4911,7 +4911,7 @@ $("npForm").onsubmit=async ev=>{
   if(!sb||!user)return say("O link expirou. Peça um novo em \"Esqueci minha senha\".",true);
   const go=$("npGo");go.disabled=true;say("Salvando…");
   try{const {error}=await sb.auth.updateUser({password:a});if(error)throw error;
-    say("Senha alterada! Você já está na sua conta.");setTimeout(()=>{$("ovNewPass").hidden=true},1600);
+    say("Senha alterada!");setTimeout(()=>{$("ovNewPass").hidden=true},1600);
   }catch(e){const t=(e&&e.message||"").toLowerCase();say(t.includes("different")||t.includes("same")?"A senha nova precisa ser diferente da antiga.":authErr(e),true)}
   go.disabled=false;
 };
@@ -4985,9 +4985,10 @@ function renderAcct(){
   const a=$("acct");
   if(!sb){a.innerHTML='<p class="small" style="margin:0">As contas estão indisponíveis no momento. Seu histórico continua salvo neste aparelho.</p>';return}
   if(user){
-    a.innerHTML='<div class="who"><b></b><span></span><span>Progresso, partidas e estudo salvos na conta.</span></div><div class="acts"><button class="btn ghost" type="button" id="btnLogout">Sair da conta</button><button class="btn danger" type="button" id="btnDelete">Excluir conta</button></div><p class="small" style="margin:0">Excluir apaga para sempre seu nome, e-mail, progresso, partidas e estudo.</p>';
+    a.innerHTML='<div class="who"><b></b><span></span><span>Progresso, partidas e estudo salvos na conta.</span></div><div class="acts"><button class="btn ghost" type="button" id="btnPass">Trocar senha</button><button class="btn ghost" type="button" id="btnLogout">Sair da conta</button><button class="btn danger" type="button" id="btnDelete">Excluir conta</button></div><p class="small" style="margin:0">Excluir apaga para sempre seu nome, e-mail, progresso, partidas e estudo.</p>';
     a.querySelector(".who b").textContent=perfil?perfil.nome:"Sua conta";a.querySelector(".who span").textContent=user.email||"";
     $("btnLogout").onclick=async()=>{sfx.click();try{await sb.auth.signOut()}catch(e){}setUser(null)};
+    $("btnPass").onclick=()=>{sfx.click();openNewPass();$("npTitle").textContent="Trocar sua senha";$("npTitle").previousElementSibling.textContent="Sua conta"};
     $("btnDelete").onclick=()=>{sfx.click();$("delMsg").textContent="";$("delMsg").className="small";$("delYes").disabled=false;$("ovDelete").hidden=false};
   }else{
     a.innerHTML=delNotice?'<span>Sua conta e seus dados foram excluídos.</span><div class="acts"><button class="btn" type="button" id="btnLogin">Criar nova conta</button></div>'
@@ -5000,7 +5001,7 @@ function setAuthMode(m){
   $("tabIn").setAttribute("aria-selected",m==="in");$("tabUp").setAttribute("aria-selected",up);
   $("aTitle").textContent=rs?"Recuperar senha":up?"Criar sua conta":"Entrar na sua conta";
   $("fNomeL").hidden=!up;$("fPassL").hidden=rs;$("authHint").hidden=!rs;
-  $("authGo").textContent=rs?"Enviar link":up?"Criar conta":"Entrar";
+  $("authGo").textContent=rs?"Pedir nova senha":up?"Criar conta":"Entrar";
   $("authForgot").textContent=rs?"← Voltar para entrar":"Esqueci minha senha";$("authForgot").parentElement.hidden=up;
   $("fPass").autocomplete=up?"new-password":"current-password";
   authMsg("");
@@ -5027,16 +5028,10 @@ $("authForm").onsubmit=async ev=>{
   const email=$("fEmail").value.trim(),password=$("fPass").value,nome=$("fNome").value.trim();
   if(!/^\S+@\S+\.\S+$/.test(email))return authMsg("Confira o e-mail digitado.",true);
   if(authMode==="reset"){
-    const go=$("authGo");go.disabled=true;authMsg("Enviando…");
-    try{
-      const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
-      if(error)throw error;
-      authMsg("Pronto! Se existir uma conta com "+email+", enviamos um link para criar uma senha nova. Confira também a caixa de spam.");
-    }catch(e){
-      const m=(e&&e.message||"").toLowerCase();
-      authMsg(m.includes("not authorized")?"O envio de e-mails ainda não está liberado. Tente mais tarde ou fale com "+CONTATO+".":authErr(e),true);
-    }
-    go.disabled=false;return;
+    const body="Olá! Esqueci a senha da minha conta no Aprenda se Divertindo.\n\nE-mail da conta: "+email+"\n\nPode me enviar uma senha provisória?";
+    location.href="mailto:"+CONTATO+"?subject="+encodeURIComponent("Recuperar senha · Aprenda se Divertindo")+"&body="+encodeURIComponent(body);
+    authMsg("Abrimos um e-mail pronto para "+CONTATO+". É só enviar. Se não abriu, mande um e-mail para esse endereço com o e-mail da sua conta.");
+    return;
   }
   if(password.length<6)return authMsg("A senha precisa ter pelo menos 6 caracteres.",true);
   if(authMode==="up"&&nome.length<2)return authMsg("Digite seu nome (pelo menos 2 letras).",true);
