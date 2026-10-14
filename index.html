@@ -233,6 +233,8 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
 .btn.danger{background:var(--dropout);color:#fff}
 
 .howto{margin:0;padding-left:20px;display:grid;gap:8px}
+.anoninfo{margin:0;color:var(--ink)}
+.anoninfo b{color:var(--money)}
 .shead{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .stime{flex:none;font-family:var(--f-mono);font-size:.85rem;font-weight:700;border:1.5px solid var(--line);border-radius:999px;padding:2px 10px;min-width:3.6em;text-align:center}
 .stime.low{color:var(--dropout);border-color:var(--dropout)}
@@ -282,6 +284,7 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
         <button class="btn ghost" id="btnSound" aria-pressed="true">Som: ligado</button>
       </div>
       <p class="small" id="poolInfo"></p>
+      <p class="small anoninfo" id="anonInfo" hidden></p>
     </div>
 
     <div style="display:grid;gap:14px">
@@ -543,6 +546,25 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
       <p class="small" id="npMsg" role="alert" style="margin:0"></p>
       <div class="row"><button class="btn" id="npGo" type="submit">Salvar senha nova</button><button class="btn ghost" type="button" id="npClose">Agora não</button></div>
     </form>
+  </div>
+</div>
+
+<!-- limite de partidas sem conta -->
+<div class="ov" id="ovGate" hidden>
+  <div class="sheet dialog" role="dialog" aria-modal="true" aria-labelledby="gTitle">
+    <span class="eyebrow">Partidas grátis sem conta</span>
+    <h3 id="gTitle" style="margin:0">Você já jogou suas 2 partidas sem conta</h3>
+    <p class="small" style="margin:0">Para continuar jogando, crie uma conta grátis. Leva menos de um minuto e você ganha:</p>
+    <ul class="small" style="margin:0;padding-left:18px;display:grid;gap:4px">
+      <li>partidas ilimitadas em todas as trilhas;</li>
+      <li>progresso salvo em qualquer aparelho;</li>
+      <li>o módulo de estudo com cartões.</li>
+    </ul>
+    <div class="row">
+      <button class="btn money" type="button" id="gUp">Criar conta grátis</button>
+      <button class="btn ghost" type="button" id="gIn">Já tenho conta</button>
+    </div>
+    <p class="small" style="margin:0"><button class="linkbtn" type="button" id="gNo">Agora não</button></p>
   </div>
 </div>
 
@@ -5021,6 +5043,7 @@ function shareUI(el,text){
 }
 function newDaily(){
   if(dailyDone()){renderStart();return}
+  if(!gateOk())return;
   S={level:0,mode:"daily",daily:dailySet(),used:new Set(),subjects:trackSubs(),help:{skip:0,elim:0,poll:0,prof:0,risk:0},riskArmed:false,hist:[],cur:null,sel:null,locked:false,left:TIME,paused:false};
   gameStart=Date.now();show("game");loadQuestion();
 }
@@ -5041,7 +5064,29 @@ function finishDaily(){
   if(d.hits===DAILY_N){sfx.win();confetti()}
 }
 
+/* sem conta: só 2 partidas (contadas neste aparelho) */
+const ANON_MAX=2,ANK="gm-anon-games";
+function anonGames(){try{return +localStorage.getItem(ANK)||0}catch(e){return 0}}
+function anonCount(){try{localStorage.setItem(ANK,String(anonGames()+1))}catch(e){}}
+function gateOk(){
+  if(user)return true;
+  if(anonGames()>=ANON_MAX){$("ovGate").hidden=false;$("gUp").focus();return false}
+  anonCount();return true;
+}
+function renderAnonInfo(){
+  const el=$("anonInfo");if(!el)return;
+  if(user){el.hidden=true;return}
+  const r=Math.max(0,ANON_MAX-anonGames());el.hidden=false;
+  el.innerHTML=r?'Sem conta: <b>'+r+' de '+ANON_MAX+'</b> partida'+(r===1?'':'s')+' grátis restante'+(r===1?'':'s')+'. <button class="linkbtn" type="button" id="anonUp">Criar conta</button> para jogar sem limite.'
+    :'Você já usou as '+ANON_MAX+' partidas sem conta. <button class="linkbtn" type="button" id="anonUp">Crie uma conta grátis</button> para continuar jogando.';
+  $("anonUp").onclick=()=>{sfx.click();openAuth("up")};
+}
+$("gUp").onclick=()=>{sfx.click();$("ovGate").hidden=true;openAuth("up")};
+$("gIn").onclick=()=>{sfx.click();$("ovGate").hidden=true;openAuth("in")};
+$("gNo").onclick=()=>{$("ovGate").hidden=true};
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("ovGate").hidden)$("gNo").click()});
 function newGame(){
+  if(!gateOk())return;
   S={level:0,mode:"classic",used:new Set(),subjects:selectedSubjects(),help:{skip:3,elim:1,poll:1,prof:1,risk:1},riskArmed:false,hist:[],cur:null,sel:null,locked:false,left:TIME,paused:false};
   gameStart=Date.now();show("game");loadQuestion();
 }
@@ -5292,6 +5337,7 @@ function renderStTracks(){
 
 /* capa */
 function renderStart(){
+  renderAnonInfo();
   $("stBest").textContent=fmt(stats.best||0);
   $("stGames").textContent=stats.games||0;
   $("stAcc").textContent=stats.total?Math.round(stats.right/stats.total*100)+"%":"–";
@@ -5451,7 +5497,7 @@ async function setUser(u){
       if(lastResult&&!lastResult.saved)cloudSave(lastResult);
     }catch(e){}
   }
-  studyReset();renderAcct();renderStudyBox();if(user)loadStudy(true);
+  studyReset();renderAcct();renderStudyBox();renderAnonInfo();if(user)loadStudy(true);
 }
 function mergeProgress(p){
   if(!p||typeof p!=="object")return false;let ch=false;
