@@ -258,6 +258,14 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
 .rkmng .mrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line)}
 .rkmng .mrow b{flex:1 1 140px;min-width:0;overflow-wrap:anywhere}
 .rkmng select{font:inherit;padding:8px;border:1.5px solid var(--line);border-radius:6px;background:var(--sheet);color:var(--ink)}
+.duelbox{display:grid;gap:8px;margin-top:4px}
+.duel{display:grid;gap:8px;padding:12px 14px;border:2px solid var(--money);border-radius:10px;background:var(--money-soft)}
+.duel.muted{border:1.5px solid var(--line);background:var(--sheet)}
+.duel b.t{font-size:1.02rem}
+.duel .small{margin:0}
+.duelbtn{font:inherit;font-size:1.05rem;line-height:1;padding:8px 9px;border:1.5px solid var(--line);border-radius:8px;background:var(--sheet);color:var(--ink);cursor:pointer}
+.duelbtn:hover{border-color:var(--money)}
+.rklist li.hasduel{grid-template-columns:2.2em 1fr auto auto}
 .rkchamp{margin:0;padding:0;list-style:none;display:grid;gap:4px;font-size:.85rem}
 .anoninfo b{color:var(--money)}
 .shead{display:flex;align-items:center;justify-content:space-between;gap:10px}
@@ -310,6 +318,7 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
       </div>
       <p class="small" id="poolInfo"></p>
       <p class="small anoninfo" id="anonInfo" hidden></p>
+      <div class="duelbox" id="duelBox" hidden></div>
     </div>
 
     <div style="display:grid;gap:14px">
@@ -602,6 +611,18 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
       <button class="btn ghost" type="button" id="gIn">Já tenho conta</button>
     </div>
     <p class="small" style="margin:0"><button class="linkbtn" type="button" id="gNo">Agora não</button></p>
+  </div>
+</div>
+
+<!-- disputa -->
+<div class="ov" id="ovDuel" hidden>
+  <div class="sheet dialog" role="dialog" aria-modal="true" aria-labelledby="dlTitle">
+    <span class="eyebrow" id="dlEye">Disputa · Show do Milhão</span>
+    <h3 id="dlTitle" style="margin:0"></h3>
+    <p class="small" id="dlMsg" style="margin:0"></p>
+    <div id="dlOpts" style="display:grid;gap:10px"></div>
+    <p class="flash" id="dlErr" role="alert" hidden></p>
+    <div class="row" id="dlActs"></div>
   </div>
 </div>
 
@@ -5684,7 +5705,8 @@ function renderRanking(){
     else{
       const any=RK.rows.some(x=>x.pontos>0);
       h+='<ol class="rklist" aria-label="Classificação">'+RK.rows.map((x,i)=>{const pct=x.respondidas?Math.round(x.acertos/x.respondidas*100):0;const pos=x.pontos?(i<3?["🥇","🥈","🥉"][i]:(i+1)+"º"):"–";
-        return '<li class="'+(x.sou_eu?'me':'')+'"><span class="pos">'+pos+'</span><span class="who"><b></b><span>'+x.partidas+' partida'+(x.partidas===1?'':'s')+(x.partidas?' · '+pct+'% de acertos':'')+'</span></span><span class="pr">'+x.pontos+' pt'+(x.pontos===1?'':'s')+'</span></li>'}).join("")+'</ol>';
+        return '<li class="'+(x.sou_eu?'me':'hasduel')+'"><span class="pos">'+pos+'</span><span class="who"><b></b><span>'+x.partidas+' partida'+(x.partidas===1?'':'s')+(x.partidas?' · '+pct+'% de acertos':'')+'</span></span><span class="pr">'+x.pontos+' pt'+(x.pontos===1?'':'s')+'</span>'+(x.sou_eu?'':'<button type="button" class="duelbtn" data-dl="'+i+'">⚔️</button>')+'</li>'}).join("")+'</ol>';
+      if(RK.rows.length>1)h+='<p class="small" style="margin:0">Toque em ⚔️ para desafiar alguém no Show do Milhão com as mesmas questões.</p>';
       h+='<p class="small" style="margin:0">'+(any?'1 ponto por acerto nas partidas jogadas com a conta (prova e desafio do dia). A pontuação zera toda segunda às 00h.':(RK.week?'Ninguém pontuou na semana passada.':'Ninguém pontuou nesta semana ainda. Cada acerto vale 1 ponto: que tal começar?'))+'</p>';
       if(RK.champs&&RK.champs.length)h+='<details><summary class="small" style="cursor:pointer;font-weight:700">🏆 Campeões das últimas semanas</summary><ul class="rkchamp" id="rkChamps">'+RK.champs.map(()=>'<li></li>').join("")+'</ul></details>';
     }
@@ -5709,6 +5731,7 @@ function renderRanking(){
   if(cur){
     $("rkName").textContent=cur.nome;
     if(RK.rows)box.querySelectorAll(".rklist .who b").forEach((b,i)=>{const x=RK.rows[i],r=RK_ROLE[x.papel]||RK_ROLE.membro;b.textContent=(x.campeao?"🏆 ":"")+x.nome+(r[0]?" "+r[0]:"")+(x.sou_eu?" (você)":"");b.title=r[1]+(x.campeao?" · campeão da semana passada":"")});
+    box.querySelectorAll("[data-dl]").forEach(b=>{const x=RK.rows[+b.dataset.dl];b.setAttribute("aria-label","Desafiar "+x.nome);b.title="Desafiar "+x.nome;b.onclick=()=>{sfx.click();openDuel(cur,x)}});
     const ch=$("rkChamps");if(ch)ch.querySelectorAll("li").forEach((li,i)=>{const c=RK.champs[i],d=String(c.semana).split("-");li.textContent="Semana de "+d[2]+"/"+d[1]+": "+c.nome+" · "+c.pontos+" pts"});
     box.querySelectorAll("[data-wk]").forEach(b=>b.onclick=async()=>{sfx.click();RK.week=+b.dataset.wk;RK.rows=null;renderRanking();await rkLoadTable();renderRanking()});
     if($("rkInvBtn"))$("rkInvBtn").onclick=()=>{sfx.click();RK.inv=!RK.inv;RK.leave=false;RK.mng=false;renderRanking()};
@@ -5763,6 +5786,117 @@ async function handleInvite(){
 }
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("ovInvite").hidden){$("ovInvite").hidden=true}});
 
+/* ===== disputas (Show do Milhão com as mesmas questões) ===== */
+const DL={list:null,t:0,busy:false},DL_PER=4;
+function dlErr(e){
+  const m=(e&&(e.message||e.details)||"")+"";
+  if(m.includes("LIMITE_DISPUTAS"))return"Você já tem 3 disputas abertas. Espere alguma terminar para lançar outra.";
+  if(m.includes("DISPUTA_ABERTA"))return"Já existe uma disputa aberta entre vocês dois. Esperem ela terminar.";
+  if(m.includes("DISPUTA_FECHADA"))return"Esta disputa já foi encerrada.";
+  if(m.includes("NAO_MEMBRO"))return"Essa pessoa não participa mais do ranking.";
+  return rkErr(e);
+}
+function dlLeft(iso){const m=Math.max(0,Math.round((new Date(iso)-Date.now())/6e4));return m>=60?Math.floor(m/60)+"h"+String(m%60).padStart(2,"0"):m+"min"}
+function dlHour(iso){const d=new Date(iso),t=d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});return d.toDateString()===new Date().toDateString()?"hoje às "+t:"amanhã às "+t}
+function duelPlan(trilha){
+  const subs=TRACKS[trilha].s,used=new Set(),ids=[];
+  for(let l=0;l<PRIZES.length;l++)for(let k=0;k<DL_PER;k++){
+    const tier=tierOf(l);let q=null;
+    for(const t of [tier,tier+1,tier-1,tier+2,tier-2,tier+3,tier-3]){const pool=Q.filter(x=>x.d===t&&subs.includes(x.s)&&!used.has(x.id));if(pool.length){q=evenPick(pool,Math.random);break}}
+    if(!q){const any=Q.filter(x=>!used.has(x.id));q=any[Math.random()*any.length|0]}
+    used.add(q.id);ids.push(q.id);
+  }
+  return ids;
+}
+function duelNext(){
+  const D=S.duel;if(D.lv!==S.level){D.lv=S.level;D.k=0}
+  while(D.k<DL_PER){const q=qById(D.q[S.level*DL_PER+D.k++]);if(q&&!S.used.has(q.id))return q}
+  return pick(tierOf(S.level));
+}
+function startDuel(d){
+  S={level:0,mode:"duel",trilha:d.trilha,duel:{id:d.id,q:d.questoes,lv:-1,k:0,outro:d.outro,ranking:d.ranking,sou:d.sou,expira:d.expira},used:new Set(),subjects:TRACKS[d.trilha].s,help:{skip:3,elim:1,poll:1,prof:1,risk:1},riskArmed:false,hist:[],cur:null,sel:null,locked:false,left:TIME,paused:false};
+  gameStart=Date.now();show("game");loadQuestion();
+}
+async function dlLoad(force){
+  if(!sb||!user){DL.list=null;renderDuels();return}
+  if(DL.busy||(!force&&DL.list&&Date.now()-DL.t<20000)){renderDuels();return}
+  DL.busy=true;try{const {data,error}=await sb.rpc("minhas_disputas");DL.list=error?[]:(data||[])}catch(e){DL.list=[]}
+  DL.t=Date.now();DL.busy=false;renderDuels();
+}
+function renderDuels(){
+  const box=$("duelBox");if(!box)return;
+  const L=(user&&DL.list||[]).filter(d=>d.status!=="preparando").slice(0,5);
+  if(!L.length){box.hidden=true;box.innerHTML="";return}
+  box.hidden=false;
+  box.innerHTML=L.map((d,i)=>{
+    const tr=TRACKS[d.trilha]?TRACKS[d.trilha].n:d.trilha,info='<p class="small">Ranking <b data-f="rk"></b> · Trilha '+tr+'</p>';
+    if(!d.sou_desafiante&&d.status==="aguardando")return '<div class="duel" data-i="'+i+'"><b class="t">⚔️ Desafiado por <span data-f="o"></span></b>'+info+'<p class="small">Show do Milhão com as mesmas questões. Expira em <b>'+dlLeft(d.expira_em)+'</b>.</p><div class="row"><button class="btn money" type="button" data-go="'+i+'">Aceitar e jogar</button><button class="btn ghost" type="button" data-no="'+i+'">Recusar</button></div></div>';
+    if(d.status==="aguardando")return '<div class="duel muted"><b class="t">⏳ Aguardando <span data-f="o"></span></b>'+info+'<p class="small">Você fez '+fmt(d.meu_premio||0)+'. O prazo termina em '+dlLeft(d.expira_em)+'.</p></div>';
+    if(d.status==="jogando")return '<div class="duel muted"><b class="t">🎮 '+(d.sou_desafiante?'<span data-f="o"></span> está jogando sua disputa':'Disputa com <span data-f="o"></span> em andamento')+'</b>'+info+(d.sou_desafiante?'':'<p class="small">Você saiu antes de terminar: o resultado vale R$ 0.</p>')+'</div>';
+    if(d.status==="concluida"){const r=d.resultado,ic=r==="venci"?"🏆":r==="empate"?"🤝":"😬",tx=r==="venci"?"Você venceu ":r==="empate"?"Empate com ":"Você perdeu para ";
+      return '<div class="duel muted"><b class="t">'+ic+' '+tx+'<span data-f="o"></span></b>'+info+'<p class="small">Você: '+fmt(d.meu_premio||0)+' × <span data-f="o"></span>: '+fmt(d.outro_premio||0)+'</p></div>'}
+    if(d.status==="recusada")return '<div class="duel muted"><b class="t">'+(d.sou_desafiante?'<span data-f="o"></span> recusou seu desafio':'Você recusou o desafio de <span data-f="o"></span>')+'</b>'+info+'</div>';
+    return '<div class="duel muted"><b class="t">⌛ '+(d.sou_desafiante?'Seu desafio para <span data-f="o"></span> expirou':'O desafio de <span data-f="o"></span> expirou')+'</b>'+info+'</div>';
+  }).join("");
+  box.querySelectorAll(".duel").forEach((el,i)=>{const d=L[i];el.querySelectorAll('[data-f="o"]').forEach(x=>x.textContent=d.outro);el.querySelectorAll('[data-f="rk"]').forEach(x=>x.textContent=d.ranking)});
+  box.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{sfx.click();openAccept(L[+b.dataset.go])});
+  box.querySelectorAll("[data-no]").forEach(b=>b.onclick=async()=>{const d=L[+b.dataset.no];if(b.dataset.ok!=="1"){b.dataset.ok="1";b.textContent="Confirmar recusa";return}
+    b.disabled=true;try{const {error}=await sb.rpc("recusar_disputa",{p_id:d.id});if(error)throw error}catch(e){}dlLoad(true)});
+}
+function dlDialog(eye,title,msg){$("dlEye").textContent=eye;$("dlTitle").textContent=title;$("dlMsg").textContent=msg;$("dlOpts").innerHTML="";$("dlActs").innerHTML="";$("dlErr").hidden=true;$("ovDuel").hidden=false}
+function dlBtn(t,c,f){const b=document.createElement("button");b.type="button";b.className="btn"+(c?" "+c:"");b.textContent=t;b.onclick=f;$("dlActs").appendChild(b);return b}
+function dlShowErr(e){$("dlErr").textContent=dlErr(e);$("dlErr").hidden=false}
+function openDuel(rk,x){
+  let tr=track,hrs=5;
+  dlDialog("Disputa · Ranking "+rk.nome,"Desafiar "+x.nome,"Vocês dois jogam o Show do Milhão com exatamente as mesmas questões. Você joga agora; "+x.nome+" vê o desafio na tela inicial e tem o prazo que você escolher para responder. Vence quem levar o maior prêmio.");
+  const o=$("dlOpts");
+  o.innerHTML='<span class="eyebrow">Trilha</span><div class="rkchips" id="dlTr" role="group" aria-label="Trilha"></div><span class="eyebrow">Prazo para responder</span><div class="rkchips" id="dlHr" role="group" aria-label="Prazo"></div>';
+  const mk=(box,items,get,set)=>{box.innerHTML="";items.forEach(([v,n])=>{const b=document.createElement("button");b.type="button";b.className="chipbtn";b.textContent=n;b.setAttribute("aria-pressed",get()===v);b.onclick=()=>{sfx.click();set(v);box.querySelectorAll("button").forEach((y,j)=>y.setAttribute("aria-pressed",items[j][0]===v))};box.appendChild(b)})};
+  mk($("dlTr"),Object.entries(TRACKS).map(([k,t])=>[k,t.n]),()=>tr,v=>tr=v);
+  mk($("dlHr"),[[5,"5 horas"],[24,"24 horas"]],()=>hrs,v=>hrs=v);
+  const go=dlBtn("Começar minha parte","money",async()=>{go.disabled=true;$("dlErr").hidden=true;
+    const q=duelPlan(tr);
+    try{const {data,error}=await sb.rpc("criar_disputa",{p_ranking:rk.id,p_desafiado:x.membro,p_trilha:tr,p_horas:hrs,p_questoes:q});if(error)throw error;
+      $("ovDuel").hidden=true;DL.t=0;startDuel({id:data,trilha:tr,questoes:q,outro:x.nome,ranking:rk.nome,sou:true,expira:new Date(Date.now()+hrs*36e5).toISOString()})}
+    catch(e){dlShowErr(e);go.disabled=false}});
+  dlBtn("Cancelar","ghost",()=>{$("ovDuel").hidden=true});go.focus();
+}
+function openAccept(d){
+  dlDialog("Disputa · Ranking "+d.ranking,d.outro+" te desafiou","Show do Milhão na trilha "+(TRACKS[d.trilha]?TRACKS[d.trilha].n:d.trilha)+", com as mesmas questões que "+d.outro+" respondeu. O resultado dele só aparece quando você terminar. Atenção: depois de começar, se sair no meio, você fica com R$ 0.");
+  const go=dlBtn("Começar agora","money",async()=>{go.disabled=true;$("dlErr").hidden=true;
+    try{const {data,error}=await sb.rpc("iniciar_disputa",{p_id:d.id});if(error)throw error;const r=Array.isArray(data)?data[0]:data;
+      $("ovDuel").hidden=true;DL.t=0;startDuel({id:d.id,trilha:r.trilha,questoes:r.questoes,outro:d.outro,ranking:d.ranking,sou:false,expira:d.expira_em})}
+    catch(e){dlShowErr(e);go.disabled=false;DL.t=0}});
+  dlBtn("Agora não","ghost",()=>{$("ovDuel").hidden=true});go.focus();
+}
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("ovDuel").hidden)$("ovDuel").hidden=true});
+async function finishDuel(how){
+  const D=S.duel,prize=how==="win"?1000000:how==="stop"?acc():errVal(),hits=S.hist.filter(h=>h.ok).length;
+  stats.games++;stats.best=Math.max(stats.best||0,prize);saveStats();bumpStreak();
+  $("endEyebrow").textContent="Disputa com "+D.outro+" · Ranking "+D.ranking;
+  $("endPrize").textContent=fmt(prize);
+  $("dailyGrid").hidden=true;$("btnAgain").textContent="Fazer nova prova";$("endStreak").textContent=streakLine();
+  $("endMsg").textContent="Enviando seu resultado…";$("shareBox").innerHTML="";
+  renderReview();show("end");recordResult("disputa",prize);
+  if(how==="win"){sfx.win();confetti()}
+  let ok=true;
+  try{const {error}=await sb.rpc("enviar_disputa",{p_id:D.id,p_premio:prize,p_nivel:Math.min(30,S.level+1),p_acertos:Math.min(30,hits),p_respondidas:Math.min(30,S.hist.length),p_tempo:Math.round((Date.now()-gameStart)/1000)});if(error)throw error}
+  catch(e){ok=false;$("endMsg").textContent="Não foi possível enviar o resultado da disputa: "+dlErr(e)}
+  DL.t=0;
+  if(!ok)return;
+  if(D.sou){
+    $("endMsg").textContent="Sua parte está feita! "+D.outro+" tem até "+dlHour(D.expira)+" para jogar as mesmas questões. Seu prêmio fica escondido até lá. Avise para não perder o prazo:";
+    shareUI($("shareBox"),"⚔️ Te desafiei no Aprenda se Divertindo! Joguei o Show do Milhão na trilha "+TRACKS[S.trilha].n+" e agora é sua vez, com as mesmas questões. Você tem até "+dlHour(D.expira)+". Entre no app para aceitar:\n"+SHARE_URL);
+  }else{
+    await dlLoad(true);const d=(DL.list||[]).find(x=>x.id===D.id);
+    if(d&&d.status==="concluida"){const r=d.resultado;
+      $("endMsg").textContent=(r==="venci"?"🏆 Você venceu "+D.outro+"!":r==="empate"?"🤝 Empate com "+D.outro+".":"😬 "+D.outro+" venceu desta vez.")+" Você: "+fmt(d.meu_premio||0)+" × "+D.outro+": "+fmt(d.outro_premio||0)+".";
+      if(r==="venci"){sfx.win();confetti()}
+      shareUI($("shareBox"),(r==="venci"?"🏆 Venci "+D.outro:r==="empate"?"🤝 Empatei com "+D.outro:"Perdi para "+D.outro)+" numa disputa do Aprenda se Divertindo: "+fmt(d.meu_premio||0)+" × "+fmt(d.outro_premio||0)+". Quem é o próximo?\n"+SHARE_URL);
+    }else $("endMsg").textContent="Resultado enviado. O placar aparece na tela inicial.";
+  }
+}
+
 /* sem conta: só 2 partidas (contadas neste aparelho) */
 const ANON_MAX=2,ANK="gm-anon-games";
 function anonGames(){try{return +localStorage.getItem(ANK)||0}catch(e){return 0}}
@@ -5799,6 +5933,7 @@ function loadQuestion(){
   const daily=S.mode==="daily";
   let qq,order;
   if(daily){qq=S.daily[S.level].q;order=S.daily[S.level].order}
+  else if(S.mode==="duel"){qq=duelNext();order=shuffle([0,1,2,3])}
   else{qq=pick(tierOf(S.level));order=shuffle([0,1,2,3])}
   S.used.add(qq.id);seen.add(qq.id);saveSeen();
   S.cur={q:qq,order,correctPos:order.indexOf(0),gone:new Set()};
@@ -5990,6 +6125,7 @@ $("ovLadder").onclick=e=>{if(e.target.id==="ovLadder"){$("ovLadder").hidden=true
 /* fim */
 function finish(how){
   clearInterval(timerId);
+  if(S.mode==="duel"){finishDuel(how);return}
   let prize=how==="win"?1000000:how==="stop"?acc():errVal();
   stats.games++;stats.best=Math.max(stats.best||0,prize);saveStats();bumpStreak();
   $("endEyebrow").textContent=how==="win"?"Aprovado em primeiro lugar":how==="stop"?"Você parou na questão "+(S.level+1):"Fim de prova na questão "+(S.level+1);
@@ -6060,6 +6196,7 @@ function renderStart(){
   });
   updatePool();
   renderStudyBox();
+  dlLoad();
 }
 function updatePool(){
   const sel=selectedSubjects();const inSel=Q.filter(q=>sel.includes(q.s));const n=inSel.length;
@@ -6198,7 +6335,7 @@ async function setUser(u){
     }catch(e){}
   }
   studyReset();renderAcct();renderStudyBox();renderAnonInfo();if(user)loadStudy(true);
-  RK.list=null;RK.sel=null;RK.rows=null;RK.champs=null;RK.err=null;RK.msg="";RK.inv=false;RK.leave=false;RK.mng=false;RK.del=false;RK.week=0;renderRanking();setTimeout(handleInvite,0);
+  DL.list=null;DL.t=0;dlLoad(true);RK.list=null;RK.sel=null;RK.rows=null;RK.champs=null;RK.err=null;RK.msg="";RK.inv=false;RK.leave=false;RK.mng=false;RK.del=false;RK.week=0;renderRanking();setTimeout(handleInvite,0);
 }
 function mergeProgress(p){
   if(!p||typeof p!=="object")return false;let ch=false;
@@ -6218,7 +6355,7 @@ function pushProgress(){
 }
 function recordResult(modo,premio){
   const resp=S.hist.length,hits=S.hist.filter(h=>h.ok).length;
-  lastResult={modo,trilha:track,questao_final:Math.min(30,Math.max(1,modo==="desafio"?resp:S.level+1)),premio:Math.min(1000000,Math.max(0,premio|0)),
+  lastResult={modo,trilha:S.trilha||track,questao_final:Math.min(30,Math.max(1,modo==="desafio"?resp:S.level+1)),premio:Math.min(1000000,Math.max(0,premio|0)),
     acertos:Math.min(40,hits),respondidas:Math.min(40,resp),tempo_seg:gameStart?Math.round((Date.now()-gameStart)/1000):null,saved:false};
   if(sb&&!user&&DEVICE){const {saved,...row}=lastResult;sb.from("partidas_anonimas").insert({...row,aparelho:DEVICE}).then(()=>{},()=>{})}
   cloudSave(lastResult);
