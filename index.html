@@ -250,6 +250,15 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
 .rkform input{flex:1 1 180px;min-width:0;font:inherit;padding:11px 12px;border:1.5px solid var(--line);border-radius:6px;background:var(--sheet);color:var(--ink)}
 .rkinv{display:grid;gap:8px;padding:12px;border:1.5px dashed var(--line);border-radius:8px}
 .rkcode{font-family:var(--f-mono);font-weight:700;letter-spacing:.12em}
+.rkhead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
+.rkrole{font-size:.78rem;font-weight:700;padding:3px 9px;border-radius:999px;border:1.5px solid var(--line);white-space:nowrap}
+.rkleft{font-family:var(--f-mono);font-size:.82rem;color:var(--muted)}
+.rklist .pr small{display:block;font-size:.7rem;font-weight:600;color:var(--muted);font-family:inherit}
+.rkmng{display:grid;gap:8px}
+.rkmng .mrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line)}
+.rkmng .mrow b{flex:1 1 140px;min-width:0;overflow-wrap:anywhere}
+.rkmng select{font:inherit;padding:8px;border:1.5px solid var(--line);border-radius:6px;background:var(--sheet);color:var(--ink)}
+.rkchamp{margin:0;padding:0;list-style:none;display:grid;gap:4px;font-size:.85rem}
 .anoninfo b{color:var(--money)}
 .shead{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .stime{flex:none;font-family:var(--f-mono);font-size:.85rem;font-weight:700;border:1.5px solid var(--line);border-radius:999px;padding:2px 10px;min-width:3.6em;text-align:center}
@@ -5609,7 +5618,12 @@ function finishDaily(){
 }
 
 /* ===== ranking com amigos ===== */
-const RK_MAX=3,RK={list:null,sel:null,period:"7",rows:null,err:null,busy:false,inv:false,leave:false,msg:""};
+const RK_MAX=3,RK={list:null,sel:null,week:0,rows:null,champs:null,err:null,busy:false,inv:false,leave:false,mng:false,del:false,msg:""};
+const RK_ROLE={admin:["👑","Administrador"],lider:["⭐","Líder"],vice:["🔹","Vice-líder"],membro:["","Membro"]};
+const rkGestor=r=>r&&(r.papel==="admin"||r.papel==="lider");
+function rkWeekLeft(){const now=Date.now(),t=new Date(now-3*36e5),dd=(8-t.getUTCDay())%7||7;
+  const end=Date.UTC(t.getUTCFullYear(),t.getUTCMonth(),t.getUTCDate()+dd)+3*36e5,m=Math.max(0,Math.floor((end-now)/6e4));
+  const d=Math.floor(m/1440),h=Math.floor(m%1440/60);return d?d+"d "+h+"h":h+"h "+(m%60)+"min"}
 let PENDING_INV=null;
 try{const u=new URL(location.href),c=u.searchParams.get("convite");if(c){PENDING_INV=c.trim().toUpperCase();sessionStorage.setItem("gm-convite",PENDING_INV);u.searchParams.delete("convite");history.replaceState(null,"",u.pathname+(u.search||"")+u.hash)}else PENDING_INV=sessionStorage.getItem("gm-convite")}catch(e){}
 function rkErr(e){
@@ -5619,6 +5633,11 @@ function rkErr(e){
   if(m.includes("CODIGO_INVALIDO"))return"Código não encontrado. Confira as letras e tente de novo.";
   if(m.includes("LOGIN"))return"Entre na sua conta para usar o ranking.";
   if(m.includes("SEM_ACESSO"))return"Você não participa mais deste ranking.";
+  if(m.includes("SEM_PERMISSAO"))return"Só o administrador e os líderes podem fazer isso.";
+  if(m.includes("LIMITE_LIDERES"))return"O ranking já tem 2 líderes. Rebaixe um antes de nomear outro.";
+  if(m.includes("LIMITE_VICES"))return"O ranking já tem 3 vice-líderes. Rebaixe um antes de nomear outro.";
+  if(m.includes("NAO_PODE_ADMIN"))return"Ninguém pode remover ou rebaixar o administrador.";
+  if(m.includes("NOME_INVALIDO"))return"O nome precisa ter de 2 a 40 letras.";
   if(m.includes("Could not find the function")||m.includes("PGRST202")||m.includes("does not exist"))return"O ranking ainda está sendo preparado. Tente mais tarde.";
   if(m.toLowerCase().includes("fetch")||m.toLowerCase().includes("network"))return"Sem conexão. Tente de novo.";
   return"Não deu certo agora. Tente de novo.";
@@ -5626,7 +5645,7 @@ function rkErr(e){
 function rkInviteLink(code){return SHARE_URL+"?convite="+code}
 function rkInviteText(r){return "Bora ver quem sabe mais? 🏆 Entre no meu ranking \""+r.nome+"\" no Aprenda se Divertindo, o quiz de concursos e Enem.\n"+rkInviteLink(r.codigo)+"\nCódigo: "+r.codigo}
 async function rkLoad(){
-  if(!sb||!user)return;RK.busy=true;RK.err=null;
+  if(!sb||!user)return;RK.busy=true;RK.err=null;RK.champs=null;
   try{const {data,error}=await sb.rpc("meus_rankings");if(error)throw error;RK.list=data||[];
     if(!RK.list.some(r=>r.id===RK.sel))RK.sel=RK.list.length?RK.list[0].id:null;
     if(RK.sel)await rkLoadTable();else RK.rows=null;
@@ -5634,10 +5653,12 @@ async function rkLoad(){
   RK.busy=false;renderRanking();
 }
 async function rkLoadTable(){
-  const since=RK.period==="tudo"?null:new Date(Date.now()-(+RK.period)*864e5).toISOString();
-  const {data,error}=await sb.rpc("tabela_ranking",{p_id:RK.sel,p_desde:since});
-  if(error){RK.rows=null;RK.err=rkErr(error);if(rkErr(error).includes("não participa")){RK.list=null}return}
-  RK.rows=data||[];
+  const [t,c]=await Promise.all([sb.rpc("tabela_semana",{p_id:RK.sel,p_semana:RK.week}),RK.champs?Promise.resolve({data:RK.champs}):sb.rpc("campeoes_ranking",{p_id:RK.sel})]);
+  if(t.error){RK.rows=null;RK.err=rkErr(t.error);if(rkErr(t.error).includes("não participa")){RK.list=null}return}
+  RK.rows=t.data||[];RK.champs=c.error?[]:(c.data||[]);
+}
+async function rkAct(fn,args,okMsg){
+  RK.err=null;try{const {data,error}=await sb.rpc(fn,args);if(error)throw error;RK.msg=okMsg;return data===null?true:data}catch(e){RK.err=rkErr(e);RK.msg="";renderRanking();return false}
 }
 function renderRanking(){
   const box=$("rkBox");if(!box)return;
@@ -5656,29 +5677,58 @@ function renderRanking(){
   else h+='<div class="rkchips" role="group" aria-label="Escolha o ranking">'+L.map(r=>'<button type="button" class="chipbtn" data-rk="'+r.id+'" aria-pressed="'+(r.id===RK.sel)+'"></button>').join("")+'</div>';
   h+='</div>';
   if(cur){
-    h+='<div class="sheet panel"><div style="display:grid;gap:2px"><h3 style="margin:0" id="rkName"></h3><span class="small">'+cur.membros+' participante'+(cur.membros===1?'':'s')+' · código <span class="rkcode">'+cur.codigo+'</span></span></div>';
-    h+='<div class="rkchips" role="group" aria-label="Período">'+[["7","7 dias"],["30","30 dias"],["tudo","Sempre"]].map(([v,n])=>'<button type="button" class="chipbtn" data-per="'+v+'" aria-pressed="'+(RK.period===v)+'">'+n+'</button>').join("")+'</div>';
+    const role=RK_ROLE[cur.papel]||RK_ROLE.membro,g=rkGestor(cur);
+    h+='<div class="sheet panel"><div class="rkhead"><div style="display:grid;gap:2px"><h3 style="margin:0" id="rkName"></h3><span class="small">'+cur.membros+' participante'+(cur.membros===1?'':'s')+(cur.codigo?' · código <span class="rkcode">'+cur.codigo+'</span>':'')+'</span></div><span class="rkrole" title="Seu cargo">'+(role[0]?role[0]+' ':'')+'Você: '+role[1]+'</span></div>';
+    h+='<div class="rkhead"><div class="rkchips" role="group" aria-label="Semana">'+[[0,"Esta semana"],[1,"Semana passada"]].map(([v,n])=>'<button type="button" class="chipbtn" data-wk="'+v+'" aria-pressed="'+(RK.week===v)+'">'+n+'</button>').join("")+'</div>'+(RK.week===0?'<span class="rkleft">Zera em '+rkWeekLeft()+'</span>':'')+'</div>';
     if(!RK.rows)h+='<p class="small" style="margin:0">Carregando…</p>';
     else{
-      const any=RK.rows.some(x=>x.partidas>0);
-      h+='<ol class="rklist" aria-label="Classificação">'+RK.rows.map((x,i)=>{const pct=x.respondidas?Math.round(x.acertos/x.respondidas*100):0;const pos=x.partidas?(i<3?["🥇","🥈","🥉"][i]:(i+1)+"º"):"–";
-        return '<li class="'+(x.sou_eu?'me':'')+'"><span class="pos">'+pos+'</span><span class="who"><b></b><span>'+x.partidas+' partida'+(x.partidas===1?'':'s')+' · '+pct+'% de acertos</span></span><span class="pr">'+fmt(x.maior_premio)+'</span></li>'}).join("")+'</ol>';
-      h+='<p class="small" style="margin:0">'+(any?'Ordem: maior prêmio, depois o percentual de acertos. Vale o que cada um jogou com a conta, em qualquer trilha.':'Ninguém jogou neste período ainda. Que tal começar?')+'</p>';
+      const any=RK.rows.some(x=>x.pontos>0);
+      h+='<ol class="rklist" aria-label="Classificação">'+RK.rows.map((x,i)=>{const pct=x.respondidas?Math.round(x.acertos/x.respondidas*100):0;const pos=x.pontos?(i<3?["🥇","🥈","🥉"][i]:(i+1)+"º"):"–";
+        return '<li class="'+(x.sou_eu?'me':'')+'"><span class="pos">'+pos+'</span><span class="who"><b></b><span>'+x.partidas+' partida'+(x.partidas===1?'':'s')+(x.partidas?' · '+pct+'% de acertos':'')+'</span></span><span class="pr">'+x.pontos+' pt'+(x.pontos===1?'':'s')+'</span></li>'}).join("")+'</ol>';
+      h+='<p class="small" style="margin:0">'+(any?'1 ponto por acerto nas partidas jogadas com a conta (prova e desafio do dia). A pontuação zera toda segunda às 00h.':(RK.week?'Ninguém pontuou na semana passada.':'Ninguém pontuou nesta semana ainda. Cada acerto vale 1 ponto: que tal começar?'))+'</p>';
+      if(RK.champs&&RK.champs.length)h+='<details><summary class="small" style="cursor:pointer;font-weight:700">🏆 Campeões das últimas semanas</summary><ul class="rkchamp" id="rkChamps">'+RK.champs.map(()=>'<li></li>').join("")+'</ul></details>';
     }
-    h+='<div class="row"><button class="btn" type="button" id="rkInvBtn" aria-expanded="'+RK.inv+'">Convidar amigos</button><button class="btn ghost" type="button" id="rkLeave">Sair do ranking</button></div>';
-    if(RK.inv)h+='<div class="rkinv"><span class="small">Mande o convite. Quem tocar no link entra no ranking depois de criar a conta ou entrar.</span><div class="row"><a class="btn money" id="rkWa" target="_blank" rel="noopener">WhatsApp</a><a class="btn ghost" id="rkMail">E-mail</a><button class="btn ghost" type="button" id="rkCopy">Copiar link</button></div><p class="small" id="rkCopyMsg" role="status" style="margin:0"></p></div>';
-    if(RK.leave)h+='<div class="rkinv"><span class="small">'+(cur.sou_dono&&cur.membros>1?'Você criou este ranking. Se sair, ele passa para o participante mais antigo.':cur.membros<=1?'Você é o único participante: o ranking será apagado.':'Sair deste ranking?')+'</span><div class="row"><button class="btn danger" type="button" id="rkLeaveYes">Sair</button><button class="btn ghost" type="button" id="rkLeaveNo">Cancelar</button></div></div>';
+    h+='<div class="row">'+(cur.codigo?'<button class="btn" type="button" id="rkInvBtn" aria-expanded="'+RK.inv+'">Convidar amigos</button>':'')+(g?'<button class="btn ghost" type="button" id="rkMngBtn" aria-expanded="'+RK.mng+'">Gerenciar</button>':'')+'<button class="btn ghost" type="button" id="rkLeave">Sair do ranking</button></div>';
+    if(!cur.codigo)h+='<p class="small" style="margin:0">Quem convida são o administrador, os líderes e os vice-líderes. Peça a um deles para chamar seus amigos.</p>';
+    if(RK.inv&&cur.codigo)h+='<div class="rkinv"><span class="small">Mande o convite. Quem tocar no link entra no ranking depois de criar a conta ou entrar.</span><div class="row"><a class="btn money" id="rkWa" target="_blank" rel="noopener">WhatsApp</a><a class="btn ghost" id="rkMail">E-mail</a><button class="btn ghost" type="button" id="rkCopy">Copiar link</button></div><p class="small" id="rkCopyMsg" role="status" style="margin:0"></p></div>';
+    if(RK.mng&&g){
+      const others=(RK.rows||[]).filter(x=>!x.sou_eu);
+      h+='<div class="rkinv rkmng"><span class="eyebrow">Cargos</span><span class="small">👑 Administrador e ⭐ líderes (até 2) gerenciam o ranking. 🔹 Vice-líderes (até 3) podem convidar. Membros jogam e desafiam.</span>';
+      h+=others.length?others.map((x,i)=>'<div class="mrow"><b data-mn="'+i+'"></b>'+(x.papel==="admin"?'<span class="rkrole">👑 Administrador</span>':'<label class="sr" for="rkP'+i+'">Cargo</label><select id="rkP'+i+'" data-pp="'+i+'">'+["lider","vice","membro"].map(v=>'<option value="'+v+'"'+(x.papel===v?' selected':'')+'>'+RK_ROLE[v][0]+' '+RK_ROLE[v][1]+'</option>').join("")+'</select><button class="btn ghost" type="button" data-rm="'+i+'">Remover</button>')+'</div>').join(""):'<span class="small">Ainda não há outros participantes.</span>';
+      h+='<span class="eyebrow" style="margin-top:6px">Ranking</span><form class="rkform" id="rkRenF"><label class="sr" for="rkRen">Novo nome</label><input id="rkRen" maxlength="40" autocomplete="off"><button class="btn ghost" type="submit">Renomear</button></form>';
+      h+='<div class="row"><button class="btn ghost" type="button" id="rkNewCode">Gerar novo código</button><button class="btn danger" type="button" id="rkDel">Apagar ranking</button></div><span class="small">Gerar um novo código desativa o link antigo, útil se o convite foi parar onde não devia.</span>';
+      if(RK.del)h+='<div class="rkinv"><span class="small">Apagar o ranking para todos os '+cur.membros+' participantes? Não dá para desfazer.</span><div class="row"><button class="btn danger" type="button" id="rkDelYes">Apagar</button><button class="btn ghost" type="button" id="rkDelNo">Cancelar</button></div></div>';
+      h+='</div>';
+    }
+    if(RK.leave)h+='<div class="rkinv"><span class="small">'+(cur.papel==="admin"&&cur.membros>1?'Você é o administrador. Se sair, a administração passa para um líder, depois um vice, ou para o participante mais antigo.':cur.membros<=1?'Você é o único participante: o ranking será apagado.':'Sair deste ranking?')+'</span><div class="row"><button class="btn danger" type="button" id="rkLeaveYes">Sair</button><button class="btn ghost" type="button" id="rkLeaveNo">Cancelar</button></div></div>';
     h+='</div>';
   }
   h+='<div class="sheet panel"><span class="eyebrow">Novo ranking</span>'+(full?'<p class="small" style="margin:0">Você já participa de '+RK_MAX+' rankings, o máximo permitido. Saia de um para criar ou entrar em outro.</p>':'<form class="rkform" id="rkNewF"><label class="sr" for="rkNew">Nome do ranking</label><input id="rkNew" maxlength="40" placeholder="Ex.: Turma da PC-BA" autocomplete="off"><button class="btn" type="submit">Criar</button></form><span class="eyebrow" style="margin-top:6px">Entrar com código</span><form class="rkform" id="rkJoinF"><label class="sr" for="rkCode">Código do convite</label><input id="rkCode" maxlength="8" placeholder="Ex.: K7Q2XB" autocomplete="off" style="text-transform:uppercase"><button class="btn ghost" type="submit">Entrar</button></form>')+'</div>';
   box.innerHTML=h;
-  box.querySelectorAll("[data-rk]").forEach(b=>{const r=L.find(x=>x.id===b.dataset.rk);b.textContent=r.nome;b.onclick=async()=>{sfx.click();RK.sel=r.id;RK.rows=null;RK.inv=false;RK.leave=false;RK.msg="";renderRanking();await rkLoadTable();renderRanking()}});
+  box.querySelectorAll("[data-rk]").forEach(b=>{const r=L.find(x=>x.id===b.dataset.rk);b.textContent=r.nome;b.onclick=async()=>{sfx.click();RK.sel=r.id;RK.rows=null;RK.champs=null;RK.inv=false;RK.leave=false;RK.mng=false;RK.msg="";renderRanking();await rkLoadTable();renderRanking()}});
   if(cur){
     $("rkName").textContent=cur.nome;
-    if(RK.rows)box.querySelectorAll(".rklist .who b").forEach((b,i)=>{b.textContent=RK.rows[i].nome+(RK.rows[i].sou_eu?" (você)":"")});
-    box.querySelectorAll("[data-per]").forEach(b=>b.onclick=async()=>{sfx.click();RK.period=b.dataset.per;RK.rows=null;renderRanking();await rkLoadTable();renderRanking()});
-    $("rkInvBtn").onclick=()=>{sfx.click();RK.inv=!RK.inv;RK.leave=false;renderRanking()};
-    $("rkLeave").onclick=()=>{sfx.click();RK.leave=!RK.leave;RK.inv=false;renderRanking()};
+    if(RK.rows)box.querySelectorAll(".rklist .who b").forEach((b,i)=>{const x=RK.rows[i],r=RK_ROLE[x.papel]||RK_ROLE.membro;b.textContent=(x.campeao?"🏆 ":"")+x.nome+(r[0]?" "+r[0]:"")+(x.sou_eu?" (você)":"");b.title=r[1]+(x.campeao?" · campeão da semana passada":"")});
+    const ch=$("rkChamps");if(ch)ch.querySelectorAll("li").forEach((li,i)=>{const c=RK.champs[i],d=String(c.semana).split("-");li.textContent="Semana de "+d[2]+"/"+d[1]+": "+c.nome+" · "+c.pontos+" pts"});
+    box.querySelectorAll("[data-wk]").forEach(b=>b.onclick=async()=>{sfx.click();RK.week=+b.dataset.wk;RK.rows=null;renderRanking();await rkLoadTable();renderRanking()});
+    if($("rkInvBtn"))$("rkInvBtn").onclick=()=>{sfx.click();RK.inv=!RK.inv;RK.leave=false;RK.mng=false;renderRanking()};
+    $("rkLeave").onclick=()=>{sfx.click();RK.leave=!RK.leave;RK.inv=false;RK.mng=false;renderRanking()};
+    if($("rkMngBtn"))$("rkMngBtn").onclick=()=>{sfx.click();RK.mng=!RK.mng;RK.inv=false;RK.leave=false;RK.del=false;renderRanking()};
+    if(RK.mng&&rkGestor(cur)){
+      const others=(RK.rows||[]).filter(x=>!x.sou_eu),reload=async()=>{RK.rows=null;RK.list=null;renderRanking()};
+      box.querySelectorAll("[data-mn]").forEach(b=>{b.textContent=others[+b.dataset.mn].nome});
+      box.querySelectorAll("[data-pp]").forEach(sel=>sel.onchange=async()=>{const x=others[+sel.dataset.pp];sel.disabled=true;
+        if(await rkAct("definir_papel",{p_ranking:cur.id,p_membro:x.membro,p_papel:sel.value},x.nome+" agora é "+RK_ROLE[sel.value][1].toLowerCase()+"."))reload()});
+      box.querySelectorAll("[data-rm]").forEach(b=>b.onclick=async()=>{const x=others[+b.dataset.rm];
+        if(b.dataset.ok!=="1"){b.dataset.ok="1";b.textContent="Confirmar remoção";b.className="btn danger";return}
+        b.disabled=true;if(await rkAct("remover_membro",{p_ranking:cur.id,p_membro:x.membro},x.nome+" saiu do ranking."))reload()});
+      $("rkRen").value=cur.nome;
+      $("rkRenF").onsubmit=async ev=>{ev.preventDefault();const n=$("rkRen").value.trim();if(n===cur.nome)return;if(await rkAct("renomear_ranking",{p_ranking:cur.id,p_nome:n},"Nome alterado."))reload()};
+      $("rkNewCode").onclick=async()=>{if(await rkAct("novo_codigo_ranking",{p_ranking:cur.id},"Novo código gerado. O link antigo não funciona mais."))reload()};
+      $("rkDel").onclick=()=>{RK.del=!RK.del;renderRanking()};
+      if(RK.del){$("rkDelNo").onclick=()=>{RK.del=false;renderRanking()};
+        $("rkDelYes").onclick=async()=>{$("rkDelYes").disabled=true;if(await rkAct("apagar_ranking",{p_ranking:cur.id},"Ranking "+cur.nome+" apagado.")){RK.sel=null;RK.mng=false;RK.del=false;reload()}}}
+    }
     if(RK.inv){const t=rkInviteText(cur);$("rkWa").href="https://wa.me/?text="+encodeURIComponent(t);
       $("rkMail").href="mailto:?subject="+encodeURIComponent("Convite para o ranking \""+cur.nome+"\" · Aprenda se Divertindo")+"&body="+encodeURIComponent(t);
       $("rkCopy").onclick=()=>{const link=rkInviteLink(cur.codigo);try{navigator.clipboard.writeText(link).then(()=>{$("rkCopyMsg").textContent="Link copiado: "+link},()=>{$("rkCopyMsg").textContent=link})}catch(e){$("rkCopyMsg").textContent=link}}}
@@ -6148,7 +6198,7 @@ async function setUser(u){
     }catch(e){}
   }
   studyReset();renderAcct();renderStudyBox();renderAnonInfo();if(user)loadStudy(true);
-  RK.list=null;RK.sel=null;RK.rows=null;RK.err=null;RK.msg="";RK.inv=false;RK.leave=false;renderRanking();setTimeout(handleInvite,0);
+  RK.list=null;RK.sel=null;RK.rows=null;RK.champs=null;RK.err=null;RK.msg="";RK.inv=false;RK.leave=false;RK.mng=false;RK.del=false;RK.week=0;renderRanking();setTimeout(handleInvite,0);
 }
 function mergeProgress(p){
   if(!p||typeof p!=="object")return false;let ch=false;
