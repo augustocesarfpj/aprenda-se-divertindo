@@ -234,6 +234,22 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
 
 .howto{margin:0;padding-left:20px;display:grid;gap:8px}
 .anoninfo{margin:0;color:var(--ink)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.rkwrap{display:grid;gap:14px}
+.rkwrap .sheet{display:grid;gap:12px}
+.rkchips{display:flex;flex-wrap:wrap;gap:6px}
+.rklist{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.rklist li{display:grid;grid-template-columns:2.2em 1fr auto;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px}
+.rklist li.me{border-color:var(--money);background:var(--money-soft)}
+.rklist .pos{font-family:var(--f-mono);font-weight:700;text-align:center;font-size:1.05rem}
+.rklist .who{display:grid;gap:1px;min-width:0}
+.rklist .who b{overflow-wrap:anywhere}
+.rklist .who span{font-size:.8rem;color:var(--muted)}
+.rklist .pr{font-family:var(--f-mono);font-weight:700;text-align:right;white-space:nowrap}
+.rkform{display:flex;gap:8px;flex-wrap:wrap}
+.rkform input{flex:1 1 180px;min-width:0;font:inherit;padding:11px 12px;border:1.5px solid var(--line);border-radius:6px;background:var(--sheet);color:var(--ink)}
+.rkinv{display:grid;gap:8px;padding:12px;border:1.5px dashed var(--line);border-radius:8px}
+.rkcode{font-family:var(--f-mono);font-weight:700;letter-spacing:.12em}
 .anoninfo b{color:var(--money)}
 .shead{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .stime{flex:none;font-family:var(--f-mono);font-size:.85rem;font-weight:700;border:1.5px solid var(--line);border-radius:999px;padding:2px 10px;min-width:3.6em;text-align:center}
@@ -243,7 +259,7 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
 .stbar.low i{background:var(--dropout)}
 .scard[data-phase="grade"] .stbar,.scard[data-phase="grade"] .stime{visibility:hidden}
 #start{padding-bottom:calc(76px + env(safe-area-inset-bottom,0px))}
-#start:not([data-tab="jogo"]) .tab-jogo,#start:not([data-tab="estudo"]) .tab-estudo,#start:not([data-tab="conta"]) .tab-conta{display:none!important}
+#start:not([data-tab="jogo"]) .tab-jogo,#start:not([data-tab="estudo"]) .tab-estudo,#start:not([data-tab="conta"]) .tab-conta,#start:not([data-tab="ranking"]) .tab-ranking{display:none!important}
 .pane{display:grid;gap:14px;max-width:640px;margin:0 auto}
 .panehead{display:grid;gap:4px;padding-block:8px 4px}
 .panehead h2{font-family:var(--f-display);font-size:clamp(1.6rem,5vw,2.2rem);margin:0;line-height:1.1}
@@ -252,13 +268,13 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
 .acctpanel .who b{font-size:1.15rem;overflow-wrap:anywhere}
 .acctpanel .who span{color:var(--muted);font-size:.9rem;overflow-wrap:anywhere}
 .acctpanel .acts{display:flex;gap:8px;flex-wrap:wrap}
-.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:12;display:grid;grid-template-columns:repeat(3,1fr);background:var(--sheet);border-top:1.5px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));box-shadow:0 -6px 18px rgba(10,14,24,.06)}
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:12;display:grid;grid-template-columns:repeat(4,1fr);background:var(--sheet);border-top:1.5px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));box-shadow:0 -6px 18px rgba(10,14,24,.06)}
 .tabbar .tab{display:grid;justify-items:center;gap:3px;background:none;border:0;color:var(--muted);font:inherit;font-size:.82rem;font-weight:600;padding:6px 4px;border-radius:10px;cursor:pointer;min-height:52px}
 .tabbar .tab svg{width:24px;height:24px}
 .tabbar .tab[aria-current="page"]{color:var(--money)}
 .tabbar .tab[aria-current="page"] svg{stroke-width:2.4}
 .tabbar .tab:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
-@media (min-width:861px){.tabbar{left:50%;right:auto;transform:translateX(-50%);bottom:14px;width:min(420px,calc(100% - 32px));border:1.5px solid var(--line);border-radius:14px;padding:6px 8px}}
+@media (min-width:861px){.tabbar{left:50%;right:auto;transform:translateX(-50%);bottom:14px;width:min(520px,calc(100% - 32px));border:1.5px solid var(--line);border-radius:14px;padding:6px 8px}}
 .howto li::marker{font-weight:700}
 .foot{text-align:center;margin:22px 0 0}
 .foot a,.dialog .small a{color:var(--ink);font-weight:700}
@@ -323,6 +339,14 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
     <div class="sheet daily studybox" id="studyBox"></div>
   </div>
 
+  <div class="pane tab-ranking">
+    <div class="panehead">
+      <span class="eyebrow">Aprenda se divertindo</span>
+      <h2>Ranking com amigos</h2>
+    </div>
+    <div class="rkwrap" id="rkBox"></div>
+  </div>
+
   <div class="pane tab-conta">
     <div class="panehead">
       <span class="eyebrow">Aprenda se divertindo</span>
@@ -358,6 +382,10 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
     <button type="button" class="tab" data-tab="estudo">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="14" height="14" rx="2"/><path d="M7 3h12a2 2 0 0 1 2 2v12"/><path d="M7 13l2.5 2.5L14 11"/></svg>
       <span>Estudo</span>
+    </button>
+    <button type="button" class="tab" data-tab="ranking">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21h16"/><rect x="9" y="8" width="6" height="13" rx="1"/><rect x="3" y="13" width="6" height="8" rx="1"/><rect x="15" y="11" width="6" height="10" rx="1"/><path d="M12 3.5l.9 1.8 2 .3-1.45 1.4.35 2-1.8-.95-1.8.95.35-2L9.1 5.6l2-.3z"/></svg>
+      <span>Ranking</span>
     </button>
     <button type="button" class="tab" data-tab="conta">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
@@ -565,6 +593,16 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
       <button class="btn ghost" type="button" id="gIn">Já tenho conta</button>
     </div>
     <p class="small" style="margin:0"><button class="linkbtn" type="button" id="gNo">Agora não</button></p>
+  </div>
+</div>
+
+<!-- convite para ranking -->
+<div class="ov" id="ovInvite" hidden>
+  <div class="sheet dialog" role="dialog" aria-modal="true" aria-labelledby="ivTitle">
+    <span class="eyebrow">Convite para ranking</span>
+    <h3 id="ivTitle" style="margin:0"></h3>
+    <p class="small" id="ivMsg" style="margin:0"></p>
+    <div class="row" id="ivActs"></div>
   </div>
 </div>
 
@@ -5001,7 +5039,7 @@ function pick(tier){
 function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a}
 
 /* ===== desafio do dia, sequência e compartilhamento ===== */
-const DAILY_N=10, SHARE_URL="https://claude.ai/artifact/XpypzqCpTPCEJ2hkQasWek";
+const DAILY_N=10, SHARE_URL="https://augustocesarfpj.github.io/aprenda-se-divertindo/";
 const dayKey=(d=new Date())=>d.toLocaleDateString("en-CA");
 const yesterdayKey=()=>dayKey(new Date(Date.now()-864e5));
 function hashStr(s){let h=2166136261;for(const c of s){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
@@ -5063,6 +5101,111 @@ function finishDaily(){
   renderReview();show("end");recordResult("desafio",0);
   if(d.hits===DAILY_N){sfx.win();confetti()}
 }
+
+/* ===== ranking com amigos ===== */
+const RK_MAX=3,RK={list:null,sel:null,period:"7",rows:null,err:null,busy:false,inv:false,leave:false,msg:""};
+let PENDING_INV=null;
+try{const u=new URL(location.href),c=u.searchParams.get("convite");if(c){PENDING_INV=c.trim().toUpperCase();sessionStorage.setItem("gm-convite",PENDING_INV);u.searchParams.delete("convite");history.replaceState(null,"",u.pathname+(u.search||"")+u.hash)}else PENDING_INV=sessionStorage.getItem("gm-convite")}catch(e){}
+function rkErr(e){
+  const m=(e&&(e.message||e.details)||"")+"";
+  if(m.includes("LIMITE_RANKINGS"))return"Você já participa de "+RK_MAX+" rankings. Saia de um para entrar em outro.";
+  if(m.includes("RANKING_CHEIO"))return"Este ranking já está cheio (50 participantes).";
+  if(m.includes("CODIGO_INVALIDO"))return"Código não encontrado. Confira as letras e tente de novo.";
+  if(m.includes("LOGIN"))return"Entre na sua conta para usar o ranking.";
+  if(m.includes("SEM_ACESSO"))return"Você não participa mais deste ranking.";
+  if(m.includes("Could not find the function")||m.includes("PGRST202")||m.includes("does not exist"))return"O ranking ainda está sendo preparado. Tente mais tarde.";
+  if(m.toLowerCase().includes("fetch")||m.toLowerCase().includes("network"))return"Sem conexão. Tente de novo.";
+  return"Não deu certo agora. Tente de novo.";
+}
+function rkInviteLink(code){return SHARE_URL+"?convite="+code}
+function rkInviteText(r){return "Bora ver quem sabe mais? 🏆 Entre no meu ranking \""+r.nome+"\" no Aprenda se Divertindo, o quiz de concursos e Enem.\n"+rkInviteLink(r.codigo)+"\nCódigo: "+r.codigo}
+async function rkLoad(){
+  if(!sb||!user)return;RK.busy=true;RK.err=null;
+  try{const {data,error}=await sb.rpc("meus_rankings");if(error)throw error;RK.list=data||[];
+    if(!RK.list.some(r=>r.id===RK.sel))RK.sel=RK.list.length?RK.list[0].id:null;
+    if(RK.sel)await rkLoadTable();else RK.rows=null;
+  }catch(e){RK.err=rkErr(e);RK.list=RK.list||[]}
+  RK.busy=false;renderRanking();
+}
+async function rkLoadTable(){
+  const since=RK.period==="tudo"?null:new Date(Date.now()-(+RK.period)*864e5).toISOString();
+  const {data,error}=await sb.rpc("tabela_ranking",{p_id:RK.sel,p_desde:since});
+  if(error){RK.rows=null;RK.err=rkErr(error);if(rkErr(error).includes("não participa")){RK.list=null}return}
+  RK.rows=data||[];
+}
+function renderRanking(){
+  const box=$("rkBox");if(!box)return;
+  if(!sb){box.innerHTML='<div class="sheet panel"><p class="small" style="margin:0">O ranking está indisponível no momento. Tente de novo mais tarde.</p></div>';return}
+  if(!user){
+    box.innerHTML='<div class="sheet panel"><span class="eyebrow">Exclusivo para quem tem conta</span><h3 style="margin:0">Desafie seus amigos</h3><p class="small" style="margin:0">Crie um ranking, convide a turma por WhatsApp ou e-mail e veja quem vai mais longe no jogo. Cada pessoa pode participar de até '+RK_MAX+' rankings.</p><div class="row"><button class="btn money" type="button" id="rkUp">Criar conta grátis</button><button class="btn ghost" type="button" id="rkIn">Já tenho conta</button></div></div>';
+    $("rkUp").onclick=()=>{sfx.click();openAuth("up")};$("rkIn").onclick=()=>{sfx.click();openAuth("in")};return;
+  }
+  if(RK.list===null){box.innerHTML='<div class="sheet panel"><p class="small" style="margin:0">Carregando seus rankings…</p></div>';if(!RK.busy)rkLoad();return}
+  const L=RK.list,cur=L.find(r=>r.id===RK.sel),full=L.length>=RK_MAX;
+  let h='';
+  if(RK.err)h+='<p class="flash" role="alert">'+RK.err+'</p>';
+  if(RK.msg)h+='<p class="small" role="status" style="margin:0;color:var(--money);font-weight:700">'+RK.msg+'</p>';
+  h+='<div class="sheet panel"><span class="eyebrow">Seus rankings · '+L.length+' de '+RK_MAX+'</span>';
+  if(!L.length)h+='<p class="small" style="margin:0">Você ainda não participa de nenhum ranking. Crie um abaixo ou entre com o código que um amigo te mandou.</p>';
+  else h+='<div class="rkchips" role="group" aria-label="Escolha o ranking">'+L.map(r=>'<button type="button" class="chipbtn" data-rk="'+r.id+'" aria-pressed="'+(r.id===RK.sel)+'"></button>').join("")+'</div>';
+  h+='</div>';
+  if(cur){
+    h+='<div class="sheet panel"><div style="display:grid;gap:2px"><h3 style="margin:0" id="rkName"></h3><span class="small">'+cur.membros+' participante'+(cur.membros===1?'':'s')+' · código <span class="rkcode">'+cur.codigo+'</span></span></div>';
+    h+='<div class="rkchips" role="group" aria-label="Período">'+[["7","7 dias"],["30","30 dias"],["tudo","Sempre"]].map(([v,n])=>'<button type="button" class="chipbtn" data-per="'+v+'" aria-pressed="'+(RK.period===v)+'">'+n+'</button>').join("")+'</div>';
+    if(!RK.rows)h+='<p class="small" style="margin:0">Carregando…</p>';
+    else{
+      const any=RK.rows.some(x=>x.partidas>0);
+      h+='<ol class="rklist" aria-label="Classificação">'+RK.rows.map((x,i)=>{const pct=x.respondidas?Math.round(x.acertos/x.respondidas*100):0;const pos=x.partidas?(i<3?["🥇","🥈","🥉"][i]:(i+1)+"º"):"–";
+        return '<li class="'+(x.sou_eu?'me':'')+'"><span class="pos">'+pos+'</span><span class="who"><b></b><span>'+x.partidas+' partida'+(x.partidas===1?'':'s')+' · '+pct+'% de acertos</span></span><span class="pr">'+fmt(x.maior_premio)+'</span></li>'}).join("")+'</ol>';
+      h+='<p class="small" style="margin:0">'+(any?'Ordem: maior prêmio, depois o percentual de acertos. Vale o que cada um jogou com a conta, em qualquer trilha.':'Ninguém jogou neste período ainda. Que tal começar?')+'</p>';
+    }
+    h+='<div class="row"><button class="btn" type="button" id="rkInvBtn" aria-expanded="'+RK.inv+'">Convidar amigos</button><button class="btn ghost" type="button" id="rkLeave">Sair do ranking</button></div>';
+    if(RK.inv)h+='<div class="rkinv"><span class="small">Mande o convite. Quem tocar no link entra no ranking depois de criar a conta ou entrar.</span><div class="row"><a class="btn money" id="rkWa" target="_blank" rel="noopener">WhatsApp</a><a class="btn ghost" id="rkMail">E-mail</a><button class="btn ghost" type="button" id="rkCopy">Copiar link</button></div><p class="small" id="rkCopyMsg" role="status" style="margin:0"></p></div>';
+    if(RK.leave)h+='<div class="rkinv"><span class="small">'+(cur.sou_dono&&cur.membros>1?'Você criou este ranking. Se sair, ele passa para o participante mais antigo.':cur.membros<=1?'Você é o único participante: o ranking será apagado.':'Sair deste ranking?')+'</span><div class="row"><button class="btn danger" type="button" id="rkLeaveYes">Sair</button><button class="btn ghost" type="button" id="rkLeaveNo">Cancelar</button></div></div>';
+    h+='</div>';
+  }
+  h+='<div class="sheet panel"><span class="eyebrow">Novo ranking</span>'+(full?'<p class="small" style="margin:0">Você já participa de '+RK_MAX+' rankings, o máximo permitido. Saia de um para criar ou entrar em outro.</p>':'<form class="rkform" id="rkNewF"><label class="sr" for="rkNew">Nome do ranking</label><input id="rkNew" maxlength="40" placeholder="Ex.: Turma da PC-BA" autocomplete="off"><button class="btn" type="submit">Criar</button></form><span class="eyebrow" style="margin-top:6px">Entrar com código</span><form class="rkform" id="rkJoinF"><label class="sr" for="rkCode">Código do convite</label><input id="rkCode" maxlength="8" placeholder="Ex.: K7Q2XB" autocomplete="off" style="text-transform:uppercase"><button class="btn ghost" type="submit">Entrar</button></form>')+'</div>';
+  box.innerHTML=h;
+  box.querySelectorAll("[data-rk]").forEach(b=>{const r=L.find(x=>x.id===b.dataset.rk);b.textContent=r.nome;b.onclick=async()=>{sfx.click();RK.sel=r.id;RK.rows=null;RK.inv=false;RK.leave=false;RK.msg="";renderRanking();await rkLoadTable();renderRanking()}});
+  if(cur){
+    $("rkName").textContent=cur.nome;
+    if(RK.rows)box.querySelectorAll(".rklist .who b").forEach((b,i)=>{b.textContent=RK.rows[i].nome+(RK.rows[i].sou_eu?" (você)":"")});
+    box.querySelectorAll("[data-per]").forEach(b=>b.onclick=async()=>{sfx.click();RK.period=b.dataset.per;RK.rows=null;renderRanking();await rkLoadTable();renderRanking()});
+    $("rkInvBtn").onclick=()=>{sfx.click();RK.inv=!RK.inv;RK.leave=false;renderRanking()};
+    $("rkLeave").onclick=()=>{sfx.click();RK.leave=!RK.leave;RK.inv=false;renderRanking()};
+    if(RK.inv){const t=rkInviteText(cur);$("rkWa").href="https://wa.me/?text="+encodeURIComponent(t);
+      $("rkMail").href="mailto:?subject="+encodeURIComponent("Convite para o ranking \""+cur.nome+"\" · Aprenda se Divertindo")+"&body="+encodeURIComponent(t);
+      $("rkCopy").onclick=()=>{const link=rkInviteLink(cur.codigo);try{navigator.clipboard.writeText(link).then(()=>{$("rkCopyMsg").textContent="Link copiado: "+link},()=>{$("rkCopyMsg").textContent=link})}catch(e){$("rkCopyMsg").textContent=link}}}
+    if(RK.leave){$("rkLeaveNo").onclick=()=>{RK.leave=false;renderRanking()};
+      $("rkLeaveYes").onclick=async()=>{const b=$("rkLeaveYes");b.disabled=true;try{const {error}=await sb.rpc("sair_ranking",{p_id:cur.id});if(error)throw error;RK.msg="Você saiu do ranking "+cur.nome+".";RK.sel=null;RK.leave=false;RK.list=null;renderRanking()}catch(e){RK.err=rkErr(e);b.disabled=false;renderRanking()}}}
+  }
+  const nf=$("rkNewF");if(nf)nf.onsubmit=async ev=>{ev.preventDefault();const nome=$("rkNew").value.trim();if(nome.length<2){RK.err="Dê um nome com pelo menos 2 letras.";renderRanking();return}
+    nf.querySelector("button").disabled=true;try{const {data,error}=await sb.rpc("criar_ranking",{p_nome:nome});if(error)throw error;const r=Array.isArray(data)?data[0]:data;RK.sel=r&&r.id;RK.msg="Ranking criado! Agora convide seus amigos.";RK.inv=true;RK.err=null;RK.list=null;renderRanking()}catch(e){RK.err=rkErr(e);renderRanking()}};
+  const jf=$("rkJoinF");if(jf)jf.onsubmit=async ev=>{ev.preventDefault();const c=$("rkCode").value.trim().toUpperCase();if(c.length<4){RK.err="Digite o código que você recebeu.";renderRanking();return}await rkJoin(c)};
+}
+async function rkJoin(code){
+  try{const {data,error}=await sb.rpc("entrar_ranking",{p_codigo:code});if(error)throw error;RK.sel=data;RK.msg="Pronto! Você entrou no ranking.";RK.err=null;RK.inv=false;RK.list=null;
+    PENDING_INV=null;try{sessionStorage.removeItem("gm-convite")}catch(e){}
+    setTab("ranking");return true}
+  catch(e){RK.err=rkErr(e);renderRanking();return false}
+}
+async function handleInvite(){
+  if(!PENDING_INV||!sb||!$("ovInvite").hidden)return;
+  const code=PENDING_INV;let info=null;
+  try{const {data,error}=await sb.rpc("ver_convite",{p_codigo:code});if(error)throw error;info=(data||[])[0]||null}catch(e){info=undefined}
+  const acts=$("ivActs");acts.innerHTML="";$("ovInvite").hidden=false;
+  const close=()=>{$("ovInvite").hidden=true;PENDING_INV=null;try{sessionStorage.removeItem("gm-convite")}catch(e){}};
+  const btn=(t,c,f)=>{const b=document.createElement("button");b.type="button";b.className="btn"+(c?" "+c:"");b.textContent=t;b.onclick=f;acts.appendChild(b);return b};
+  if(info===undefined){$("ivTitle").textContent="Não foi possível abrir o convite";$("ivMsg").textContent="Verifique sua conexão e tente de novo pelo link.";btn("Fechar","ghost",close);return}
+  if(!info){$("ivTitle").textContent="Convite não encontrado";$("ivMsg").textContent="Este ranking não existe mais ou o link está incompleto.";btn("Fechar","ghost",close);return}
+  $("ivTitle").textContent="Ranking \""+info.nome+"\"";
+  if(!user){$("ivMsg").textContent=info.membros+" participante"+(info.membros===1?"":"s")+". Para entrar, crie sua conta grátis ou entre na sua conta. Depois disso você entra no ranking automaticamente.";
+    btn("Criar conta grátis","money",()=>{$("ovInvite").hidden=true;openAuth("up")});btn("Já tenho conta","ghost",()=>{$("ovInvite").hidden=true;openAuth("in")});btn("Agora não","ghost",close);return}
+  $("ivMsg").textContent=info.membros+" participante"+(info.membros===1?"":"s")+". Quer entrar e comparar seu desempenho com a turma?";
+  const go=btn("Entrar no ranking","money",async()=>{go.disabled=true;const ok=await rkJoin(code);$("ovInvite").hidden=true;if(!ok){setTab("ranking")}});
+  btn("Agora não","ghost",close);go.focus();
+}
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("ovInvite").hidden){$("ovInvite").hidden=true}});
 
 /* sem conta: só 2 partidas (contadas neste aparelho) */
 const ANON_MAX=2,ANK="gm-anon-games";
@@ -5321,12 +5464,13 @@ $("btnAgain").onclick=()=>{sfx.click();newGame()};
 $("btnHome").onclick=()=>{renderStart();show("start")};
 
 function show(id){["start","game","end","study"].forEach(s=>$(s).hidden=s!==id);window.scrollTo(0,0)}
-let homeTab="jogo";try{const t=localStorage.getItem("gm-tab");if(["jogo","estudo","conta"].includes(t))homeTab=t}catch(e){}
+let homeTab="jogo";try{const t=localStorage.getItem("gm-tab");if(["jogo","estudo","ranking","conta"].includes(t))homeTab=t}catch(e){}
 function setTab(t){
   homeTab=t;try{localStorage.setItem("gm-tab",t)}catch(e){}
   $("start").dataset.tab=t;
   document.querySelectorAll(".tabbar .tab").forEach(b=>{if(b.dataset.tab===t)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current")});
   if(t==="estudo")renderStudyBox();
+  if(t==="ranking")renderRanking();
   window.scrollTo(0,0);
 }
 document.querySelectorAll(".tabbar .tab").forEach(b=>b.onclick=()=>{sfx.click();setTab(b.dataset.tab)});
@@ -5498,6 +5642,7 @@ async function setUser(u){
     }catch(e){}
   }
   studyReset();renderAcct();renderStudyBox();renderAnonInfo();if(user)loadStudy(true);
+  RK.list=null;RK.sel=null;RK.rows=null;RK.err=null;RK.msg="";RK.inv=false;RK.leave=false;renderRanking();setTimeout(handleInvite,0);
 }
 function mergeProgress(p){
   if(!p||typeof p!=="object")return false;let ch=false;
