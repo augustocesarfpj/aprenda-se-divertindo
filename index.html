@@ -273,6 +273,7 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
 .duelbtn{font:inherit;font-size:1.05rem;line-height:1;padding:8px 9px;border:1.5px solid var(--line);border-radius:8px;background:var(--sheet);color:var(--ink);cursor:pointer}
 .duelbtn:hover{border-color:var(--money)}
 .rklist li.hasduel{grid-template-columns:2.2em 1fr auto auto}
+@media (max-width:440px){.rklist li{gap:8px;padding:9px 10px}.rklist li.hasduel{grid-template-columns:1.7em 1fr auto auto}.rklist .pr{font-size:.92rem}.duelbtn{padding:7px}}
 .rkchamp{margin:0;padding:0;list-style:none;display:grid;gap:4px;font-size:.85rem}
 .anoninfo b{color:var(--money)}
 .shead{display:flex;align-items:center;justify-content:space-between;gap:10px}
@@ -5816,7 +5817,7 @@ function renderRanking(){
     else{
       const any=RK.rows.some(x=>x.pontos>0);
       h+='<ol class="rklist" aria-label="Classificação">'+RK.rows.map((x,i)=>{const pct=x.respondidas?Math.round(x.acertos/x.respondidas*100):0;const pos=x.pontos?(i<3?["🥇","🥈","🥉"][i]:(i+1)+"º"):"–";
-        return '<li class="'+(x.sou_eu?'me':'hasduel')+'"><span class="pos">'+pos+'</span><span class="who"><b></b><span>'+x.partidas+' partida'+(x.partidas===1?'':'s')+(x.partidas?' · '+pct+'% de acertos':'')+((x.vitorias||x.empates||x.derrotas)?' · ⚔️ '+(x.vitorias||0)+'V '+(x.empates||0)+'E '+(x.derrotas||0)+'D':'')+'</span></span><span class="pr">'+x.pontos+' pt'+(x.pontos===1?'':'s')+'</span>'+(x.sou_eu?'':'<button type="button" class="duelbtn" data-dl="'+i+'">⚔️</button>')+'</li>'}).join("")+'</ol>';
+        return '<li class="'+(x.sou_eu?'me':'hasduel')+'"><span class="pos">'+pos+'</span><span class="who"><b></b><span>'+x.partidas+' partida'+(x.partidas===1?'':'s')+(x.partidas?' · '+pct+'%':'')+((x.vitorias||x.empates||x.derrotas)?' · ⚔️ '+(x.vitorias||0)+'V '+(x.empates||0)+'E '+(x.derrotas||0)+'D':'')+'</span></span><span class="pr">'+x.pontos+' pt'+(x.pontos===1?'':'s')+'</span>'+(x.sou_eu?'':'<button type="button" class="duelbtn" data-dl="'+i+'">⚔️</button>')+'</li>'}).join("")+'</ol>';
       if(RK.rows.length>1)h+='<p class="small" style="margin:0">Toque em ⚔️ para desafiar alguém no Show do Milhão com as mesmas questões.</p>';
       h+='<p class="small" style="margin:0">'+(any?'Pontos: 1 por acerto nas partidas com a conta (prova, desafio do dia e disputas), +5 por vitória e +2 por empate em disputa. Zera toda segunda às 00h.':(RK.week?'Ninguém pontuou na semana passada.':'Ninguém pontuou nesta semana ainda. Cada acerto vale 1 ponto e cada vitória em disputa vale 5: que tal começar?'))+'</p>';
       if(RK.feed){
@@ -5920,7 +5921,10 @@ async function handleInvite(){
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("ovInvite").hidden){$("ovInvite").hidden=true}});
 
 /* ===== disputas (Show do Milhão com as mesmas questões) ===== */
-const DL={list:null,t:0,busy:false},DL_PER=4;
+const DL={list:null,t:0,busy:false},DL_PER=4,DL_PK="gm-duel-pend";
+async function dlFlush(){let a=null;try{a=JSON.parse(localStorage.getItem(DL_PK))}catch(e){}if(!a||!sb||!user)return;
+  try{const {error}=await sb.rpc("enviar_disputa",a);if(!error||String(error.message||"").includes("DISPUTA_FECHADA")||String(error.message||"").includes("SEM_ACESSO"))localStorage.removeItem(DL_PK)}catch(e){}}
+window.addEventListener("beforeunload",e=>{if(S&&S.mode==="duel"&&!$("game").hidden){e.preventDefault();e.returnValue=""}});
 function dlErr(e){
   const m=(e&&(e.message||e.details)||"")+"";
   if(m.includes("LIMITE_DISPUTAS"))return"Você já tem 3 disputas abertas. Espere alguma terminar para lançar outra.";
@@ -5947,13 +5951,13 @@ function duelNext(){
   return pick(tierOf(S.level));
 }
 function startDuel(d){
-  S={level:0,mode:"duel",trilha:d.trilha,duel:{id:d.id,q:d.questoes,lv:-1,k:0,outro:d.outro,ranking:d.ranking,sou:d.sou,expira:d.expira},used:new Set(),subjects:TRACKS[d.trilha].s,help:{skip:3,elim:1,poll:1,prof:1,risk:1},riskArmed:false,hist:[],cur:null,sel:null,locked:false,left:TIME,paused:false};
+  S={level:0,mode:"duel",trilha:d.trilha,duel:{id:d.id,trilha:d.trilha,q:d.questoes,lv:-1,k:0,outro:d.outro,ranking:d.ranking,sou:d.sou,expira:d.expira},used:new Set(),subjects:TRACKS[d.trilha].s,help:{skip:3,elim:1,poll:1,prof:1,risk:1},riskArmed:false,hist:[],cur:null,sel:null,locked:false,left:TIME,paused:false};
   gameStart=Date.now();show("game");loadQuestion();
 }
 async function dlLoad(force){
   if(!sb||!user){DL.list=null;renderDuels();return}
   if(DL.busy||(!force&&DL.list&&Date.now()-DL.t<20000)){renderDuels();return}
-  DL.busy=true;try{const {data,error}=await sb.rpc("minhas_disputas");DL.list=error?[]:(data||[])}catch(e){DL.list=[]}
+  DL.busy=true;await dlFlush();try{const {data,error}=await sb.rpc("minhas_disputas");DL.list=error?[]:(data||[])}catch(e){DL.list=[]}
   DL.t=Date.now();DL.busy=false;renderDuels();
 }
 function renderDuels(){
@@ -6015,14 +6019,22 @@ async function finishDuel(how){
   $("endMsg").textContent="Enviando seu resultado…";$("shareBox").innerHTML="";
   renderReview();show("end");recordResult("disputa",prize);
   if(how==="win"){sfx.win();confetti()}
-  let ok=true;
-  try{const {error}=await sb.rpc("enviar_disputa",{p_id:D.id,p_premio:prize,p_nivel:Math.min(30,S.level+1),p_acertos:Math.min(30,hits),p_respondidas:Math.min(30,S.hist.length),p_tempo:Math.round((Date.now()-gameStart)/1000)});if(error)throw error}
-  catch(e){ok=false;$("endMsg").textContent="Não foi possível enviar o resultado da disputa: "+dlErr(e)}
+  const args={p_id:D.id,p_premio:prize,p_nivel:Math.min(30,S.level+1),p_acertos:Math.min(30,hits),p_respondidas:Math.min(30,S.hist.length),p_tempo:Math.round((Date.now()-gameStart)/1000)};
+  try{localStorage.setItem(DL_PK,JSON.stringify(args))}catch(e){}
+  const send=async()=>{try{const {error}=await sb.rpc("enviar_disputa",args);if(error)throw error;try{localStorage.removeItem(DL_PK)}catch(e){}return true}
+    catch(e){const m=(e&&(e.message||"")+"");if(m.includes("DISPUTA_FECHADA")){try{localStorage.removeItem(DL_PK)}catch(x){}}
+      $("endMsg").textContent="Não foi possível enviar o resultado da disputa: "+dlErr(e)+(m.includes("DISPUTA_FECHADA")?"":" Ele fica guardado neste aparelho e é enviado sozinho quando a conexão voltar.");
+      const a=$("endDuelAct");a.innerHTML="";const b=document.createElement("button");b.type="button";b.className="btn money";b.textContent="Tentar enviar de novo";b.onclick=async()=>{b.disabled=true;if(await send())finishDuelShow(D);else b.disabled=false};a.appendChild(b);a.hidden=m.includes("DISPUTA_FECHADA");return false}};
+  const ok=await send();
   DL.t=0;RK.list=null;
   if(!ok)return;
+  finishDuelShow(D);
+}
+async function finishDuelShow(D){
+  $("endDuelAct").hidden=true;
   if(D.sou){
     $("endMsg").textContent="Sua parte está feita! "+D.outro+" tem até "+dlHour(D.expira)+" para jogar as mesmas questões. Seu prêmio fica escondido até lá. Avise para não perder o prazo:";
-    shareUI($("shareBox"),"⚔️ Te desafiei no Aprenda se Divertindo! Joguei o Show do Milhão na trilha "+TRACKS[S.trilha].n+" e agora é sua vez, com as mesmas questões. Você tem até "+dlHour(D.expira)+". Entre no app para aceitar:\n"+SHARE_URL);
+    shareUI($("shareBox"),"⚔️ Te desafiei no Aprenda se Divertindo! Joguei o Show do Milhão na trilha "+TRACKS[D.trilha||S.trilha].n+" e agora é sua vez, com as mesmas questões. Você tem até "+dlHour(D.expira)+". Entre no app para aceitar:\n"+SHARE_URL);
   }else{
     await dlLoad(true);const d=(DL.list||[]).find(x=>x.id===D.id);
     if(d&&d.status==="concluida"){const r=d.resultado;
