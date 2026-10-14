@@ -259,13 +259,6 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
 .rkmng .mrow b{flex:1 1 140px;min-width:0;overflow-wrap:anywhere}
 .rkmng select{font:inherit;padding:8px;border:1.5px solid var(--line);border-radius:6px;background:var(--sheet);color:var(--ink)}
 .duelbox{display:grid;gap:8px;margin-top:4px}
-#ovPremium .dialog{max-height:calc(100dvh - 32px);overflow:auto}
-.pmlist{margin:0;padding-left:18px;display:grid;gap:4px}
-.pmprice{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}.pmprice b{font-family:var(--f-display);font-size:1.9rem;color:var(--money)}.pmprice span{color:var(--muted);font-size:.9rem}
-.pixcode{width:100%;font-family:var(--f-mono);font-size:.72rem;padding:8px;border:1.5px solid var(--line);border-radius:6px;background:var(--sheet);color:var(--ink);resize:none;word-break:break-all}
-.plan{display:grid;gap:6px;padding:12px;border:1.5px solid var(--line);border-radius:8px}
-.plan.pro{border-color:var(--money);background:var(--money-soft)}
-.usage{font-size:.85rem;color:var(--muted)}
 .tabbar .tab{position:relative}
 .tabdot{position:absolute;top:4px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--danger,#c8364c);color:#fff;font-size:.7rem;font-weight:800;line-height:18px;text-align:center}
 .rkfeed{list-style:none;margin:0;padding:0;display:grid;gap:6px}
@@ -629,24 +622,6 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
       <button class="btn ghost" type="button" id="gIn">Já tenho conta</button>
     </div>
     <p class="small" style="margin:0"><button class="linkbtn" type="button" id="gNo">Agora não</button></p>
-  </div>
-</div>
-
-<!-- premium -->
-<div class="ov" id="ovPremium" hidden>
-  <div class="sheet dialog" role="dialog" aria-modal="true" aria-labelledby="pmTitle">
-    <span class="eyebrow" id="pmEye">💎 Aprenda se Divertindo Premium</span>
-    <h3 id="pmTitle" style="margin:0"></h3>
-    <p class="small" id="pmWhy" style="margin:0"></p>
-    <ul class="small pmlist">
-      <li><b>Provas ilimitadas</b> em todas as trilhas (grátis: 5 por dia)</li>
-      <li><b>Estudo ilimitado</b> com cartões (grátis: 3 por dia)</li>
-      <li><b>Disputas ilimitadas</b> com os amigos (grátis: 1 por dia)</li>
-      <li>Selo <b>💎</b> ao lado do seu nome no ranking</li>
-    </ul>
-    <div class="pmprice"><b id="pmPrice"></b><span id="pmPer"></span></div>
-    <div id="pmPay" style="display:grid;gap:8px"></div>
-    <div class="row"><button class="btn ghost" type="button" id="pmClose">Agora não</button></div>
   </div>
 </div>
 
@@ -5879,7 +5854,7 @@ function renderRanking(){
   box.querySelectorAll("[data-rk]").forEach(b=>{const r=L.find(x=>x.id===b.dataset.rk);b.textContent=r.nome;b.onclick=async()=>{sfx.click();RK.sel=r.id;RK.rows=null;RK.champs=null;RK.feed=null;RK.inv=false;RK.leave=false;RK.mng=false;RK.msg="";renderRanking();await rkLoadTable();renderRanking()}});
   if(cur){
     $("rkName").textContent=cur.nome;
-    if(RK.rows)box.querySelectorAll(".rklist .who b").forEach((b,i)=>{const x=RK.rows[i],r=RK_ROLE[x.papel]||RK_ROLE.membro;b.textContent=(x.campeao?"🏆 ":"")+x.nome+(x.premium?" 💎":"")+(r[0]?" "+r[0]:"")+(x.sou_eu?" (você)":"");b.title=r[1]+(x.campeao?" · campeão da semana passada":"")});
+    if(RK.rows)box.querySelectorAll(".rklist .who b").forEach((b,i)=>{const x=RK.rows[i],r=RK_ROLE[x.papel]||RK_ROLE.membro;b.textContent=(x.campeao?"🏆 ":"")+x.nome+(r[0]?" "+r[0]:"")+(x.sou_eu?" (você)":"");b.title=r[1]+(x.campeao?" · campeão da semana passada":"")});
     box.querySelectorAll("[data-dl]").forEach(b=>{const x=RK.rows[+b.dataset.dl];b.setAttribute("aria-label","Desafiar "+x.nome);b.title="Desafiar "+x.nome;b.onclick=()=>{sfx.click();openDuel(cur,x)}});
     if(RK.feed)box.querySelectorAll("#rkFeed li").forEach(li=>{const f=RK.feed[+li.dataset.fi],A=f.nome_desafiante,B=f.nome_desafiado,tr=TRACKS[f.trilha]?TRACKS[f.trilha].n:f.trilha;
       const tx=li.querySelector(".tx"),meta=li.querySelector(".meta"),bd=t=>{const b=document.createElement("b");b.textContent=t;return b};
@@ -5962,7 +5937,6 @@ function dlErr(e){
   if(m.includes("LIMITE_DISPUTAS"))return"Você já tem 3 disputas abertas. Espere alguma terminar para lançar outra.";
   if(m.includes("DISPUTA_ABERTA"))return"Já existe uma disputa aberta entre vocês dois. Esperem ela terminar.";
   if(m.includes("DISPUTA_FECHADA"))return"Esta disputa já foi encerrada.";
-  if(m.includes("LIMITE_DIARIO"))return"Você já lançou a disputa grátis de hoje. Com o Premium, as disputas são ilimitadas.";
   if(m.includes("NAO_MEMBRO"))return"Essa pessoa não participa mais do ranking.";
   return rkErr(e);
 }
@@ -6020,7 +5994,6 @@ function dlDialog(eye,title,msg){$("dlEye").textContent=eye;$("dlTitle").textCon
 function dlBtn(t,c,f){const b=document.createElement("button");b.type="button";b.className="btn"+(c?" "+c:"");b.textContent=t;b.onclick=f;$("dlActs").appendChild(b);return b}
 function dlShowErr(e){$("dlErr").textContent=dlErr(e);$("dlErr").hidden=false}
 function openDuel(rk,x){
-  if(!plCan("disputas")){openPremium("Você já lançou a disputa grátis de hoje. Aceitar desafios continua liberado; para desafiar sem limite, seja Premium.");return}
   let tr=track,hrs=5;
   dlDialog("Disputa · Ranking "+rk.nome,"Desafiar "+x.nome,"Vocês dois jogam o Show do Milhão com exatamente as mesmas questões. Você joga agora; "+x.nome+" vê o desafio na tela inicial e tem o prazo que você escolher para responder. Vence quem levar o maior prêmio.");
   const o=$("dlOpts");
@@ -6031,8 +6004,8 @@ function openDuel(rk,x){
   const go=dlBtn("Começar minha parte","money",async()=>{go.disabled=true;$("dlErr").hidden=true;
     const q=duelPlan(tr);
     try{const {data,error}=await sb.rpc("criar_disputa",{p_ranking:rk.id,p_desafiado:x.membro,p_trilha:tr,p_horas:hrs,p_questoes:q});if(error)throw error;
-      $("ovDuel").hidden=true;DL.t=0;plBump("disputas");startDuel({id:data,trilha:tr,questoes:q,outro:x.nome,ranking:rk.nome,sou:true,expira:new Date(Date.now()+hrs*36e5).toISOString()})}
-    catch(e){dlShowErr(e);go.disabled=false;if(String(e&&e.message||"").includes("LIMITE_DIARIO")){$("ovDuel").hidden=true;openPremium(dlErr(e))}}});
+      $("ovDuel").hidden=true;DL.t=0;startDuel({id:data,trilha:tr,questoes:q,outro:x.nome,ranking:rk.nome,sou:true,expira:new Date(Date.now()+hrs*36e5).toISOString()})}
+    catch(e){dlShowErr(e);go.disabled=false}});
   dlBtn("Cancelar","ghost",()=>{$("ovDuel").hidden=true});go.focus();
 }
 function openAccept(d){
@@ -6081,61 +6054,6 @@ async function finishDuelShow(D){
   }
 }
 
-/* ===== plano Premium (Pix manual) ===== */
-const PREMIUM={preco:14.90,meses:6,pix:{chave:"",nome:"",cidade:"",whats:""}};
-const LIM={provas:5,cartoes:3,disputas:1};
-const PL={loaded:false,premium:false,ate:null,origem:null,srv:{provas:0,cartoes:0,disputas:0}};
-function plKey(){return "gm-uso-"+(user?user.id:"x")+"-"+dayKey()}
-function plLocal(){try{return Object.assign({provas:0,cartoes:0,disputas:0},JSON.parse(localStorage.getItem(plKey()))||{})}catch(e){return{provas:0,cartoes:0,disputas:0}}}
-function plBump(k){const u=plLocal();u[k]++;try{localStorage.setItem(plKey(),JSON.stringify(u))}catch(e){}renderPlan()}
-function plUsed(k){return Math.max(plLocal()[k],PL.srv[k]||0)}
-function plFree(){return !!(user&&PL.loaded&&!PL.premium)}
-function plCan(k){return !plFree()||plUsed(k)<LIM[k]}
-async function plLoad(){
-  PL.loaded=false;PL.premium=false;PL.ate=null;
-  if(!sb||!user){renderPlan();return}
-  try{const {data,error}=await sb.rpc("meu_plano");if(error)throw error;const r=Array.isArray(data)?data[0]:data;
-    if(r){PL.premium=!!r.premium;PL.ate=r.ate;PL.origem=r.origem;PL.srv={provas:r.provas_hoje||0,cartoes:r.cartoes_hoje||0,disputas:r.disputas_hoje||0};PL.loaded=true}}
-  catch(e){} // sem o SQL do Premium: nada fica bloqueado
-  renderPlan();
-}
-const fmtBRL=v=>"R$ "+v.toFixed(2).replace(".",",");
-const fmtDate=iso=>new Date(iso).toLocaleDateString("pt-BR");
-function pixTLV(id,v){return id+String(v.length).padStart(2,"0")+v}
-function pixCRC(str){let c=0xFFFF;for(let i=0;i<str.length;i++){c^=str.charCodeAt(i)<<8;for(let j=0;j<8;j++)c=c&0x8000?((c<<1)^0x1021)&0xFFFF:(c<<1)&0xFFFF}return c.toString(16).toUpperCase().padStart(4,"0")}
-function pixClean(t,n){return t.normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^A-Za-z0-9 ]/g,"").toUpperCase().slice(0,n)}
-function pixCode(){const P=PREMIUM.pix;if(!P.chave||!P.nome||!P.cidade)return null;
-  const body=pixTLV("00","01")+pixTLV("26",pixTLV("00","br.gov.bcb.pix")+pixTLV("01",P.chave))+pixTLV("52","0000")+pixTLV("53","986")+pixTLV("54",PREMIUM.preco.toFixed(2))+pixTLV("58","BR")+pixTLV("59",pixClean(P.nome,25))+pixTLV("60",pixClean(P.cidade,15))+pixTLV("62",pixTLV("05","PREMIUM"))+"6304";
-  return body+pixCRC(body)}
-function openPremium(why){
-  $("pmTitle").textContent=PL.premium?"Você já é Premium 💎":"Libere tudo por "+PREMIUM.meses+" meses";
-  $("pmWhy").textContent=PL.premium?"Seu Premium vale até "+fmtDate(PL.ate)+". Para renovar, pague de novo pelo Pix: os meses são somados.":(why||"Estude sem limites até o dia da prova.");
-  $("pmPrice").textContent=fmtBRL(PREMIUM.preco);$("pmPer").textContent="pagamento único · "+PREMIUM.meses+" meses de acesso · sem renovação automática";
-  const box=$("pmPay"),code=pixCode(),em=user&&user.email?user.email:"(o e-mail da sua conta)";
-  const msg="Olá! Paguei o Premium do Aprenda se Divertindo. E-mail da conta: "+em;
-  const send=PREMIUM.pix.whats?'https://wa.me/'+(w=>w.length<=11?"55"+w:w)(PREMIUM.pix.whats.replace(/\D/g,""))+'?text='+encodeURIComponent(msg):'mailto:'+CONTATO+'?subject='+encodeURIComponent("Comprovante Premium")+'&body='+encodeURIComponent(msg);
-  if(!user){box.innerHTML='<p class="small" style="margin:0">Primeiro crie sua conta grátis: o Premium fica ligado a ela.</p><div class="row"><button class="btn money" type="button" id="pmUp">Criar conta grátis</button></div>';$("pmUp").onclick=()=>{$("ovPremium").hidden=true;openAuth("up")}}
-  else if(code){box.innerHTML='<span class="eyebrow">1. Pague pelo Pix (copia e cola)</span><textarea class="pixcode" id="pmCode" rows="3" readonly></textarea><div class="row"><button class="btn money" type="button" id="pmCopy">Copiar código Pix</button></div><p class="small" id="pmCopied" role="status" style="margin:0"></p><span class="small">Ou use a chave: <b id="pmKey"></b> ('+fmtBRL(PREMIUM.preco)+').</span><span class="eyebrow">2. Mande o comprovante</span><div class="row"><a class="btn ghost" id="pmSend" target="_blank" rel="noopener">Enviar comprovante</a></div><p class="small" style="margin:0">Informe o e-mail da conta (<b id="pmMail"></b>). O Premium é liberado em até 24 horas, normalmente bem antes.</p>';
-    $("pmCode").value=code;$("pmKey").textContent=PREMIUM.pix.chave;$("pmMail").textContent=em;$("pmSend").href=send;
-    $("pmCopy").onclick=()=>{const ok=()=>{$("pmCopied").textContent="Código copiado! Abra o app do seu banco, escolha Pix copia e cola e cole."};try{navigator.clipboard.writeText(code).then(ok,()=>{$("pmCode").select();$("pmCopied").textContent="Selecione o código acima e copie."})}catch(e){$("pmCode").select()}}}
-  else{box.innerHTML='<p class="small" style="margin:0">Para assinar, fale com a gente e enviamos os dados do Pix.</p><div class="row"><a class="btn money" id="pmSend" target="_blank" rel="noopener">Quero ser Premium</a></div>';$("pmSend").href=send.replace(encodeURIComponent("Paguei"),encodeURIComponent("Quero assinar"))}
-  $("ovPremium").hidden=false;(box.querySelector(".btn")||$("pmClose")).focus();
-}
-$("pmClose").onclick=()=>{$("ovPremium").hidden=true};
-document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("ovPremium").hidden)$("ovPremium").hidden=true});
-function plUsageText(){return "Hoje: "+Math.min(plUsed("provas"),LIM.provas)+"/"+LIM.provas+" provas · "+Math.min(plUsed("cartoes"),LIM.cartoes)+"/"+LIM.cartoes+" cartões · "+Math.min(plUsed("disputas"),LIM.disputas)+"/"+LIM.disputas+" disputa"}
-function renderPlan(){
-  const el=$("planBox");
-  if(el){
-    if(!user||!PL.loaded){el.hidden=true}
-    else{el.hidden=false;
-      if(PL.premium){el.className="plan pro";el.innerHTML='<b>💎 Premium até '+fmtDate(PL.ate)+'</b><span class="usage">'+(PL.origem==="fundador"?"Presente de fundador: obrigado por estar aqui desde o começo! ":"")+'Provas, estudo e disputas sem limite.</span><div class="row"><button class="btn ghost" type="button" id="planBtn">Renovar</button></div>'}
-      else{el.className="plan";el.innerHTML='<b>Plano grátis</b><span class="usage">'+plUsageText()+'</span><div class="row"><button class="btn money" type="button" id="planBtn">💎 Seja Premium · '+fmtBRL(PREMIUM.preco)+'</button></div>'}
-      $("planBtn").onclick=()=>{sfx.click();openPremium()}}
-  }
-  renderAnonInfo();
-}
-
 /* sem conta: só 2 partidas (contadas neste aparelho) */
 const ANON_MAX=2,ANK="gm-anon-games";
 function anonGames(){try{return +localStorage.getItem(ANK)||0}catch(e){return 0}}
@@ -6147,12 +6065,7 @@ function gateOk(){
 }
 function renderAnonInfo(){
   const el=$("anonInfo");if(!el)return;
-  if(user){
-    if(!plFree()){el.hidden=true;return}
-    const r=Math.max(0,LIM.provas-plUsed("provas"));el.hidden=false;
-    el.innerHTML=(r?'Plano grátis: <b>'+r+' de '+LIM.provas+'</b> prova'+(r===1?'':'s')+' restante'+(r===1?'':'s')+' hoje.':'Você usou as '+LIM.provas+' provas grátis de hoje.')+' <button class="linkbtn" type="button" id="anonUp">💎 Seja Premium</button> para jogar sem limite.';
-    $("anonUp").onclick=()=>{sfx.click();openPremium()};return;
-  }
+  if(user){el.hidden=true;return}
   const r=Math.max(0,ANON_MAX-anonGames());el.hidden=false;
   el.innerHTML=r?'Sem conta: <b>'+r+' de '+ANON_MAX+'</b> partida'+(r===1?'':'s')+' grátis restante'+(r===1?'':'s')+'. <button class="linkbtn" type="button" id="anonUp">Criar conta</button> para jogar sem limite.'
     :'Você já usou as '+ANON_MAX+' partidas sem conta. <button class="linkbtn" type="button" id="anonUp">Crie uma conta grátis</button> para continuar jogando.';
@@ -6164,8 +6077,6 @@ $("gNo").onclick=()=>{$("ovGate").hidden=true};
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("ovGate").hidden)$("gNo").click()});
 function newGame(){
   if(!gateOk())return;
-  if(user&&!plCan("provas")){openPremium("Você já jogou as "+LIM.provas+" provas grátis de hoje. Amanhã tem mais, ou libere tudo agora.");return}
-  if(user)plBump("provas");
   S={level:0,mode:"classic",used:new Set(),subjects:selectedSubjects(),help:{skip:3,elim:1,poll:1,prof:1,risk:1},riskArmed:false,hist:[],cur:null,sel:null,locked:false,left:TIME,paused:false};
   gameStart=Date.now();show("game");loadQuestion();
 }
@@ -6581,7 +6492,7 @@ async function setUser(u){
       if(lastResult&&!lastResult.saved)cloudSave(lastResult);
     }catch(e){}
   }
-  studyReset();renderAcct();renderStudyBox();renderAnonInfo();if(user)loadStudy(true);plLoad();
+  studyReset();renderAcct();renderStudyBox();renderAnonInfo();if(user)loadStudy(true);
   DL.list=null;DL.t=0;dlLoad(true);RK.list=null;RK.sel=null;RK.rows=null;RK.champs=null;RK.err=null;RK.msg="";RK.inv=false;RK.leave=false;RK.mng=false;RK.del=false;RK.week=0;renderRanking();setTimeout(handleInvite,0);
 }
 function mergeProgress(p){
@@ -6623,11 +6534,10 @@ function renderAcct(){
   const a=$("acct");
   if(!sb){a.innerHTML='<p class="small" style="margin:0">As contas estão indisponíveis no momento. Seu histórico continua salvo neste aparelho.</p>';return}
   if(user){
-    a.innerHTML='<div class="who"><b></b><span></span><span>Progresso, partidas e estudo salvos na conta.</span></div><div id="planBox" hidden></div><div class="acts"><button class="btn ghost" type="button" id="btnPass">Trocar senha</button><button class="btn ghost" type="button" id="btnLogout">Sair da conta</button><button class="btn danger" type="button" id="btnDelete">Excluir conta</button></div><p class="small" style="margin:0">Excluir apaga para sempre seu nome, e-mail, progresso, partidas e estudo.</p>';
+    a.innerHTML='<div class="who"><b></b><span></span><span>Progresso, partidas e estudo salvos na conta.</span></div><div class="acts"><button class="btn ghost" type="button" id="btnPass">Trocar senha</button><button class="btn ghost" type="button" id="btnLogout">Sair da conta</button><button class="btn danger" type="button" id="btnDelete">Excluir conta</button></div><p class="small" style="margin:0">Excluir apaga para sempre seu nome, e-mail, progresso, partidas e estudo.</p>';
     a.querySelector(".who b").textContent=perfil?perfil.nome:"Sua conta";a.querySelector(".who span").textContent=user.email||"";
     $("btnLogout").onclick=async()=>{sfx.click();try{await sb.auth.signOut()}catch(e){}setUser(null)};
     $("btnPass").onclick=()=>{sfx.click();openNewPass();$("npTitle").textContent="Trocar sua senha";$("npTitle").previousElementSibling.textContent="Sua conta"};
-    renderPlan();
     $("btnDelete").onclick=()=>{sfx.click();$("delMsg").textContent="";$("delMsg").className="small";$("delYes").disabled=false;$("ovDelete").hidden=false};
   }else{
     a.innerHTML=delNotice?'<span>Sua conta e seus dados foram excluídos.</span><div class="acts"><button class="btn" type="button" id="btnLogin">Criar nova conta</button></div>'
@@ -6827,7 +6737,6 @@ $("howGo").onclick=()=>{sfx.click();$("ovHowto").hidden=true;startStudy()};
 $("howNo").onclick=()=>{$("ovHowto").hidden=true};
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("ovHowto").hidden)$("howNo").click()});
 function startStudy(){
-  if(!plCan("cartoes")){openPremium("Você já estudou os "+LIM.cartoes+" cartões grátis de hoje. Amanhã tem mais, ou libere o estudo ilimitado agora.");return}
   const t=studyToday();
   const revs=t.due.map(r=>({q:qById(r.questao_id),novo:false}));
   const novos=pickNew(t.novosRestantes).map(q=>({q,novo:true}));
@@ -6837,7 +6746,6 @@ function startStudy(){
 }
 function nextCard(){
   if(!ST.queue.length){finishStudy();return}
-  if(!ST.firstPass.has(ST.queue[0].q.id)&&!plCan("cartoes")){ST.queue=[];stopSTimer();finishStudy();openPremium("Você já estudou os "+LIM.cartoes+" cartões grátis de hoje. Amanhã tem mais, ou libere o estudo ilimitado agora.");return}
   ST.cur=ST.queue.shift();ST.phase="ask";ST.conf=null;
   const q=ST.cur.q;
   $("sKind").textContent=(ST.cur.again?"De novo":ST.cur.novo?"Novo":"Revisão")+" · "+SUBJ[q.s]+" · "+TIER[q.d];
@@ -6882,7 +6790,7 @@ function grade(ok){
   if(ST.phase!=="grade")return;ST.phase="saving";
   const c=ST.cur,q=c.q,sabia=ST.conf,today=dayKey();
   const prev=ST.rows.get(q.id);
-  const first=!ST.firstPass.has(q.id);ST.firstPass.add(q.id);if(first)plBump("cartoes");
+  const first=!ST.firstPass.has(q.id);ST.firstPass.add(q.id);
   let r=prev?{...prev}:{questao_id:q.id,caixa:1,vence:today,alerta:false,vistas:0,acertos:0,falsas_certezas:0,primeira_vez:today};
   r.vistas++;if(ok)r.acertos++;
   if(first){
