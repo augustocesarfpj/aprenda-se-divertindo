@@ -259,6 +259,13 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
 .rkmng .mrow b{flex:1 1 140px;min-width:0;overflow-wrap:anywhere}
 .rkmng select{font:inherit;padding:8px;border:1.5px solid var(--line);border-radius:6px;background:var(--sheet);color:var(--ink)}
 .duelbox{display:grid;gap:8px;margin-top:4px}
+.tabbar .tab{position:relative}
+.tabdot{position:absolute;top:4px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--danger,#c8364c);color:#fff;font-size:.7rem;font-weight:800;line-height:18px;text-align:center}
+.rkfeed{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.rkfeed li{display:grid;gap:4px;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;font-size:.92rem}
+.rkfeed li.me{border-color:var(--money)}
+.rkfeed .meta{font-size:.78rem;color:var(--muted)}
+.rkfeed .btn{justify-self:start;padding:7px 12px;font-size:.85rem}
 .duel{display:grid;gap:8px;padding:12px 14px;border:2px solid var(--money);border-radius:10px;background:var(--money-soft)}
 .duel.muted{border:1.5px solid var(--line);background:var(--sheet)}
 .duel b.t{font-size:1.02rem}
@@ -474,6 +481,7 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
       <div class="grid10" id="dailyGrid" hidden></div>
       <span class="streak" id="endStreak"></span>
       <p class="small" id="endCloud" style="margin:0" hidden></p>
+      <div class="row" id="endDuelAct" hidden></div>
     </div>
     <div class="sheet panel">
       <h2>Desafie os amigos</h2>
@@ -5622,7 +5630,7 @@ function newDaily(){
   gameStart=Date.now();show("game");loadQuestion();
 }
 function finishDaily(){
-  clearInterval(timerId);
+  clearInterval(timerId);$("endDuelAct").hidden=true;
   const d={date:dayKey(),track,hits:S.hist.filter(h=>h.ok).length,grid:S.hist.map(h=>h.ok?1:0)};
   const store=dailyStore();store.res[track]={hits:d.hits,grid:d.grid};
   try{localStorage.setItem(DK,JSON.stringify(store))}catch(e){}
@@ -5677,7 +5685,9 @@ async function rkLoadTable(){
   const [t,c]=await Promise.all([sb.rpc("tabela_semana",{p_id:RK.sel,p_semana:RK.week}),RK.champs?Promise.resolve({data:RK.champs}):sb.rpc("campeoes_ranking",{p_id:RK.sel})]);
   if(t.error){RK.rows=null;RK.err=rkErr(t.error);if(rkErr(t.error).includes("não participa")){RK.list=null}return}
   RK.rows=t.data||[];RK.champs=c.error?[]:(c.data||[]);
+  try{const f=await sb.rpc("feed_disputas",{p_ranking:RK.sel});RK.feed=f.error?[]:(f.data||[])}catch(e){RK.feed=[]}
 }
+function ago(iso){const m=Math.max(0,Math.round((Date.now()-new Date(iso))/6e4));return m<60?"há "+m+" min":m<1440?"há "+Math.floor(m/60)+"h":"há "+Math.floor(m/1440)+" dia"+(m>=2880?"s":"")}
 async function rkAct(fn,args,okMsg){
   RK.err=null;try{const {data,error}=await sb.rpc(fn,args);if(error)throw error;RK.msg=okMsg;return data===null?true:data}catch(e){RK.err=rkErr(e);RK.msg="";renderRanking();return false}
 }
@@ -5705,9 +5715,14 @@ function renderRanking(){
     else{
       const any=RK.rows.some(x=>x.pontos>0);
       h+='<ol class="rklist" aria-label="Classificação">'+RK.rows.map((x,i)=>{const pct=x.respondidas?Math.round(x.acertos/x.respondidas*100):0;const pos=x.pontos?(i<3?["🥇","🥈","🥉"][i]:(i+1)+"º"):"–";
-        return '<li class="'+(x.sou_eu?'me':'hasduel')+'"><span class="pos">'+pos+'</span><span class="who"><b></b><span>'+x.partidas+' partida'+(x.partidas===1?'':'s')+(x.partidas?' · '+pct+'% de acertos':'')+'</span></span><span class="pr">'+x.pontos+' pt'+(x.pontos===1?'':'s')+'</span>'+(x.sou_eu?'':'<button type="button" class="duelbtn" data-dl="'+i+'">⚔️</button>')+'</li>'}).join("")+'</ol>';
+        return '<li class="'+(x.sou_eu?'me':'hasduel')+'"><span class="pos">'+pos+'</span><span class="who"><b></b><span>'+x.partidas+' partida'+(x.partidas===1?'':'s')+(x.partidas?' · '+pct+'% de acertos':'')+((x.vitorias||x.empates||x.derrotas)?' · ⚔️ '+(x.vitorias||0)+'V '+(x.empates||0)+'E '+(x.derrotas||0)+'D':'')+'</span></span><span class="pr">'+x.pontos+' pt'+(x.pontos===1?'':'s')+'</span>'+(x.sou_eu?'':'<button type="button" class="duelbtn" data-dl="'+i+'">⚔️</button>')+'</li>'}).join("")+'</ol>';
       if(RK.rows.length>1)h+='<p class="small" style="margin:0">Toque em ⚔️ para desafiar alguém no Show do Milhão com as mesmas questões.</p>';
-      h+='<p class="small" style="margin:0">'+(any?'1 ponto por acerto nas partidas jogadas com a conta (prova e desafio do dia). A pontuação zera toda segunda às 00h.':(RK.week?'Ninguém pontuou na semana passada.':'Ninguém pontuou nesta semana ainda. Cada acerto vale 1 ponto: que tal começar?'))+'</p>';
+      h+='<p class="small" style="margin:0">'+(any?'Pontos: 1 por acerto nas partidas com a conta (prova, desafio do dia e disputas), +5 por vitória e +2 por empate em disputa. Zera toda segunda às 00h.':(RK.week?'Ninguém pontuou na semana passada.':'Ninguém pontuou nesta semana ainda. Cada acerto vale 1 ponto e cada vitória em disputa vale 5: que tal começar?'))+'</p>';
+      if(RK.feed){
+        h+='<span class="eyebrow" style="margin-top:4px">⚔️ Disputas dos últimos 7 dias</span>';
+        h+=RK.feed.length?'<ul class="rkfeed" id="rkFeed">'+RK.feed.map((f,i)=>{const me=user&&(f.desafiante===user.id||f.desafiado===user.id);return '<li class="'+(me?'me':'')+'" data-fi="'+i+'"><span class="tx"></span><span class="meta"></span>'+(me&&f.status==="concluida"?'<button type="button" class="btn ghost" data-rv="'+i+'">⚔️ Revanche</button>':'')+'</li>'}).join("")+'</ul>'
+          :'<p class="small" style="margin:0">Nenhuma disputa nos últimos 7 dias. Toque em ⚔️ ao lado de alguém para começar.</p>';
+      }
       if(RK.champs&&RK.champs.length)h+='<details><summary class="small" style="cursor:pointer;font-weight:700">🏆 Campeões das últimas semanas</summary><ul class="rkchamp" id="rkChamps">'+RK.champs.map(()=>'<li></li>').join("")+'</ul></details>';
     }
     h+='<div class="row">'+(cur.codigo?'<button class="btn" type="button" id="rkInvBtn" aria-expanded="'+RK.inv+'">Convidar amigos</button>':'')+(g?'<button class="btn ghost" type="button" id="rkMngBtn" aria-expanded="'+RK.mng+'">Gerenciar</button>':'')+'<button class="btn ghost" type="button" id="rkLeave">Sair do ranking</button></div>';
@@ -5727,11 +5742,28 @@ function renderRanking(){
   }
   h+='<div class="sheet panel"><span class="eyebrow">Novo ranking</span>'+(full?'<p class="small" style="margin:0">Você já participa de '+RK_MAX+' rankings, o máximo permitido. Saia de um para criar ou entrar em outro.</p>':'<form class="rkform" id="rkNewF"><label class="sr" for="rkNew">Nome do ranking</label><input id="rkNew" maxlength="40" placeholder="Ex.: Turma da PC-BA" autocomplete="off"><button class="btn" type="submit">Criar</button></form><span class="eyebrow" style="margin-top:6px">Entrar com código</span><form class="rkform" id="rkJoinF"><label class="sr" for="rkCode">Código do convite</label><input id="rkCode" maxlength="8" placeholder="Ex.: K7Q2XB" autocomplete="off" style="text-transform:uppercase"><button class="btn ghost" type="submit">Entrar</button></form>')+'</div>';
   box.innerHTML=h;
-  box.querySelectorAll("[data-rk]").forEach(b=>{const r=L.find(x=>x.id===b.dataset.rk);b.textContent=r.nome;b.onclick=async()=>{sfx.click();RK.sel=r.id;RK.rows=null;RK.champs=null;RK.inv=false;RK.leave=false;RK.mng=false;RK.msg="";renderRanking();await rkLoadTable();renderRanking()}});
+  box.querySelectorAll("[data-rk]").forEach(b=>{const r=L.find(x=>x.id===b.dataset.rk);b.textContent=r.nome;b.onclick=async()=>{sfx.click();RK.sel=r.id;RK.rows=null;RK.champs=null;RK.feed=null;RK.inv=false;RK.leave=false;RK.mng=false;RK.msg="";renderRanking();await rkLoadTable();renderRanking()}});
   if(cur){
     $("rkName").textContent=cur.nome;
     if(RK.rows)box.querySelectorAll(".rklist .who b").forEach((b,i)=>{const x=RK.rows[i],r=RK_ROLE[x.papel]||RK_ROLE.membro;b.textContent=(x.campeao?"🏆 ":"")+x.nome+(r[0]?" "+r[0]:"")+(x.sou_eu?" (você)":"");b.title=r[1]+(x.campeao?" · campeão da semana passada":"")});
     box.querySelectorAll("[data-dl]").forEach(b=>{const x=RK.rows[+b.dataset.dl];b.setAttribute("aria-label","Desafiar "+x.nome);b.title="Desafiar "+x.nome;b.onclick=()=>{sfx.click();openDuel(cur,x)}});
+    if(RK.feed)box.querySelectorAll("#rkFeed li").forEach(li=>{const f=RK.feed[+li.dataset.fi],A=f.nome_desafiante,B=f.nome_desafiado,tr=TRACKS[f.trilha]?TRACKS[f.trilha].n:f.trilha;
+      const tx=li.querySelector(".tx"),meta=li.querySelector(".meta"),bd=t=>{const b=document.createElement("b");b.textContent=t;return b};
+      const put=(...parts)=>parts.forEach(p=>tx.append(typeof p==="string"?document.createTextNode(p):p));
+      if(f.status==="aguardando")put("⚔️ ",bd(A)," desafiou ",bd(B)),meta.textContent=tr+" · "+ago(f.criada_em)+" · faltam "+dlLeft(f.expira_em);
+      else if(f.status==="jogando")put("🎮 ",bd(B)," está respondendo o desafio de ",bd(A)),meta.textContent=tr+" · "+ago(f.criada_em);
+      else if(f.status==="concluida"){
+        if(f.vencedor==="empate"){put("🤝 ",bd(A)," e ",bd(B)," empataram")}
+        else{const w=f.vencedor==="desafiante",W=w?A:B,L=w?B:A;put("🏆 ",bd(W)," venceu ",bd(L))}
+        const pw=f.vencedor==="desafiado"?f.premio_desafiado:f.premio_desafiante,pl=f.vencedor==="desafiado"?f.premio_desafiante:f.premio_desafiado;
+        const sw=f.vencedor==="desafiado"?f.placar_desafiado:f.placar_desafiante,sl=f.vencedor==="desafiado"?f.placar_desafiante:f.placar_desafiado,nw=f.vencedor==="desafiado"?B:A,nl=f.vencedor==="desafiado"?A:B;
+        put(" · "+fmt(pw||0)+" × "+fmt(pl||0));
+        meta.textContent=tr+" · "+ago(f.criada_em)+" · placar entre os dois: "+nw+" "+sw+" × "+sl+" "+nl+(f.placar_empates?" ("+f.placar_empates+" empate"+(f.placar_empates>1?"s":"")+")":"");
+      }
+      else if(f.status==="recusada")put("Desafio de ",bd(A)," para ",bd(B)," não foi aceito"),meta.textContent=tr+" · "+ago(f.criada_em);
+      else put("⌛ Desafio de ",bd(A)," para ",bd(B)," expirou"),meta.textContent=tr+" · "+ago(f.criada_em);
+    });
+    box.querySelectorAll("[data-rv]").forEach(b=>{const f=RK.feed[+b.dataset.rv],eu=f.desafiante===user.id;b.onclick=()=>{sfx.click();openDuel(cur,{membro:eu?f.desafiado:f.desafiante,nome:eu?f.nome_desafiado:f.nome_desafiante})}});
     const ch=$("rkChamps");if(ch)ch.querySelectorAll("li").forEach((li,i)=>{const c=RK.champs[i],d=String(c.semana).split("-");li.textContent="Semana de "+d[2]+"/"+d[1]+": "+c.nome+" · "+c.pontos+" pts"});
     box.querySelectorAll("[data-wk]").forEach(b=>b.onclick=async()=>{sfx.click();RK.week=+b.dataset.wk;RK.rows=null;renderRanking();await rkLoadTable();renderRanking()});
     if($("rkInvBtn"))$("rkInvBtn").onclick=()=>{sfx.click();RK.inv=!RK.inv;RK.leave=false;RK.mng=false;renderRanking()};
@@ -5826,6 +5858,8 @@ async function dlLoad(force){
 function renderDuels(){
   const box=$("duelBox");if(!box)return;
   const L=(user&&DL.list||[]).filter(d=>d.status!=="preparando").slice(0,5);
+  const pend=(user&&DL.list||[]).filter(d=>!d.sou_desafiante&&d.status==="aguardando").length,jt=document.querySelector('.tabbar .tab[data-tab="jogo"]');
+  if(jt){let dot=jt.querySelector(".tabdot");if(pend){if(!dot){dot=document.createElement("span");dot.className="tabdot";jt.appendChild(dot)}dot.textContent=pend;jt.setAttribute("aria-label","Jogo, "+pend+" desafio"+(pend>1?"s":"")+" pendente"+(pend>1?"s":""))}else if(dot){dot.remove();jt.removeAttribute("aria-label")}}
   if(!L.length){box.hidden=true;box.innerHTML="";return}
   box.hidden=false;
   box.innerHTML=L.map((d,i)=>{
@@ -5834,12 +5868,13 @@ function renderDuels(){
     if(d.status==="aguardando")return '<div class="duel muted"><b class="t">⏳ Aguardando <span data-f="o"></span></b>'+info+'<p class="small">Você fez '+fmt(d.meu_premio||0)+'. O prazo termina em '+dlLeft(d.expira_em)+'.</p></div>';
     if(d.status==="jogando")return '<div class="duel muted"><b class="t">🎮 '+(d.sou_desafiante?'<span data-f="o"></span> está jogando sua disputa':'Disputa com <span data-f="o"></span> em andamento')+'</b>'+info+(d.sou_desafiante?'':'<p class="small">Você saiu antes de terminar: o resultado vale R$ 0.</p>')+'</div>';
     if(d.status==="concluida"){const r=d.resultado,ic=r==="venci"?"🏆":r==="empate"?"🤝":"😬",tx=r==="venci"?"Você venceu ":r==="empate"?"Empate com ":"Você perdeu para ";
-      return '<div class="duel muted"><b class="t">'+ic+' '+tx+'<span data-f="o"></span></b>'+info+'<p class="small">Você: '+fmt(d.meu_premio||0)+' × <span data-f="o"></span>: '+fmt(d.outro_premio||0)+'</p></div>'}
+      return '<div class="duel muted"><b class="t">'+ic+' '+tx+'<span data-f="o"></span></b>'+info+'<p class="small">Você: '+fmt(d.meu_premio||0)+' × <span data-f="o"></span>: '+fmt(d.outro_premio||0)+(d.placar_eu!=null?' · placar geral: você '+d.placar_eu+' × '+d.placar_outro+' <span data-f="o"></span>':'')+'</p>'+(d.outro_id?'<div class="row"><button class="btn ghost" type="button" data-rv="'+i+'">⚔️ Revanche</button></div>':'')+'</div>'}
     if(d.status==="recusada")return '<div class="duel muted"><b class="t">'+(d.sou_desafiante?'<span data-f="o"></span> recusou seu desafio':'Você recusou o desafio de <span data-f="o"></span>')+'</b>'+info+'</div>';
     return '<div class="duel muted"><b class="t">⌛ '+(d.sou_desafiante?'Seu desafio para <span data-f="o"></span> expirou':'O desafio de <span data-f="o"></span> expirou')+'</b>'+info+'</div>';
   }).join("");
   box.querySelectorAll(".duel").forEach((el,i)=>{const d=L[i];el.querySelectorAll('[data-f="o"]').forEach(x=>x.textContent=d.outro);el.querySelectorAll('[data-f="rk"]').forEach(x=>x.textContent=d.ranking)});
   box.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{sfx.click();openAccept(L[+b.dataset.go])});
+  box.querySelectorAll("[data-rv]").forEach(b=>b.onclick=()=>{const d=L[+b.dataset.rv];sfx.click();openDuel({id:d.ranking_id,nome:d.ranking},{membro:d.outro_id,nome:d.outro})});
   box.querySelectorAll("[data-no]").forEach(b=>b.onclick=async()=>{const d=L[+b.dataset.no];if(b.dataset.ok!=="1"){b.dataset.ok="1";b.textContent="Confirmar recusa";return}
     b.disabled=true;try{const {error}=await sb.rpc("recusar_disputa",{p_id:d.id});if(error)throw error}catch(e){}dlLoad(true)});
 }
@@ -5882,7 +5917,7 @@ async function finishDuel(how){
   let ok=true;
   try{const {error}=await sb.rpc("enviar_disputa",{p_id:D.id,p_premio:prize,p_nivel:Math.min(30,S.level+1),p_acertos:Math.min(30,hits),p_respondidas:Math.min(30,S.hist.length),p_tempo:Math.round((Date.now()-gameStart)/1000)});if(error)throw error}
   catch(e){ok=false;$("endMsg").textContent="Não foi possível enviar o resultado da disputa: "+dlErr(e)}
-  DL.t=0;
+  DL.t=0;RK.list=null;
   if(!ok)return;
   if(D.sou){
     $("endMsg").textContent="Sua parte está feita! "+D.outro+" tem até "+dlHour(D.expira)+" para jogar as mesmas questões. Seu prêmio fica escondido até lá. Avise para não perder o prazo:";
@@ -5892,6 +5927,7 @@ async function finishDuel(how){
     if(d&&d.status==="concluida"){const r=d.resultado;
       $("endMsg").textContent=(r==="venci"?"🏆 Você venceu "+D.outro+"!":r==="empate"?"🤝 Empate com "+D.outro+".":"😬 "+D.outro+" venceu desta vez.")+" Você: "+fmt(d.meu_premio||0)+" × "+D.outro+": "+fmt(d.outro_premio||0)+".";
       if(r==="venci"){sfx.win();confetti()}
+      if(d.outro_id){const a=$("endDuelAct");a.innerHTML="";const b=document.createElement("button");b.type="button";b.className="btn money";b.textContent=r==="perdi"?"⚔️ Pedir revanche":"⚔️ Desafiar de novo";b.onclick=()=>{sfx.click();openDuel({id:d.ranking_id,nome:d.ranking},{membro:d.outro_id,nome:D.outro})};a.appendChild(b);a.hidden=false}
       shareUI($("shareBox"),(r==="venci"?"🏆 Venci "+D.outro:r==="empate"?"🤝 Empatei com "+D.outro:"Perdi para "+D.outro)+" numa disputa do Aprenda se Divertindo: "+fmt(d.meu_premio||0)+" × "+fmt(d.outro_premio||0)+". Quem é o próximo?\n"+SHARE_URL);
     }else $("endMsg").textContent="Resultado enviado. O placar aparece na tela inicial.";
   }
@@ -6124,7 +6160,7 @@ $("ovLadder").onclick=e=>{if(e.target.id==="ovLadder"){$("ovLadder").hidden=true
 
 /* fim */
 function finish(how){
-  clearInterval(timerId);
+  clearInterval(timerId);$("endDuelAct").hidden=true;
   if(S.mode==="duel"){finishDuel(how);return}
   let prize=how==="win"?1000000:how==="stop"?acc():errVal();
   stats.games++;stats.best=Math.max(stats.best||0,prize);saveStats();bumpStreak();
