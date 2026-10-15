@@ -1,7 +1,7 @@
 -- Aprenda se Divertindo · Relatório: quantas questões há em cada trilha e em cada matéria
--- Só consulta (não altera nada). Cole no SQL Editor e clique em Run.
--- As trilhas são definidas no jogo; a lista abaixo reflete as trilhas atuais.
--- Uma mesma matéria pode aparecer em várias trilhas (ex.: Português), então a soma das trilhas é maior que o total do banco.
+-- Só consulta (não altera nada). Cole tudo no SQL Editor e clique em Run: sai uma tabela só.
+-- Linhas "★ TOTAL DA TRILHA" trazem o total de cada trilha; a última linha é o total do banco.
+-- Uma mesma matéria aparece em várias trilhas (ex.: Português), então a soma das trilhas é maior que o total do banco.
 
 with trilhas(trilha, nome_trilha, materia, nome_materia) as (
   values
@@ -112,143 +112,34 @@ with trilhas(trilha, nome_trilha, materia, nome_materia) as (
     ('administrativa','Administrativa','ia','IA e Inovação'),
     ('administrativa','Administrativa','sust','Sustentabilidade')
 ),
-contagem as (
-  select materia, count(*) as questoes,
-         count(*) filter (where nivel = 0) as facil,
-         count(*) filter (where nivel = 1) as intermediaria,
-         count(*) filter (where nivel = 2) as dificil,
-         count(*) filter (where nivel = 3) as muito_dificil,
-         count(*) filter (where nivel = 4) as desafio
-  from public.questoes group by materia
+ordem(trilha, pos) as (
+  values ('policial',1),('tribunais',2),('fiscal',3),('administrativa',4),('saude',5),('enem',6),('geral',7)
+),
+linhas as (
+  select o.pos, t.nome_trilha, t.nome_materia, q.id, q.nivel
+  from trilhas t
+  join ordem o on o.trilha = t.trilha
+  left join public.questoes q on q.materia = t.materia
 )
--- 1) total por trilha
-select t.nome_trilha as trilha, count(*) as materias, sum(coalesce(c.questoes,0)) as questoes,
-       sum(coalesce(c.facil,0)) as facil, sum(coalesce(c.intermediaria,0)) as intermediaria,
-       sum(coalesce(c.dificil,0)) as dificil, sum(coalesce(c.muito_dificil,0)) as muito_dificil,
-       sum(coalesce(c.desafio,0)) as desafio
-from trilhas t left join contagem c on c.materia = t.materia
-group by t.nome_trilha
-order by questoes desc;
-
--- 2) detalhe por trilha e matéria (rode esta parte separadamente, se preferir)
-with trilhas(trilha, nome_trilha, materia, nome_materia) as (
-  values
-    ('geral','Geral','port','Português'),
-    ('geral','Geral','const','Dir. Constitucional'),
-    ('geral','Geral','adm','Dir. Administrativo'),
-    ('geral','Geral','pen','Dir. Penal'),
-    ('geral','Geral','ppen','Processo Penal'),
-    ('geral','Geral','leg','Legislação Especial'),
-    ('geral','Geral','inf','Informática'),
-    ('geral','Geral','rl','Raciocínio Lógico'),
-    ('geral','Geral','est','Estatística'),
-    ('geral','Geral','cont','Contabilidade'),
-    ('geral','Geral','dh','Direitos Humanos'),
-    ('geral','Geral','civ','Direito Civil'),
-    ('geral','Geral','pciv','Processo Civil'),
-    ('geral','Geral','trib','Dir. Tributário'),
-    ('geral','Geral','afo','AFO'),
-    ('geral','Geral','gest','Adm. Pública'),
-    ('geral','Geral','arq','Arquivologia'),
-    ('geral','Geral','ml','Medicina Legal'),
-    ('geral','Geral','igual','Igualdade Racial e de Gênero'),
-    ('geral','Geral','prev','Dir. Previdenciário'),
-    ('geral','Geral','pcd','Pessoas com Deficiência'),
-    ('geral','Geral','ia','IA e Inovação'),
-    ('geral','Geral','sust','Sustentabilidade'),
-    ('geral','Geral','adua','Leg. Aduaneira'),
-    ('geral','Geral','eco','Economia e Finanças'),
-    ('geral','Geral','aud','Auditoria'),
-    ('geral','Geral','dados','Fluência em Dados'),
-    ('policial','Policial','port','Português'),
-    ('policial','Policial','const','Dir. Constitucional'),
-    ('policial','Policial','adm','Dir. Administrativo'),
-    ('policial','Policial','pen','Dir. Penal'),
-    ('policial','Policial','ppen','Processo Penal'),
-    ('policial','Policial','leg','Legislação Especial'),
-    ('policial','Policial','dh','Direitos Humanos'),
-    ('policial','Policial','inf','Informática'),
-    ('policial','Policial','rl','Raciocínio Lógico'),
-    ('policial','Policial','est','Estatística'),
-    ('policial','Policial','cont','Contabilidade'),
-    ('policial','Policial','ml','Medicina Legal'),
-    ('policial','Policial','igual','Igualdade Racial e de Gênero'),
-    ('policial','Policial','pcd','Pessoas com Deficiência'),
-    ('policial','Policial','ia','IA e Inovação'),
-    ('policial','Policial','sust','Sustentabilidade'),
-    ('tribunais','Tribunais','port','Português'),
-    ('tribunais','Tribunais','const','Dir. Constitucional'),
-    ('tribunais','Tribunais','adm','Dir. Administrativo'),
-    ('tribunais','Tribunais','civ','Direito Civil'),
-    ('tribunais','Tribunais','pciv','Processo Civil'),
-    ('tribunais','Tribunais','pen','Dir. Penal'),
-    ('tribunais','Tribunais','ppen','Processo Penal'),
-    ('tribunais','Tribunais','arq','Arquivologia'),
-    ('tribunais','Tribunais','inf','Informática'),
-    ('tribunais','Tribunais','rl','Raciocínio Lógico'),
-    ('tribunais','Tribunais','prev','Dir. Previdenciário'),
-    ('tribunais','Tribunais','trib','Dir. Tributário'),
-    ('tribunais','Tribunais','gest','Adm. Pública'),
-    ('tribunais','Tribunais','pcd','Pessoas com Deficiência'),
-    ('tribunais','Tribunais','ia','IA e Inovação'),
-    ('tribunais','Tribunais','sust','Sustentabilidade'),
-    ('fiscal','Fiscal','port','Português'),
-    ('fiscal','Fiscal','const','Dir. Constitucional'),
-    ('fiscal','Fiscal','adm','Dir. Administrativo'),
-    ('fiscal','Fiscal','trib','Dir. Tributário'),
-    ('fiscal','Fiscal','afo','AFO'),
-    ('fiscal','Fiscal','cont','Contabilidade'),
-    ('fiscal','Fiscal','est','Estatística'),
-    ('fiscal','Fiscal','rl','Raciocínio Lógico'),
-    ('fiscal','Fiscal','inf','Informática'),
-    ('fiscal','Fiscal','adua','Leg. Aduaneira'),
-    ('fiscal','Fiscal','eco','Economia e Finanças'),
-    ('fiscal','Fiscal','aud','Auditoria'),
-    ('fiscal','Fiscal','dados','Fluência em Dados'),
-    ('fiscal','Fiscal','prev','Dir. Previdenciário'),
-    ('fiscal','Fiscal','pcd','Pessoas com Deficiência'),
-    ('fiscal','Fiscal','ia','IA e Inovação'),
-    ('fiscal','Fiscal','sust','Sustentabilidade'),
-    ('saude','Saúde','enf','Enfermagem'),
-    ('saude','Saúde','sus','Legislação do SUS'),
-    ('saude','Saúde','med','Medicina'),
-    ('saude','Saúde','fisio','Fisioterapia'),
-    ('saude','Saúde','port','Português'),
-    ('saude','Saúde','rl','Raciocínio Lógico'),
-    ('saude','Saúde','inf','Informática'),
-    ('saude','Saúde','const','Dir. Constitucional'),
-    ('saude','Saúde','pcd','Pessoas com Deficiência'),
-    ('saude','Saúde','igual','Igualdade Racial e de Gênero'),
-    ('enem','Enem','ling','Linguagens'),
-    ('enem','Enem','mat','Matemática'),
-    ('enem','Enem','fis','Física'),
-    ('enem','Enem','qui','Química'),
-    ('enem','Enem','bio','Biologia'),
-    ('enem','Enem','his','História'),
-    ('enem','Enem','geo','Geografia'),
-    ('enem','Enem','fil','Filosofia e Sociologia'),
-    ('administrativa','Administrativa','port','Português'),
-    ('administrativa','Administrativa','const','Dir. Constitucional'),
-    ('administrativa','Administrativa','adm','Dir. Administrativo'),
-    ('administrativa','Administrativa','gest','Adm. Pública'),
-    ('administrativa','Administrativa','arq','Arquivologia'),
-    ('administrativa','Administrativa','afo','AFO'),
-    ('administrativa','Administrativa','inf','Informática'),
-    ('administrativa','Administrativa','rl','Raciocínio Lógico'),
-    ('administrativa','Administrativa','prev','Dir. Previdenciário'),
-    ('administrativa','Administrativa','pcd','Pessoas com Deficiência'),
-    ('administrativa','Administrativa','ia','IA e Inovação'),
-    ('administrativa','Administrativa','sust','Sustentabilidade')
-)
-select t.nome_trilha as trilha, t.nome_materia as materia, count(q.id) as questoes,
-       count(q.id) filter (where q.nivel = 0) as facil,
-       count(q.id) filter (where q.nivel = 1) as intermediaria,
-       count(q.id) filter (where q.nivel = 2) as dificil,
-       count(q.id) filter (where q.nivel = 3) as muito_dificil,
-       count(q.id) filter (where q.nivel = 4) as desafio
-from trilhas t left join public.questoes q on q.materia = t.materia
-group by t.nome_trilha, t.nome_materia
-order by t.nome_trilha, questoes desc;
-
--- 3) total geral do banco
-select count(*) as total_de_questoes from public.questoes;
+select trilha, materia, questoes, facil, intermediaria, dificil, muito_dificil, desafio
+from (
+  select pos, nome_trilha as trilha, nome_materia as materia, 1 as tipo,
+         count(id) as questoes,
+         count(id) filter (where nivel = 0) as facil,
+         count(id) filter (where nivel = 1) as intermediaria,
+         count(id) filter (where nivel = 2) as dificil,
+         count(id) filter (where nivel = 3) as muito_dificil,
+         count(id) filter (where nivel = 4) as desafio
+  from linhas group by pos, nome_trilha, nome_materia
+  union all
+  select pos, nome_trilha, '★ TOTAL DA TRILHA (' || count(distinct nome_materia) || ' matérias)', 0,
+         count(id), count(id) filter (where nivel = 0), count(id) filter (where nivel = 1),
+         count(id) filter (where nivel = 2), count(id) filter (where nivel = 3), count(id) filter (where nivel = 4)
+  from linhas group by pos, nome_trilha
+  union all
+  select 99, '★ BANCO INTEIRO', 'total sem repetir matérias', 0,
+         count(*), count(*) filter (where nivel = 0), count(*) filter (where nivel = 1),
+         count(*) filter (where nivel = 2), count(*) filter (where nivel = 3), count(*) filter (where nivel = 4)
+  from public.questoes
+) r
+order by pos, tipo, questoes desc;
