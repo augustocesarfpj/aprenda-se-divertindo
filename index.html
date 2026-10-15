@@ -6653,7 +6653,7 @@ const LAST=PRIZES.length-1;
 const SAFE=new Set([10,17,22,26,LAST]); // fim de cada faixa de dificuldade
 const TIME=45;
 const fmt=v=>v>=1000000?"R$ 1 milhão":"R$ "+v.toLocaleString("pt-BR");
-const tierOf=l=>l<11?0:l<18?1:l<23?2:l<27?3:4; // 1–11 fácil · 12–18 intermediária · 19–23 difícil · 24–27 muito difícil · 28–30 desafio
+const tierOf=l=>(l===5||l===6)?1:(l===11||l===12)?0:l<11?0:l<18?1:l<23?2:l<27?3:4; // 1–5 fácil · 6–7 intermediária · 8–13 fácil · 14–18 intermediária · 19–23 difícil · 24–27 muito difícil · 28–30 desafio
 const $=id=>document.getElementById(id);
 
 /* armazenamento */
@@ -6704,7 +6704,9 @@ function pick(tier){
     if(!pool.length)continue;
     const fresh=pool.filter(q=>!seen.has(q.id));
     if(fresh.length)return evenPick(fresh,Math.random);
-    // todas desse nível já foram vistas: recomeça o ciclo só deste nível
+    // todas desse nível já foram vistas: antes de repetir, usa uma inédita do nível seguinte (mais difícil)
+    if(t===tier&&t<4){const up=Q.filter(q=>q.d===t+1&&ok(q)&&!seen.has(q.id));if(up.length)return evenPick(up,Math.random)}
+    // nem o nível seguinte tem inéditas: recomeça o ciclo só deste nível
     pool.forEach(q=>seen.delete(q.id));saveSeen();
     return evenPick(pool,Math.random);
   }
