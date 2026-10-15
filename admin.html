@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Administração · Aprenda se Divertindo</title>
+<link rel="icon" href="icones/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+:root{--paper:#EEF1EC;--sheet:#FFFFFF;--ink:#16203A;--muted:#5B6476;--line:#D6DCD2;--money:#17774A;--money-soft:#DDF1E5;--alt:#B7C9BE;--warn:#B7791F;--warn-soft:#FBF0DA;--bad:#C93A57;--bad-soft:#F8E1E6;--focus:#2C57D0}
+@media (prefers-color-scheme:dark){:root{--paper:#10172A;--sheet:#182238;--ink:#E7ECF5;--muted:#9AA6BD;--line:#2B3753;--money:#4CC98B;--money-soft:#17352A;--alt:#3B5A4C;--warn:#E9B23B;--warn-soft:#3A2F14;--bad:#F07A93;--bad-soft:#3A1B25}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.5 "Atkinson Hyperlegible",system-ui,sans-serif}
+h1,h2,h3{font-family:"Bricolage Grotesque",system-ui,sans-serif;margin:0;line-height:1.15}
+h1{font-size:1.6rem;font-weight:800}h2{font-size:1.2rem}
+.mono,.eye,th{font-family:"IBM Plex Mono",ui-monospace,monospace}
+.eye{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:20px 24px 8px;max-width:1200px;margin:0 auto}
+.brand{display:flex;align-items:center;gap:12px}
+main{max-width:1200px;margin:0 auto;padding:8px 24px 48px;display:grid;gap:16px}
+.panel{background:var(--sheet);border:1.5px solid var(--line);border-radius:12px;padding:18px 20px;display:grid;gap:12px;min-width:0}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab,.chip{font:inherit;font-size:.92rem;padding:7px 14px;border-radius:999px;border:1.5px solid var(--line);background:var(--sheet);color:var(--ink);cursor:pointer}
+.tab[aria-selected="true"],.chip[aria-pressed="true"]{background:var(--ink);color:var(--sheet);border-color:var(--ink)}
+.btn{font:inherit;font-weight:700;padding:9px 16px;border-radius:8px;border:1.5px solid var(--ink);background:var(--ink);color:var(--sheet);cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.tile{border:1.5px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:2px}
+.tile b{font-family:"Bricolage Grotesque",sans-serif;font-size:1.7rem;font-weight:800;color:var(--money)}
+.tile span{font-size:.85rem;color:var(--muted)}
+.tile small{font-size:.78rem;color:var(--muted)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.tablewrap{overflow-x:auto;border:1.5px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+th{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:left;padding:9px 10px;border-bottom:1.5px solid var(--line);white-space:nowrap;background:var(--paper);position:sticky;top:0}
+th.sort{cursor:pointer}th.sort:hover{color:var(--ink)}
+td{padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+tr:last-child td{border-bottom:0}
+.bar{display:inline-block;height:8px;border-radius:4px;background:var(--money);vertical-align:middle;margin-left:6px}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:.78rem;font-weight:700}
+.pill.ok{background:var(--money-soft);color:var(--money)}.pill.warn{background:var(--warn-soft);color:var(--warn)}.pill.bad{background:var(--bad-soft);color:var(--bad)}
+input[type=search],input[type=email],input[type=password]{font:inherit;padding:9px 12px;border:1.5px solid var(--line);border-radius:8px;background:var(--sheet);color:var(--ink);min-width:220px}
+.small{font-size:.86rem;color:var(--muted);margin:0}
+.flash{background:var(--bad-soft);color:var(--bad);padding:10px 14px;border-radius:8px;margin:0}
+.chart svg{width:100%;height:auto;display:block}
+.legend{display:flex;gap:14px;font-size:.82rem;color:var(--muted)}.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.cohort td.c{text-align:center;font-variant-numeric:tabular-nums}
+form.login{display:grid;gap:10px;max-width:360px}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+@media (max-width:640px){header,main{padding-left:16px;padding-right:16px}.panel{padding:14px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><svg width="40" height="40" viewBox="0 0 120 120" aria-hidden="true"><rect width="120" height="120" rx="28" fill="#16203A"/><g transform="translate(1 4)"><path d="M18 100 V84 H38 V68 H58 V52 H78 V36 H100 V100 Z" fill="#4CC98B"/><circle cx="89" cy="21" r="10" fill="#E9B23B"/></g></svg>
+    <div><span class="eye">Aprenda se Divertindo</span><h1>Administração</h1></div></div>
+  <div class="row"><span class="small" id="who"></span><a class="btn ghost" href="./" style="text-decoration:none">Abrir o jogo</a><button class="btn ghost" id="out" hidden>Sair</button></div>
+</header>
+<main id="app"><div class="panel"><p class="small">Carregando…</p></div></main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
+<script>
+const SB_URL="https://yanrzhogtthhqwsbeqnc.supabase.co",SB_KEY="sb_publishable_nDmaVkG52OAxZfplzIkBUQ_lDIlluzx";
+const TRACKS={"geral":{"n":"Geral","s":["port","const","adm","pen","ppen","leg","inf","rl","est","cont","dh","civ","pciv","trib","afo","gest","arq","ml","igual","prev","pcd","ia","sust","adua","eco","aud","dados"]},"policial":{"n":"Policial","s":["port","const","adm","pen","ppen","leg","dh","inf","rl","est","cont","ml","igual","pcd","ia","sust"]},"tribunais":{"n":"Tribunais","s":["port","const","adm","civ","pciv","pen","ppen","arq","inf","rl","prev","trib","gest","pcd","ia","sust"]},"fiscal":{"n":"Fiscal","s":["port","const","adm","trib","afo","cont","est","rl","inf","adua","eco","aud","dados","prev","pcd","ia","sust"]},"saude":{"n":"Saúde","s":["enf","sus","med","fisio","port","rl","inf","const","pcd","igual"]},"enem":{"n":"Enem","s":["ling","mat","fis","qui","bio","his","geo","fil"]},"administrativa":{"n":"Administrativa","s":["port","const","adm","gest","arq","afo","inf","rl","prev","pcd","ia","sust"]}},SUBJ={"port":"Português","const":"Dir. Constitucional","adm":"Dir. Administrativo","pen":"Dir. Penal","ppen":"Processo Penal","leg":"Legislação Especial","inf":"Informática","rl":"Raciocínio Lógico","est":"Estatística","cont":"Contabilidade","dh":"Direitos Humanos","civ":"Direito Civil","pciv":"Processo Civil","trib":"Dir. Tributário","afo":"AFO","gest":"Adm. Pública","arq":"Arquivologia","ml":"Medicina Legal","igual":"Igualdade Racial e de Gênero","prev":"Dir. Previdenciário","pcd":"Pessoas com Deficiência","ia":"IA e Inovação","sust":"Sustentabilidade","adua":"Leg. Aduaneira","eco":"Economia e Finanças","aud":"Auditoria","dados":"Fluência em Dados","ling":"Linguagens","mat":"Matemática","fis":"Física","qui":"Química","bio":"Biologia","his":"História","geo":"Geografia","fil":"Filosofia e Sociologia","sus":"Legislação do SUS","enf":"Enfermagem","fisio":"Fisioterapia","med":"Medicina"},NIVEIS=["Fácil","Intermediária","Difícil","Muito difícil","Desafio"];
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const num=n=>Number(n||0).toLocaleString("pt-BR"),brl=n=>"R$ "+num(n);
+const dt=s=>s?new Date(s).toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit",year:"2-digit"}):"–";
+const ago=s=>{if(!s)return"nunca";const m=Math.round((Date.now()-new Date(s))/6e4);return m<60?"há "+m+" min":m<1440?"há "+Math.floor(m/60)+" h":"há "+Math.floor(m/1440)+" d"};
+const dd=s=>{const p=String(s).split("-");return p[2]+"/"+p[1]};
+let sb=null,user=null;const ST={tab:"geral",dias:30,data:{},q:"",sort:{k:"ultimo_jogo",d:-1}};
+function errMsg(e){const m=(e&&(e.message||e.details)||"")+"";if(m.includes("SEM_PERMISSAO"))return"Esta conta não tem acesso à administração.";if(m.includes("Could not find")||m.includes("does not exist"))return"Rode o arquivo 49-admin.sql no Supabase para ativar esta página.";if(m.toLowerCase().includes("fetch"))return"Sem conexão. Tente de novo.";return"Não deu certo: "+m}
+async function rpc(fn,args){const {data,error}=await sb.rpc(fn,args||{});if(error)throw error;return data}
+
+function loginView(msg){
+  $("app").innerHTML='<div class="panel"><h2>Entrar</h2><p class="small">Use a mesma conta do jogo. Só administradores veem os dados.</p>'+(msg?'<p class="flash" role="alert">'+esc(msg)+'</p>':'')+'<form class="login" id="lf"><label class="small" for="em">E-mail</label><input type="email" id="em" required autocomplete="email"><label class="small" for="pw">Senha</label><input type="password" id="pw" required autocomplete="current-password"><button class="btn" type="submit">Entrar</button></form></div>';
+  $("lf").onsubmit=async e=>{e.preventDefault();const b=e.target.querySelector("button");b.disabled=true;const {error}=await sb.auth.signInWithPassword({email:$("em").value.trim(),password:$("pw").value});if(error){loginView(error.message.includes("Invalid")?"E-mail ou senha incorretos.":error.message)}};
+}
+async function boot(){
+  try{sb=window.supabase.createClient(SB_URL,SB_KEY)}catch(e){$("app").innerHTML='<div class="panel"><p class="flash">Não foi possível carregar o Supabase.</p></div>';return}
+  sb.auth.onAuthStateChange((ev,s)=>{const u=s&&s.user;if((u&&u.id)!==(user&&user.id)){user=u||null;start()}});
+  const {data}=await sb.auth.getSession();user=data.session&&data.session.user||null;start();
+  $("out").onclick=async()=>{await sb.auth.signOut()};
+}
+async function start(){
+  $("who").textContent=user?user.email:"";$("out").hidden=!user;
+  if(!user){loginView();return}
+  try{const ok=await rpc("admin_eu");if(!ok){$("app").innerHTML='<div class="panel"><h2>Acesso restrito</h2><p class="small">A conta '+esc(user.email)+' não é administradora. Entre com a conta do criador do jogo.</p></div>';return}}
+  catch(e){$("app").innerHTML='<div class="panel"><p class="flash" role="alert">'+esc(errMsg(e))+'</p></div>';return}
+  shell();load();
+}
+function shell(){
+  const tabs=[["geral","Visão geral"],["retencao","Retenção"],["jogadores","Jogadores"],["conteudo","Conteúdo"],["rankings","Rankings"]];
+  $("app").innerHTML='<div class="row" style="justify-content:space-between"><div class="tabs" role="tablist">'+tabs.map(([k,n])=>'<button class="tab" role="tab" data-t="'+k+'" aria-selected="'+(ST.tab===k)+'">'+n+'</button>').join("")+'</div><div class="row"><span class="small" id="upd"></span><button class="btn ghost" id="rel">Atualizar</button></div></div><div id="view" style="display:grid;gap:16px"></div>';
+  document.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{ST.tab=b.dataset.t;document.querySelectorAll("[data-t]").forEach(x=>x.setAttribute("aria-selected",x===b));render()});
+  $("rel").onclick=()=>load();
+}
+async function load(){
+  $("view").innerHTML='<div class="panel"><p class="small">Carregando os dados…</p></div>';
+  try{
+    const [res,tot,ret,jog,que,tri,rk]=await Promise.all([rpc("admin_resumo",{p_dias:ST.dias}),rpc("admin_totais"),rpc("admin_retencao",{p_semanas:10}),rpc("admin_jogadores"),rpc("admin_questoes"),rpc("admin_trilhas",{p_dias:ST.dias}),rpc("admin_rankings")]);
+    const byDay={};(res||[]).forEach(r=>byDay[String(r.dia)]=r);const full=[];for(let i=ST.dias-1;i>=0;i--){const d=new Date(Date.now()-3*36e5-i*864e5).toISOString().slice(0,10);full.push(byDay[d]||{dia:d,visitantes:0,visitantes_com_conta:0,partidas_sem_conta:0,partidas_com_conta:0,jogadores_com_conta:0,contas_novas:0})}
+    ST.data={res:full,tot:tot||{},ret:ret||[],jog:jog||[],que:que||[],tri:tri||[],rk:rk||[]};
+    $("upd").textContent="Atualizado às "+new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});render();
+  }catch(e){$("view").innerHTML='<div class="panel"><p class="flash" role="alert">'+esc(errMsg(e))+'</p></div>'}
+}
+function render(){const v=$("view");if(!ST.data.tot)return;({geral:vGeral,retencao:vRet,jogadores:vJog,conteudo:vCont,rankings:vRk})[ST.tab](v)}
+
+/* gráfico de barras empilhadas em SVG */
+function bars(rows,series,opts){
+  const W=760,H=220,L=36,R=8,T=14,B=26,n=rows.length;if(!n)return'<p class="small">Sem dados no período.</p>';
+  const max=Math.max(1,...rows.map(r=>series.reduce((a,s)=>a+(+r[s.k]||0),0)));
+  const step=(W-L-R)/n,bw=Math.max(2,Math.min(28,step*.7));const y=v=>T+(H-T-B)*(1-v/max);
+  const ticks=[0,Math.round(max/2),max];let g='';
+  ticks.forEach(t=>{g+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y(t)+'" y2="'+y(t)+'" stroke="var(--line)"/><text x="'+(L-6)+'" y="'+(y(t)+4)+'" text-anchor="end" font-size="11" fill="var(--muted)">'+num(t)+'</text>'});
+  const every=Math.ceil(n/12);
+  rows.forEach((r,i)=>{let acc=0;const x=L+i*step+(step-bw)/2;const tip=esc(dd(r.dia))+": "+series.map(s=>s.n+" "+num(r[s.k])).join(" · ");
+    g+='<g><title>'+tip+'</title>';series.forEach(s=>{const v=+r[s.k]||0;if(!v)return;g+='<rect x="'+x+'" y="'+y(acc+v)+'" width="'+bw+'" height="'+(y(acc)-y(acc+v))+'" fill="'+s.c+'" rx="2"/>';acc+=v});g+='</g>';
+    if(i%every===0||i===n-1)g+='<text x="'+(x+bw/2)+'" y="'+(H-8)+'" text-anchor="middle" font-size="11" fill="var(--muted)">'+dd(r.dia)+'</text>'});
+  return'<div class="chart"><svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(opts.label)+'">'+g+'</svg></div><div class="legend">'+series.map(s=>'<span><i style="background:'+s.c+'"></i>'+s.n+'</span>').join("")+'</div>';
+}
+function tile(v,label,sub){return'<div class="tile"><b>'+num(v)+'</b><span>'+label+'</span>'+(sub?'<small>'+sub+'</small>':'')+'</div>'}
+function vGeral(v){
+  const t=ST.data.tot,R=ST.data.res,hoje=R.length?R[R.length-1]:{};const hojeStr=new Date(Date.now()-3*36e5).toISOString().slice(0,10),h=String(hoje.dia)===hojeStr?hoje:{};
+  const sum=k=>R.reduce((a,r)=>a+(+r[k]||0),0),vis=sum("visitantes"),cn=sum("contas_novas");
+  v.innerHTML='<div class="panel"><div class="row" style="justify-content:space-between"><h2>Hoje</h2><span class="small">dia '+dd(hojeStr)+' (horário de Brasília)</span></div><div class="tiles">'+tile(h.visitantes,"visitantes")+tile(h.contas_novas,"contas novas")+tile((+h.partidas_com_conta||0)+(+h.partidas_sem_conta||0),"partidas",num(h.partidas_sem_conta)+" sem conta")+tile(h.jogadores_com_conta,"jogadores com conta")+'</div></div>'
+  +'<div class="panel"><div class="row" style="justify-content:space-between"><h2>Período</h2><div class="row" role="group" aria-label="Período">'+[7,30,90].map(d=>'<button class="chip" data-d="'+d+'" aria-pressed="'+(ST.dias===d)+'">'+d+' dias</button>').join("")+'</div></div>'
+  +'<div class="tiles">'+tile(vis,"visitantes no período")+tile(cn,"contas novas",vis?Math.round(cn/vis*100)+"% dos visitantes":"")+tile(sum("partidas_com_conta")+sum("partidas_sem_conta"),"partidas no período",num(sum("partidas_sem_conta"))+" sem conta")+tile(t.ativos_7d,"ativos nos últimos 7 dias",num(t.ativos_30d)+" em 30 dias")+'</div>'
+  +'<h3 style="margin-top:6px">Partidas por dia</h3>'+bars(R,[{k:"partidas_com_conta",n:"com conta",c:"var(--money)"},{k:"partidas_sem_conta",n:"sem conta",c:"var(--alt)"}],{label:"Partidas por dia"})
+  +'<h3 style="margin-top:6px">Visitantes e contas novas por dia</h3>'+bars(R.map(r=>Object.assign({},r,{visitantes_sem:Math.max(0,(+r.visitantes||0)-(+r.contas_novas||0))})),[{k:"contas_novas",n:"contas novas",c:"var(--money)"},{k:"visitantes_sem",n:"outros visitantes",c:"var(--alt)"}],{label:"Visitantes e contas novas por dia"})+'</div>'
+  +'<div class="panel"><h2>Desde o lançamento</h2><div class="tiles">'+tile(t.contas,"contas",num(t.contas_7d)+" nos últimos 7 dias")+tile(t.partidas,"partidas",num(t.partidas_7d)+" nos últimos 7 dias")+tile(t.milhoes,"vezes que alguém chegou ao milhão")+tile(t.questoes,"questões no banco")+tile(t.rankings,"rankings")+tile(t.disputas_7d,"disputas em 7 dias",num(t.saques_7d)+" saques")+tile(t.em_estudo,"pessoas estudando com cartões",num(t.cartoes)+" cartões")+'</div></div>';
+  v.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>{ST.dias=+b.dataset.d;load()});
+}
+function vRet(v){
+  const R=ST.data.ret;const pct=(a,b)=>b?Math.round(a/b*100):0;
+  const cell=(a,b,fut)=>fut?'<td class="c small">–</td>':'<td class="c" style="background:color-mix(in srgb,var(--money) '+Math.round(pct(a,b)*.6)+'%,transparent)">'+pct(a,b)+'%<br><span class="small">'+a+'</span></td>';
+  const now=Date.now();
+  v.innerHTML='<div class="panel"><h2>Quem volta a jogar</h2><p class="small">Cada linha é a semana em que as contas foram criadas (segunda a domingo). As colunas mostram quantas dessas contas jogaram na mesma semana e nas semanas seguintes. O número mais importante é a <b>semana +1</b>: quem volta na semana seguinte.</p>'
+  +(R.length?'<div class="tablewrap"><table class="cohort"><thead><tr><th>Semana de cadastro</th><th class="n">Contas</th><th>Mesma semana</th><th>Semana +1</th><th>Semana +2</th><th>Semana +3</th><th>Semana +4</th></tr></thead><tbody>'+R.map(r=>{const w=new Date(r.semana+"T12:00:00-03:00").getTime(),f=k=>w+k*7*864e5>now;return'<tr><td>'+dd(r.semana)+'</td><td class="n">'+r.contas+'</td>'+cell(r.s0,r.contas,false)+cell(r.s1,r.contas,f(1))+cell(r.s2,r.contas,f(2))+cell(r.s3,r.contas,f(3))+cell(r.s4,r.contas,f(4))+'</tr>'}).join("")+'</tbody></table></div>':'<p class="small">Ainda não há contas no período.</p>')
+  +'<p class="small">Meta do plano de marketing: 40% ou mais voltando na semana +1. A semana atual ainda está em andamento.</p></div>';
+}
+const POOL={};function pools(){if(POOL.ok)return;for(const [k,t] of Object.entries(TRACKS)){POOL[k]=[0,0,0,0,0];ST.data.que.forEach(r=>{if(t.s.includes(r.materia))POOL[k][r.nivel]+=r.qtd})}POOL.ok=1}
+function vJog(v){
+  pools();const J=ST.data.jog;const q=ST.q.toLowerCase();
+  const rows=J.filter(r=>!q||(r.nome+" "+(r.email||"")).toLowerCase().includes(q));
+  const {k,d}=ST.sort;rows.sort((a,b)=>{const x=a[k],y=b[k];if(x==null&&y==null)return 0;if(x==null)return 1;if(y==null)return-1;return(x>y?1:x<y?-1:0)*d});
+  const ativos7=J.filter(r=>r.partidas_7d>0).length;
+  const col=[["nome","Jogador"],["criado_em","Cadastro"],["ultimo_jogo","Último jogo"],["partidas","Partidas",1],["partidas_7d","Em 7 dias",1],["melhor_premio","Melhor prêmio",1],["trilha","Trilha"],["faceis_vistas","Fáceis vistas",1],["intermediarias_vistas","Interm. vistas",1],["cartoes","Cartões",1],["rankings","Rankings",1]];
+  v.innerHTML='<div class="panel"><div class="row" style="justify-content:space-between"><h2>Jogadores com conta</h2><span class="small">'+J.length+' contas · '+ativos7+' jogaram nos últimos 7 dias</span></div><div class="row"><label class="small" for="qs">Buscar</label><input type="search" id="qs" placeholder="nome ou e-mail" value="'+esc(ST.q)+'"><button class="btn ghost" id="csv">Baixar planilha (CSV)</button></div>'
+  +'<p class="small">“Fáceis vistas” compara com o total de questões fáceis da trilha preferida do jogador: <span class="pill warn">80%+</span> está perto de começar a ver as intermediárias no lugar das fáceis já vistas.</p>'
+  +'<div class="tablewrap" style="max-height:70vh"><table><thead><tr>'+col.map(([key,n,nn])=>'<th class="sort'+(nn?' n':'')+'" data-k="'+key+'" aria-sort="'+(k===key?(d>0?"ascending":"descending"):"none")+'">'+n+(k===key?(d>0?" ▲":" ▼"):"")+'</th>').join("")+'</tr></thead><tbody>'
+  +rows.map(r=>{const p=POOL[r.trilha]||POOL.geral,fp=p[0]?Math.round(r.faceis_vistas/p[0]*100):0,pill=fp>=100?'<span class="pill bad">'+fp+'%</span>':fp>=80?'<span class="pill warn">'+fp+'%</span>':'<span class="small">'+fp+'%</span>';
+    return'<tr><td><b>'+esc(r.nome)+'</b><br><span class="small">'+esc(r.email)+'</span></td><td>'+dt(r.criado_em)+'</td><td title="'+esc(r.ultimo_jogo||"")+'">'+ago(r.ultimo_jogo)+'</td><td class="n">'+num(r.partidas)+'</td><td class="n">'+num(r.partidas_7d)+'</td><td class="n">'+(r.melhor_premio?brl(r.melhor_premio):"–")+(r.milhoes>1?' <span class="small">×'+r.milhoes+'</span>':'')+'</td><td>'+esc(TRACKS[r.trilha]?TRACKS[r.trilha].n:(r.trilha||"–"))+'</td><td class="n">'+num(r.faceis_vistas)+' '+pill+'</td><td class="n">'+num(r.intermediarias_vistas)+'</td><td class="n">'+num(r.cartoes)+'</td><td class="n">'+num(r.rankings)+'</td></tr>'}).join("")+'</tbody></table></div></div>';
+  const qs=$("qs");qs.oninput=()=>{ST.q=qs.value;const pos=qs.selectionStart;vJog(v);const n=$("qs");n.focus();n.setSelectionRange(pos,pos)};
+  v.querySelectorAll("th.sort").forEach(th=>th.onclick=()=>{const key=th.dataset.k;ST.sort=ST.sort.k===key?{k:key,d:-ST.sort.d}:{k:key,d:["nome","email","trilha"].includes(key)?1:-1};vJog(v)});
+  $("csv").onclick=()=>{const cc=[["nome","Nome"],["email","E-mail"]].concat(col.slice(1));const head=cc.map(c=>c[1]);const lines=[head.join(";")].concat(rows.map(r=>cc.map(([key])=>{let x=r[key];if(key==="trilha"&&TRACKS[x])x=TRACKS[x].n;return'"'+String(x==null?"":x).replace(/"/g,'""')+'"'}).join(";")));
+    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["﻿"+lines.join("\n")],{type:"text/csv;charset=utf-8"}));a.download="jogadores-"+new Date().toISOString().slice(0,10)+".csv";a.click()};
+}
+function vCont(v){
+  pools();const T=ST.data.tri;const byTr={};T.forEach(r=>{const o=byTr[r.trilha]=byTr[r.trilha]||{p:0,j:0,a:0,m:{}};o.p+=r.partidas;o.a+=r.sem_conta;o.m[r.modo]=(o.m[r.modo]||0)+r.partidas+r.sem_conta});
+  const total=Object.values(byTr).reduce((a,o)=>a+o.p+o.a,0)||1;
+  const bySub={};ST.data.que.forEach(r=>{(bySub[r.materia]=bySub[r.materia]||[0,0,0,0,0])[r.nivel]+=r.qtd});
+  v.innerHTML='<div class="panel"><h2>Questões e uso por trilha</h2><p class="small">Questões disponíveis em cada trilha (matérias comuns, como Português, contam em várias) e partidas dos últimos '+ST.dias+' dias.</p><div class="tablewrap"><table><thead><tr><th>Trilha</th>'+NIVEIS.map(n=>'<th class="n">'+n+'</th>').join("")+'<th class="n">Total</th><th class="n">Partidas</th><th class="n">Sem conta</th><th>Participação</th></tr></thead><tbody>'
+  +Object.entries(TRACKS).map(([k,t])=>{const p=POOL[k],o=byTr[k]||{p:0,a:0},sh=Math.round((o.p+o.a)/total*100);return'<tr><td><b>'+esc(t.n)+'</b></td>'+p.map(x=>'<td class="n">'+num(x)+'</td>').join("")+'<td class="n"><b>'+num(p.reduce((a,b)=>a+b,0))+'</b></td><td class="n">'+num(o.p)+'</td><td class="n">'+num(o.a)+'</td><td>'+sh+'%<span class="bar" style="width:'+Math.max(2,sh)+'px"></span></td></tr>'}).join("")
+  +'</tbody></table></div><p class="small">Total no banco: '+num(ST.data.tot.questoes)+' questões.</p></div>'
+  +'<div class="panel"><h2>Partidas por trilha e modo</h2><div class="tablewrap"><table><thead><tr><th>Trilha</th><th>Modo</th><th class="n">Com conta</th><th class="n">Jogadores</th><th class="n">Sem conta</th></tr></thead><tbody>'
+  +(T.length?T.map(r=>'<tr><td>'+esc(TRACKS[r.trilha]?TRACKS[r.trilha].n:r.trilha)+'</td><td>'+esc({classico:"Prova",desafio:"Desafio do dia",disputa:"Disputa"}[r.modo]||r.modo)+'</td><td class="n">'+num(r.partidas)+'</td><td class="n">'+num(r.jogadores)+'</td><td class="n">'+num(r.sem_conta)+'</td></tr>').join(""):'<tr><td colspan="5" class="small">Sem partidas no período.</td></tr>')+'</tbody></table></div></div>'
+  +'<div class="panel"><h2>Questões por matéria</h2><div class="tablewrap" style="max-height:60vh"><table><thead><tr><th>Matéria</th>'+NIVEIS.map(n=>'<th class="n">'+n+'</th>').join("")+'<th class="n">Total</th></tr></thead><tbody>'
+  +Object.entries(bySub).sort((a,b)=>b[1].reduce((x,y)=>x+y,0)-a[1].reduce((x,y)=>x+y,0)).map(([m,p])=>'<tr><td>'+esc(SUBJ[m]||m)+'</td>'+p.map(x=>'<td class="n">'+num(x)+'</td>').join("")+'<td class="n"><b>'+num(p.reduce((a,b)=>a+b,0))+'</b></td></tr>').join("")+'</tbody></table></div></div>';
+}
+function vRk(v){
+  const R=ST.data.rk;
+  v.innerHTML='<div class="panel"><div class="row" style="justify-content:space-between"><h2>Rankings</h2><span class="small">'+R.length+' rankings · '+R.filter(r=>r.saque).length+' com Sábado do Saque</span></div><div class="tablewrap"><table><thead><tr><th>Ranking</th><th>Administrador</th><th class="n">Participantes</th><th class="n">Partidas na semana</th><th class="n">Disputas (7 dias)</th><th class="n">Saques (7 dias)</th><th>Saque</th><th>Criado em</th></tr></thead><tbody>'
+  +(R.length?R.map(r=>'<tr><td><b>'+esc(r.nome)+'</b></td><td>'+esc(r.dono)+'</td><td class="n">'+num(r.membros)+'</td><td class="n">'+num(r.partidas_semana)+'</td><td class="n">'+num(r.disputas_7d)+'</td><td class="n">'+num(r.saques_7d)+'</td><td>'+(r.saque?'<span class="pill ok">ativo</span>':'<span class="small">desligado</span>')+'</td><td>'+dt(r.criado_em)+'</td></tr>').join(""):'<tr><td colspan="8" class="small">Nenhum ranking ainda.</td></tr>')+'</tbody></table></div><p class="small">“Partidas na semana” soma as partidas dos participantes desde segunda às 00h.</p></div>';
+}
+boot();
+</script>
+</body>
+</html>

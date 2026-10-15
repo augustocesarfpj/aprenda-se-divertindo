@@ -7626,6 +7626,7 @@ function renderAcct(){
     $("btnLogout").onclick=async()=>{sfx.click();try{await sb.auth.signOut()}catch(e){}setUser(null)};
     $("btnPass").onclick=()=>{sfx.click();openNewPass();$("npTitle").textContent="Trocar sua senha";$("npTitle").previousElementSibling.textContent="Sua conta"};
     $("btnDelete").onclick=()=>{sfx.click();$("delMsg").textContent="";$("delMsg").className="small";$("delYes").disabled=false;$("ovDelete").hidden=false};
+    const uid=user.id;sb.rpc("admin_eu").then(({data})=>{if(data===true&&user&&user.id===uid&&!a.querySelector("#admLink")){const l=document.createElement("a");l.id="admLink";l.className="btn ghost";l.href="admin.html";l.textContent="Administração";l.style.textDecoration="none";a.querySelector(".acts").prepend(l)}},()=>{});
   }else{
     a.innerHTML=delNotice?'<span>Sua conta e seus dados foram excluídos.</span><div class="acts"><button class="btn" type="button" id="btnLogin">Criar nova conta</button></div>'
       :'<span>Crie uma conta grátis para salvar seu progresso em qualquer aparelho e liberar o módulo de estudo.</span><div class="acts"><button class="btn" type="button" id="btnLogin">Entrar ou criar conta</button></div>';
