@@ -282,6 +282,11 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
 .duelbtn{font:inherit;font-size:1.05rem;line-height:1;padding:8px 9px;border:1.5px solid var(--line);border-radius:8px;background:var(--sheet);color:var(--ink);cursor:pointer}
 .duelbtn:hover{border-color:var(--money)}
 .rklist li.hasduel{grid-template-columns:2.2em 1fr auto auto}
+.rklist .acts{display:flex;gap:6px}
+.duelbtn.sq{border-color:var(--money);background:var(--money-soft)}
+.sqbanner{display:grid;gap:4px;padding:10px 12px;border:2px dashed var(--money);border-radius:10px;background:var(--money-soft);font-size:.92rem}
+.sqbanner b{font-size:1rem}
+.duel .sqtag{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;background:var(--money);color:var(--sheet);font-size:.75rem;font-weight:700;vertical-align:middle}
 @media (max-width:440px){.rklist li{gap:8px;padding:9px 10px}.rklist li.hasduel{grid-template-columns:1.7em 1fr auto auto}.rklist .pr{font-size:.92rem}.duelbtn{padding:7px}}
 .rkbonus{border-collapse:collapse;width:100%;max-width:280px}.rkbonus td{padding:3px 6px;border-bottom:1px solid var(--line)}.rkbonus td:last-child{text-align:right;font-family:var(--f-mono)}
 .rkchamp{margin:0;padding:0;list-style:none;display:grid;gap:4px;font-size:.85rem}
@@ -6775,7 +6780,7 @@ function finishDaily(){
 }
 
 /* ===== ranking com amigos ===== */
-const RK_MAX=3,RK={list:null,sel:null,week:0,rows:null,champs:null,err:null,busy:false,inv:false,leave:false,mng:false,del:false,msg:""};
+const RK_MAX=3,RK={list:null,sel:null,week:0,rows:null,champs:null,sq:null,err:null,busy:false,inv:false,leave:false,mng:false,del:false,msg:""};
 const RK_BONUS=[[30,30,100],[29,29,75],[28,28,65],[27,27,55],[26,26,45],[22,25,30],[17,21,15],[10,16,5],[5,9,2]];
 function rkBonus(v){for(const [a,b,p] of RK_BONUS)if(v>=a)return p;return 0}
 function ptsLine(vencidas,hits,modo){if(!user)return"";const b=modo==="desafio"?0:rkBonus(vencidas);return"No ranking: +"+(hits+b)+" ponto"+(hits+b===1?"":"s")+" ("+hits+" de acertos"+(b?" + "+b+" de bônus por vencer "+vencidas+" questões":"")+")."+(!b&&modo!=="desafio"&&vencidas<5?" Vença 5 questões para começar a ganhar bônus.":"")}
@@ -6817,6 +6822,8 @@ async function rkLoadTable(){
   if(t.error){RK.rows=null;RK.err=rkErr(t.error);if(rkErr(t.error).includes("não participa")){RK.list=null}return}
   RK.rows=t.data||[];RK.champs=c.error?[]:(c.data||[]);
   try{const f=await sb.rpc("feed_disputas",{p_ranking:RK.sel});RK.feed=f.error?[]:(f.data||[])}catch(e){RK.feed=[]}
+  RK.sq=null;const cr=(RK.list||[]).find(r=>r.id===RK.sel);
+  if(cr&&cr.saque&&RK.week===0){try{const q=await sb.rpc("saque_info",{p_ranking:RK.sel});RK.sq=q.error?null:q.data}catch(e){RK.sq=null}}
 }
 function ago(iso){const m=Math.max(0,Math.round((Date.now()-new Date(iso))/6e4));return m<60?"há "+m+" min":m<1440?"há "+Math.floor(m/60)+"h":"há "+Math.floor(m/1440)+" dia"+(m>=2880?"s":"")}
 async function rkAct(fn,args,okMsg){
@@ -6842,13 +6849,18 @@ function renderRanking(){
     const role=RK_ROLE[cur.papel]||RK_ROLE.membro,g=rkGestor(cur);
     h+='<div class="sheet panel"><div class="rkhead"><div style="display:grid;gap:2px"><h3 style="margin:0" id="rkName"></h3><span class="small">'+cur.membros+' participante'+(cur.membros===1?'':'s')+(cur.codigo?' · código <span class="rkcode">'+cur.codigo+'</span>':'')+'</span></div><span class="rkrole" title="Seu cargo">'+(role[0]?role[0]+' ':'')+'Você: '+role[1]+'</span></div>';
     h+='<div class="rkhead"><div class="rkchips" role="group" aria-label="Semana">'+[[0,"Esta semana"],[1,"Semana passada"]].map(([v,n])=>'<button type="button" class="chipbtn" data-wk="'+v+'" aria-pressed="'+(RK.week===v)+'">'+n+'</button>').join("")+'</div>'+(RK.week===0?'<span class="rkleft">Zera em '+rkWeekLeft()+'</span>':'')+'</div>';
+    const SQ=cur.saque&&RK.week===0?RK.sq:null,sqT={};
+    if(SQ&&SQ.aberto)(SQ.alvos||[]).forEach(a=>{if(!a.motivo)sqT[a.membro]=a});
+    if(SQ)h+='<div class="sqbanner">'+(SQ.aberto?'<b>💰 Hoje é Sábado do Saque!</b><span>'+(Object.keys(sqT).length?'Você pode saquear quem está até 3 posições acima de você. Toque em 💰 ao lado do alvo. Vale até as 21h.':SQ.minha_pos===1?'Você está em 1º: não há ninguém acima para saquear. Defenda sua posição!':'Ninguém disponível para saquear agora: cada dupla só se enfrenta uma vez no sábado e cada pessoa recebe no máximo 3 saques.')+'</span><span class="small">Seu escudo 🛡️: '+(SQ.escudo?'disponível (1 recusa grátis hoje)':'já usado hoje')+'</span>'
+      :SQ.sabado?'<b>💰 Sábado do Saque</b><span>Os saques de hoje foram encerrados às 21h. Os que já foram lançados podem ser respondidos até as 23h59.</span>'
+      :'<b>💰 Sábado do Saque ativo neste ranking</b><span>No sábado, das 0h às 21h, você pode desafiar quem está até 3 posições acima de você valendo pontos do ranking.</span>')+'</div>';
     if(!RK.rows)h+='<p class="small" style="margin:0">Carregando…</p>';
     else{
       const any=RK.rows.some(x=>x.pontos>0);
       h+='<ol class="rklist" aria-label="Classificação">'+RK.rows.map((x,i)=>{const pct=x.respondidas?Math.round(x.acertos/x.respondidas*100):0;const pos=x.pontos?(i<3?["🥇","🥈","🥉"][i]:(i+1)+"º"):"–";
-        return '<li class="'+(x.sou_eu?'me':'hasduel')+'"><span class="pos">'+pos+'</span><span class="who"><b></b><span>'+x.partidas+' partida'+(x.partidas===1?'':'s')+(x.partidas?' · '+pct+'%':'')+(x.mais_longe?' · '+(x.milhoes?'💰 Milhão'+(x.milhoes>1?' ×'+x.milhoes:''):'🏁 Q'+x.mais_longe):'')+((x.vitorias||x.empates||x.derrotas)?' · ⚔️ '+(x.vitorias||0)+'V '+(x.empates||0)+'E '+(x.derrotas||0)+'D':'')+'</span></span><span class="pr">'+x.pontos+' pt'+(x.pontos===1?'':'s')+'</span>'+(x.sou_eu?'':'<button type="button" class="duelbtn" data-dl="'+i+'">⚔️</button>')+'</li>'}).join("")+'</ol>';
+        return '<li class="'+(x.sou_eu?'me':'hasduel')+'"><span class="pos">'+pos+'</span><span class="who"><b></b><span>'+x.partidas+' partida'+(x.partidas===1?'':'s')+(x.partidas?' · '+pct+'%':'')+(x.mais_longe?' · '+(x.milhoes?'💰 Milhão'+(x.milhoes>1?' ×'+x.milhoes:''):'🏁 Q'+x.mais_longe):'')+((x.vitorias||x.empates||x.derrotas)?' · ⚔️ '+(x.vitorias||0)+'V '+(x.empates||0)+'E '+(x.derrotas||0)+'D':'')+(x.saque?' · 💰 '+(x.saque>0?'+':'')+x.saque+' em saques':'')+'</span></span><span class="pr">'+x.pontos+' pt'+(x.pontos===1?'':'s')+'</span>'+(x.sou_eu?'':'<span class="acts">'+(sqT[x.membro]?'<button type="button" class="duelbtn sq" data-sq="'+i+'">💰</button>':'')+'<button type="button" class="duelbtn" data-dl="'+i+'">⚔️</button></span>')+'</li>'}).join("")+'</ol>';
       if(RK.rows.length>1)h+='<p class="small" style="margin:0">Toque em ⚔️ para desafiar alguém no Show do Milhão com as mesmas questões.</p>';
-      h+='<details class="small"><summary style="cursor:pointer;font-weight:700">Como a pontuação funciona</summary><div style="display:grid;gap:6px;margin-top:6px"><span>1 ponto por acerto em qualquer partida feita com a conta (prova, desafio do dia e disputas).</span><span><b>Bônus de distância</b> em cada prova até o milhão e em cada disputa, pelas questões vencidas:</span><table class="rkbonus"><tbody>'+RK_BONUS.map(([a,b,p])=>'<tr><td>'+(a===b?(a===30?'💰 Milhão (30)':'Q'+a):a+' a '+b)+'</td><td><b>+'+p+'</b></td></tr>').join("")+'</tbody></table><span>Disputa: +5 por vitória e +2 por empate. 🏁 mostra a questão mais longe que cada um alcançou na semana. Tudo zera toda segunda às 00h.</span></div></details>';
+      h+='<details class="small"><summary style="cursor:pointer;font-weight:700">Como a pontuação funciona</summary><div style="display:grid;gap:6px;margin-top:6px"><span>1 ponto por acerto em qualquer partida feita com a conta (prova, desafio do dia e disputas).</span><span><b>Bônus de distância</b> em cada prova até o milhão e em cada disputa, pelas questões vencidas:</span><table class="rkbonus"><tbody>'+RK_BONUS.map(([a,b,p])=>'<tr><td>'+(a===b?(a===30?'💰 Milhão (30)':'Q'+a):a+' a '+b)+'</td><td><b>+'+p+'</b></td></tr>').join("")+'</tbody></table><span>Disputa: +5 por vitória e +2 por empate. 🏁 mostra a questão mais longe que cada um alcançou na semana. Tudo zera toda segunda às 00h.</span>'+(cur.saque?'<span><b>💰 Sábado do Saque</b> (ativo neste ranking): aos sábados, das 0h às 21h, dá para lançar um saque contra quem está até 3 posições acima. Vale 25 pontos (30 contra o 1º colocado). Se quem saqueou vencer, leva a aposta inteira; se perder, entrega metade ao desafiado; empate não muda nada. O desafiado tem até 3h30 (no máximo até 23h59) para jogar. A primeira recusa do dia é grátis (escudo 🛡️); as seguintes, ou deixar o prazo acabar, custam 10 pontos para quem desafiou. Cada dupla se enfrenta uma vez no sábado, cada pessoa recebe no máximo 3 saques, as questões começam no nível intermediário e ninguém fica com pontos negativos. Quem mais saqueou na semana ganha o selo 💰 Saqueador do Sábado.</span>':'')+'</div></details>';
       h+='<p class="small" style="margin:0">'+(any?'Quem chega mais longe na prova ganha bônus: o milhão vale +100 pontos. Toque em "Como a pontuação funciona" para ver a tabela.':(RK.week?'Ninguém pontuou na semana passada.':'Ninguém pontuou nesta semana ainda. Cada acerto vale 1 ponto e cada vitória em disputa vale 5: que tal começar?'))+'</p>';
       if(RK.feed){
         h+='<span class="eyebrow" style="margin-top:4px">⚔️ Disputas dos últimos 7 dias</span>';
@@ -6864,6 +6876,7 @@ function renderRanking(){
       const others=(RK.rows||[]).filter(x=>!x.sou_eu);
       h+='<div class="rkinv rkmng"><span class="eyebrow">Cargos</span><span class="small">👑 Administrador e ⭐ líderes (até 2) gerenciam o ranking. 🔹 Vice-líderes (até 3) podem convidar. Membros jogam e desafiam.</span>';
       h+=others.length?others.map((x,i)=>'<div class="mrow"><b data-mn="'+i+'"></b>'+(x.papel==="admin"?'<span class="rkrole">👑 Administrador</span>':'<label class="sr" for="rkP'+i+'">Cargo</label><select id="rkP'+i+'" data-pp="'+i+'">'+["lider","vice","membro"].map(v=>'<option value="'+v+'"'+(x.papel===v?' selected':'')+'>'+RK_ROLE[v][0]+' '+RK_ROLE[v][1]+'</option>').join("")+'</select><button class="btn ghost" type="button" data-rm="'+i+'">Remover</button>')+'</div>').join(""):'<span class="small">Ainda não há outros participantes.</span>';
+      h+='<span class="eyebrow" style="margin-top:6px">💰 Sábado do Saque</span><span class="small">'+(cur.saque?'Ativado. Aos sábados, cada um pode lançar saques valendo pontos contra quem está até 3 posições acima.':'Desativado. Ao ativar, aos sábados cada um pode lançar saques valendo pontos do ranking contra quem está até 3 posições acima. As regras aparecem em "Como a pontuação funciona".')+'</span><div class="row"><button class="btn'+(cur.saque?' ghost':' money')+'" type="button" id="rkSq">'+(cur.saque?'Desativar':'Ativar')+' o Sábado do Saque</button></div>';
       h+='<span class="eyebrow" style="margin-top:6px">Ranking</span><form class="rkform" id="rkRenF"><label class="sr" for="rkRen">Novo nome</label><input id="rkRen" maxlength="40" autocomplete="off"><button class="btn ghost" type="submit">Renomear</button></form>';
       h+='<div class="row"><button class="btn ghost" type="button" id="rkNewCode">Gerar novo código</button><button class="btn danger" type="button" id="rkDel">Apagar ranking</button></div><span class="small">Gerar um novo código desativa o link antigo, útil se o convite foi parar onde não devia.</span>';
       if(RK.del)h+='<div class="rkinv"><span class="small">Apagar o ranking para todos os '+cur.membros+' participantes? Não dá para desfazer.</span><div class="row"><button class="btn danger" type="button" id="rkDelYes">Apagar</button><button class="btn ghost" type="button" id="rkDelNo">Cancelar</button></div></div>';
@@ -6877,11 +6890,24 @@ function renderRanking(){
   box.querySelectorAll("[data-rk]").forEach(b=>{const r=L.find(x=>x.id===b.dataset.rk);b.textContent=r.nome;b.onclick=async()=>{sfx.click();RK.sel=r.id;RK.rows=null;RK.champs=null;RK.feed=null;RK.inv=false;RK.leave=false;RK.mng=false;RK.msg="";renderRanking();await rkLoadTable();renderRanking()}});
   if(cur){
     $("rkName").textContent=cur.nome;
-    if(RK.rows)box.querySelectorAll(".rklist .who b").forEach((b,i)=>{const x=RK.rows[i],r=RK_ROLE[x.papel]||RK_ROLE.membro;b.textContent=(x.campeao?"🏆 ":"")+x.nome+(r[0]?" "+r[0]:"")+(x.sou_eu?" (você)":"");b.title=r[1]+(x.campeao?" · campeão da semana passada":"")});
+    if(RK.rows){const sqTop=Math.max(0,...RK.rows.map(x=>x.saque||0));box.querySelectorAll(".rklist .who b").forEach((b,i)=>{const x=RK.rows[i],r=RK_ROLE[x.papel]||RK_ROLE.membro,sqr=sqTop>0&&x.saque===sqTop;b.textContent=(x.campeao?"🏆 ":"")+(sqr?"💰 ":"")+x.nome+(r[0]?" "+r[0]:"")+(x.sou_eu?" (você)":"");b.title=r[1]+(x.campeao?" · campeão da semana passada":"")+(sqr?" · Saqueador do Sábado":"")})}
+    box.querySelectorAll("[data-sq]").forEach(b=>{const x=RK.rows[+b.dataset.sq],a=(RK.sq&&RK.sq.alvos||[]).find(y=>y.membro===x.membro);b.setAttribute("aria-label","Saquear "+x.nome);b.title="Saquear "+x.nome+(a?" (vale "+a.valor+" pontos)":"");b.onclick=()=>{sfx.click();openSaque(cur,x,a)}});
     box.querySelectorAll("[data-dl]").forEach(b=>{const x=RK.rows[+b.dataset.dl];b.setAttribute("aria-label","Desafiar "+x.nome);b.title="Desafiar "+x.nome;b.onclick=()=>{sfx.click();openDuel(cur,x)}});
     if(RK.feed)box.querySelectorAll("#rkFeed li").forEach(li=>{const f=RK.feed[+li.dataset.fi],A=f.nome_desafiante,B=f.nome_desafiado,tr=TRACKS[f.trilha]?TRACKS[f.trilha].n:f.trilha;
       const tx=li.querySelector(".tx"),meta=li.querySelector(".meta"),bd=t=>{const b=document.createElement("b");b.textContent=t;return b};
       const put=(...parts)=>parts.forEach(p=>tx.append(typeof p==="string"?document.createTextNode(p):p));
+      if(f.saque){const v=f.valor||25,vm=Math.ceil(v/2);
+        if(f.status==="aguardando")put("💰 ",bd(A)," lançou um saque contra ",bd(B)),meta.textContent=tr+" · vale "+v+" pontos · "+ago(f.criada_em)+" · faltam "+dlLeft(f.expira_em);
+        else if(f.status==="jogando")put("🎮 ",bd(B)," está defendendo o saque de ",bd(A)),meta.textContent=tr+" · vale "+v+" pontos · "+ago(f.criada_em);
+        else if(f.status==="concluida"){
+          if(f.vencedor==="empate")put("🤝 Saque de ",bd(A)," contra ",bd(B)," terminou empatado");
+          else if(f.vencedor==="desafiante")put("💰 ",bd(A)," saqueou "+v+" pontos de ",bd(B));
+          else put("🛡️ ",bd(B)," defendeu o saque de ",bd(A)," e levou "+vm+" pontos");
+          put(" · "+fmt(f.premio_desafiante||0)+" × "+fmt(f.premio_desafiado||0));meta.textContent=tr+" · "+ago(f.criada_em);
+        }
+        else if(f.status==="recusada")f.escudo?put("🛡️ ",bd(B)," usou o escudo contra o saque de ",bd(A)):put("🏳️ ",bd(B)," recusou o saque de ",bd(A)," e entregou 10 pontos"),meta.textContent=tr+" · "+ago(f.criada_em);
+        else put("⌛ ",bd(B)," não respondeu ao saque de ",bd(A)," e entregou 10 pontos"),meta.textContent=tr+" · "+ago(f.criada_em);
+        return}
       if(f.status==="aguardando")put("⚔️ ",bd(A)," desafiou ",bd(B)),meta.textContent=tr+" · "+ago(f.criada_em)+" · faltam "+dlLeft(f.expira_em);
       else if(f.status==="jogando")put("🎮 ",bd(B)," está respondendo o desafio de ",bd(A)),meta.textContent=tr+" · "+ago(f.criada_em);
       else if(f.status==="concluida"){
@@ -6909,6 +6935,7 @@ function renderRanking(){
       box.querySelectorAll("[data-rm]").forEach(b=>b.onclick=async()=>{const x=others[+b.dataset.rm];
         if(b.dataset.ok!=="1"){b.dataset.ok="1";b.textContent="Confirmar remoção";b.className="btn danger";return}
         b.disabled=true;if(await rkAct("remover_membro",{p_ranking:cur.id,p_membro:x.membro},x.nome+" saiu do ranking."))reload()});
+      $("rkSq").onclick=async()=>{$("rkSq").disabled=true;if(await rkAct("definir_saque",{p_ranking:cur.id,p_ativo:!cur.saque},cur.saque?"Sábado do Saque desativado.":"Sábado do Saque ativado! Avise a turma: no sábado vale saquear pontos."))reload()};
       $("rkRen").value=cur.nome;
       $("rkRenF").onsubmit=async ev=>{ev.preventDefault();const n=$("rkRen").value.trim();if(n===cur.nome)return;if(await rkAct("renomear_ranking",{p_ranking:cur.id,p_nome:n},"Nome alterado."))reload()};
       $("rkNewCode").onclick=async()=>{if(await rkAct("novo_codigo_ranking",{p_ranking:cur.id},"Novo código gerado. O link antigo não funciona mais."))reload()};
@@ -6961,14 +6988,19 @@ function dlErr(e){
   if(m.includes("DISPUTA_ABERTA"))return"Já existe uma disputa aberta entre vocês dois. Esperem ela terminar.";
   if(m.includes("DISPUTA_FECHADA"))return"Esta disputa já foi encerrada.";
   if(m.includes("NAO_MEMBRO"))return"Essa pessoa não participa mais do ranking.";
+  if(m.includes("SAQUE_DESATIVADO"))return"O Sábado do Saque não está ativo neste ranking.";
+  if(m.includes("SAQUE_FECHADO"))return"Os saques só podem ser lançados aos sábados, das 0h às 21h.";
+  if(m.includes("ALVO_FORA"))return"A tabela mudou: só dá para saquear quem está até 3 posições acima de você. Atualize o ranking.";
+  if(m.includes("JA_SAQUEOU"))return"Vocês dois já se enfrentaram num saque hoje.";
+  if(m.includes("ALVO_PROTEGIDO"))return"Essa pessoa já recebeu 3 saques hoje e está protegida.";
   return rkErr(e);
 }
 function dlLeft(iso){const m=Math.max(0,Math.round((new Date(iso)-Date.now())/6e4));return m>=60?Math.floor(m/60)+"h"+String(m%60).padStart(2,"0"):m+"min"}
 function dlHour(iso){const d=new Date(iso),t=d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});return d.toDateString()===new Date().toDateString()?"hoje às "+t:"amanhã às "+t}
-function duelPlan(trilha){
+function duelPlan(trilha,minTier){
   const subs=TRACKS[trilha].s,used=new Set(),ids=[];
   for(let l=0;l<PRIZES.length;l++)for(let k=0;k<DL_PER;k++){
-    const tier=tierOf(l);let q=null;
+    const tier=Math.max(minTier||0,tierOf(l));let q=null;
     for(const t of [tier,tier+1,tier-1,tier+2,tier-2,tier+3,tier-3]){const pool=Q.filter(x=>x.d===t&&subs.includes(x.s)&&!used.has(x.id));if(pool.length){q=evenPick(pool,Math.random,TRACKS[trilha].w);break}}
     if(!q){const any=Q.filter(x=>!used.has(x.id));q=any[Math.random()*any.length|0]}
     used.add(q.id);ids.push(q.id);
@@ -6981,7 +7013,7 @@ function duelNext(){
   return pick(tierOf(S.level));
 }
 function startDuel(d){
-  S={level:0,mode:"duel",trilha:d.trilha,duel:{id:d.id,trilha:d.trilha,q:d.questoes,lv:-1,k:0,outro:d.outro,ranking:d.ranking,sou:d.sou,expira:d.expira},used:new Set(),subjects:TRACKS[d.trilha].s,help:{skip:3,elim:1,poll:1,prof:1,risk:1},riskArmed:false,hist:[],cur:null,sel:null,locked:false,left:TIME,paused:false};
+  S={level:0,mode:"duel",trilha:d.trilha,duel:{id:d.id,trilha:d.trilha,q:d.questoes,lv:-1,k:0,outro:d.outro,ranking:d.ranking,sou:d.sou,expira:d.expira,saque:!!d.saque,valor:d.valor||25},used:new Set(),subjects:TRACKS[d.trilha].s,help:{skip:3,elim:1,poll:1,prof:1,risk:1},riskArmed:false,hist:[],cur:null,sel:null,locked:false,left:TIME,paused:false};
   gameStart=Date.now();show("game");loadQuestion();
 }
 async function dlLoad(force){
@@ -6999,6 +7031,16 @@ function renderDuels(){
   box.hidden=false;
   box.innerHTML=L.map((d,i)=>{
     const tr=TRACKS[d.trilha]?TRACKS[d.trilha].n:d.trilha,info='<p class="small">Ranking <b data-f="rk"></b> · Trilha '+tr+'</p>';
+    if(d.saque){const v=d.valor||25,vm=Math.ceil(v/2),tag='<span class="sqtag">💰 Saque · '+v+' pts</span>';
+      if(!d.sou_desafiante&&d.status==="aguardando")return '<div class="duel" data-i="'+i+'"><b class="t">💰 <span data-f="o"></span> quer saquear seus pontos!'+tag+'</b>'+info+'<p class="small">Se <span data-f="o"></span> vencer, leva '+v+' pontos seus. Se você vencer, leva '+vm+' pontos dele. Expira em <b>'+dlLeft(d.expira_em)+'</b>: se não jogar, você perde 10 pontos.</p><div class="row"><button class="btn money" type="button" data-go="'+i+'">Defender agora</button><button class="btn ghost" type="button" data-no="'+i+'" data-esc="'+(d.escudo_livre?1:0)+'">'+(d.escudo_livre?'Usar escudo 🛡️':'Recusar (−10 pts)')+'</button></div>'+(d.escudo_livre?'<p class="small">O escudo é sua recusa grátis do sábado: não perde pontos, mas só vale uma vez por dia.</p>':'')+'</div>';
+      if(d.status==="aguardando")return '<div class="duel muted"><b class="t">⏳ Saque lançado contra <span data-f="o"></span>'+tag+'</b>'+info+'<p class="small">Você fez '+fmt(d.meu_premio||0)+'. O prazo termina em '+dlLeft(d.expira_em)+'.</p></div>';
+      if(d.status==="jogando")return '<div class="duel muted"><b class="t">🎮 '+(d.sou_desafiante?'<span data-f="o"></span> está defendendo seu saque':'Saque de <span data-f="o"></span> em andamento')+tag+'</b>'+info+(d.sou_desafiante?'':'<p class="small">Você saiu antes de terminar: o resultado vale R$ 0.</p>')+'</div>';
+      if(d.status==="concluida"){const r=d.resultado,pts=r==="empate"?0:d.sou_desafiante?(r==="venci"?v:vm):(r==="venci"?vm:v);
+        const ic=r==="venci"?(d.sou_desafiante?"💰":"🛡️"):r==="empate"?"🤝":"😬",tx=r==="empate"?"Saque empatado com ":r==="venci"?(d.sou_desafiante?"Você saqueou "+v+" pontos de ":"Você defendeu o saque e levou "+vm+" pontos de "):(d.sou_desafiante?"Saque falhou: você entregou "+vm+" pontos a ":"Você foi saqueado em "+v+" pontos por ");
+        return '<div class="duel muted"><b class="t">'+ic+' '+tx+'<span data-f="o"></span></b>'+info+'<p class="small">Você: '+fmt(d.meu_premio||0)+' × <span data-f="o"></span>: '+fmt(d.outro_premio||0)+(r==="empate"?' · ninguém ganhou pontos':'')+'</p></div>'}
+      if(d.status==="recusada")return '<div class="duel muted"><b class="t">'+(d.escudo?(d.sou_desafiante?'🛡️ <span data-f="o"></span> usou o escudo contra seu saque':'🛡️ Você usou o escudo contra o saque de <span data-f="o"></span>'):(d.sou_desafiante?'🏳️ <span data-f="o"></span> recusou seu saque: +10 pontos para você':'🏳️ Você recusou o saque de <span data-f="o"></span> e entregou 10 pontos'))+'</b>'+info+'</div>';
+      return '<div class="duel muted"><b class="t">⌛ '+(d.sou_desafiante?'<span data-f="o"></span> não respondeu seu saque: +10 pontos para você':'Você não respondeu o saque de <span data-f="o"></span> e entregou 10 pontos')+'</b>'+info+'</div>';
+    }
     if(!d.sou_desafiante&&d.status==="aguardando")return '<div class="duel" data-i="'+i+'"><b class="t">⚔️ Desafiado por <span data-f="o"></span></b>'+info+'<p class="small">Show do Milhão com as mesmas questões. Expira em <b>'+dlLeft(d.expira_em)+'</b>.</p><div class="row"><button class="btn money" type="button" data-go="'+i+'">Aceitar e jogar</button><button class="btn ghost" type="button" data-no="'+i+'">Recusar</button></div></div>';
     if(d.status==="aguardando")return '<div class="duel muted"><b class="t">⏳ Aguardando <span data-f="o"></span></b>'+info+'<p class="small">Você fez '+fmt(d.meu_premio||0)+'. O prazo termina em '+dlLeft(d.expira_em)+'.</p></div>';
     if(d.status==="jogando")return '<div class="duel muted"><b class="t">🎮 '+(d.sou_desafiante?'<span data-f="o"></span> está jogando sua disputa':'Disputa com <span data-f="o"></span> em andamento')+'</b>'+info+(d.sou_desafiante?'':'<p class="small">Você saiu antes de terminar: o resultado vale R$ 0.</p>')+'</div>';
@@ -7010,8 +7052,8 @@ function renderDuels(){
   box.querySelectorAll(".duel").forEach((el,i)=>{const d=L[i];el.querySelectorAll('[data-f="o"]').forEach(x=>x.textContent=d.outro);el.querySelectorAll('[data-f="rk"]').forEach(x=>x.textContent=d.ranking)});
   box.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{sfx.click();openAccept(L[+b.dataset.go])});
   box.querySelectorAll("[data-rv]").forEach(b=>b.onclick=()=>{const d=L[+b.dataset.rv];sfx.click();openDuel({id:d.ranking_id,nome:d.ranking},{membro:d.outro_id,nome:d.outro})});
-  box.querySelectorAll("[data-no]").forEach(b=>b.onclick=async()=>{const d=L[+b.dataset.no];if(b.dataset.ok!=="1"){b.dataset.ok="1";b.textContent="Confirmar recusa";return}
-    b.disabled=true;try{const {error}=await sb.rpc("recusar_disputa",{p_id:d.id});if(error)throw error}catch(e){}dlLoad(true)});
+  box.querySelectorAll("[data-no]").forEach(b=>b.onclick=async()=>{const d=L[+b.dataset.no];if(b.dataset.ok!=="1"){b.dataset.ok="1";b.textContent=d.saque?(b.dataset.esc==="1"?"Confirmar escudo":"Confirmar e perder 10 pts"):"Confirmar recusa";return}
+    b.disabled=true;try{const {error}=await sb.rpc("recusar_disputa",{p_id:d.id});if(error)throw error}catch(e){}RK.list=null;dlLoad(true)});
 }
 function dlDialog(eye,title,msg){$("dlEye").textContent=eye;$("dlTitle").textContent=title;$("dlMsg").textContent=msg;$("dlOpts").innerHTML="";$("dlActs").innerHTML="";$("dlErr").hidden=true;$("ovDuel").hidden=false}
 function dlBtn(t,c,f){const b=document.createElement("button");b.type="button";b.className="btn"+(c?" "+c:"");b.textContent=t;b.onclick=f;$("dlActs").appendChild(b);return b}
@@ -7031,7 +7073,26 @@ function openDuel(rk,x){
     catch(e){dlShowErr(e);go.disabled=false}});
   dlBtn("Cancelar","ghost",()=>{$("ovDuel").hidden=true});go.focus();
 }
+function openSaque(rk,x,a){
+  let tr=track;const v=a&&a.valor||25,vm=Math.ceil(v/2);
+  dlDialog("💰 Sábado do Saque · Ranking "+rk.nome,"Saquear "+x.nome,"Vale "+v+" pontos"+(v>25?" (alvo em 1º lugar)":"")+". Você joga agora, com questões a partir do nível intermediário; "+x.nome+" tem até 3h30 (no máximo até 23h59) para jogar as mesmas. Se você vencer, leva "+v+" pontos de "+x.nome+". Se perder, entrega "+vm+". Empate não muda nada. Se "+x.nome+" recusar sem escudo ou deixar o prazo acabar, você ganha 10 pontos.");
+  const o=$("dlOpts");o.innerHTML='<span class="eyebrow">Trilha</span><div class="rkchips" id="dlTr" role="group" aria-label="Trilha"></div>';
+  const box=$("dlTr");Object.entries(TRACKS).forEach(([k,t])=>{const b=document.createElement("button");b.type="button";b.className="chipbtn";b.textContent=t.n;b.setAttribute("aria-pressed",tr===k);b.onclick=()=>{sfx.click();tr=k;box.querySelectorAll("button").forEach(y=>y.setAttribute("aria-pressed",y===b))};box.appendChild(b)});
+  const go=dlBtn("Saquear agora","money",async()=>{go.disabled=true;$("dlErr").hidden=true;
+    const q=duelPlan(tr,1);
+    try{const {data,error}=await sb.rpc("criar_saque",{p_ranking:rk.id,p_desafiado:x.membro,p_trilha:tr,p_questoes:q});if(error)throw error;
+      $("ovDuel").hidden=true;DL.t=0;RK.sq=null;startDuel({id:data.id,trilha:tr,questoes:q,outro:x.nome,ranking:rk.nome,sou:true,expira:data.expira_em,saque:true,valor:data.valor})}
+    catch(e){dlShowErr(e);go.disabled=false}});
+  dlBtn("Cancelar","ghost",()=>{$("ovDuel").hidden=true});go.focus();
+}
 function openAccept(d){
+  if(d.saque){const v=d.valor||25,vm=Math.ceil(v/2);
+    dlDialog("💰 Sábado do Saque · Ranking "+d.ranking,"Defender o saque de "+d.outro,"Show do Milhão na trilha "+(TRACKS[d.trilha]?TRACKS[d.trilha].n:d.trilha)+", com as mesmas questões que "+d.outro+" respondeu. Se você vencer, leva "+vm+" pontos; se perder, entrega "+v+". O resultado dele só aparece quando você terminar. Depois de começar, se sair no meio, você fica com R$ 0.");
+    const go=dlBtn("Defender agora","money",async()=>{go.disabled=true;$("dlErr").hidden=true;
+      try{const {data,error}=await sb.rpc("iniciar_disputa",{p_id:d.id});if(error)throw error;const r=Array.isArray(data)?data[0]:data;
+        $("ovDuel").hidden=true;DL.t=0;startDuel({id:d.id,trilha:r.trilha,questoes:r.questoes,outro:d.outro,ranking:d.ranking,sou:false,expira:d.expira_em,saque:true,valor:v})}
+      catch(e){dlShowErr(e);go.disabled=false;DL.t=0}});
+    dlBtn("Agora não","ghost",()=>{$("ovDuel").hidden=true});go.focus();return}
   dlDialog("Disputa · Ranking "+d.ranking,d.outro+" te desafiou","Show do Milhão na trilha "+(TRACKS[d.trilha]?TRACKS[d.trilha].n:d.trilha)+", com as mesmas questões que "+d.outro+" respondeu. O resultado dele só aparece quando você terminar. Atenção: depois de começar, se sair no meio, você fica com R$ 0.");
   const go=dlBtn("Começar agora","money",async()=>{go.disabled=true;$("dlErr").hidden=true;
     try{const {data,error}=await sb.rpc("iniciar_disputa",{p_id:d.id});if(error)throw error;const r=Array.isArray(data)?data[0]:data;
@@ -7043,7 +7104,7 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("ovDuel").hidden
 async function finishDuel(how){
   const D=S.duel,prize=how==="win"?1000000:how==="stop"?acc():errVal(),hits=S.hist.filter(h=>h.ok).length;
   stats.games++;stats.best=Math.max(stats.best||0,prize);saveStats();bumpStreak();
-  $("endEyebrow").textContent="Disputa com "+D.outro+" · Ranking "+D.ranking;
+  $("endEyebrow").textContent=(D.saque?"💰 Saque com ":"Disputa com ")+D.outro+" · Ranking "+D.ranking;
   $("endPrize").textContent=fmt(prize);
   $("dailyGrid").hidden=true;$("btnAgain").textContent="Fazer nova prova";$("endStreak").textContent=streakLine();
   $("endMsg").textContent="Enviando seu resultado…";$("shareBox").innerHTML="";
@@ -7063,13 +7124,16 @@ async function finishDuel(how){
 }
 async function finishDuelShow(D){
   $("endDuelAct").hidden=true;
-  if(D.sou){
+  if(D.sou&&D.saque){
+    $("endMsg").textContent="Saque lançado! "+D.outro+" tem até "+dlHour(D.expira)+" para defender. Se você vencer, leva "+D.valor+" pontos; se perder, entrega "+Math.ceil(D.valor/2)+". Se não houver resposta, +10 pontos para você. Avise (ou provoque):";
+    shareUI($("shareBox"),"💰 É Sábado do Saque! Lancei um saque contra você no Aprenda se Divertindo, valendo "+D.valor+" pontos do ranking. Você tem até "+dlHour(D.expira)+" para defender:\n"+SHARE_URL);
+  }else if(D.sou){
     $("endMsg").textContent="Sua parte está feita! "+D.outro+" tem até "+dlHour(D.expira)+" para jogar as mesmas questões. Seu prêmio fica escondido até lá. Avise para não perder o prazo:";
     shareUI($("shareBox"),"⚔️ Te desafiei no Aprenda se Divertindo! Joguei o Show do Milhão na trilha "+TRACKS[D.trilha||S.trilha].n+" e agora é sua vez, com as mesmas questões. Você tem até "+dlHour(D.expira)+". Entre no app para aceitar:\n"+SHARE_URL);
   }else{
     await dlLoad(true);const d=(DL.list||[]).find(x=>x.id===D.id);
     if(d&&d.status==="concluida"){const r=d.resultado;
-      $("endMsg").textContent=(r==="venci"?"🏆 Você venceu "+D.outro+"!":r==="empate"?"🤝 Empate com "+D.outro+".":"😬 "+D.outro+" venceu desta vez.")+" Você: "+fmt(d.meu_premio||0)+" × "+D.outro+": "+fmt(d.outro_premio||0)+".";
+      $("endMsg").textContent=(D.saque?(r==="venci"?"🛡️ Saque defendido! Você levou "+Math.ceil(D.valor/2)+" pontos de "+D.outro+".":r==="empate"?"🤝 Saque empatado: ninguém ganhou pontos.":"😬 "+D.outro+" saqueou "+D.valor+" pontos seus."):(r==="venci"?"🏆 Você venceu "+D.outro+"!":r==="empate"?"🤝 Empate com "+D.outro+".":"😬 "+D.outro+" venceu desta vez."))+" Você: "+fmt(d.meu_premio||0)+" × "+D.outro+": "+fmt(d.outro_premio||0)+".";
       if(r==="venci"){sfx.win();confetti()}
       if(d.outro_id){const a=$("endDuelAct");a.innerHTML="";const b=document.createElement("button");b.type="button";b.className="btn money";b.textContent=r==="perdi"?"⚔️ Pedir revanche":"⚔️ Desafiar de novo";b.onclick=()=>{sfx.click();openDuel({id:d.ranking_id,nome:d.ranking},{membro:d.outro_id,nome:D.outro})};a.appendChild(b);a.hidden=false}
       shareUI($("shareBox"),(r==="venci"?"🏆 Venci "+D.outro:r==="empate"?"🤝 Empatei com "+D.outro:"Perdi para "+D.outro)+" numa disputa do Aprenda se Divertindo: "+fmt(d.meu_premio||0)+" × "+fmt(d.outro_premio||0)+". Quem é o próximo?\n"+SHARE_URL);
