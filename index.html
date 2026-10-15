@@ -7057,10 +7057,10 @@ q("adm",2,"O servidor reprovado na avaliação do estágio probatório será:",[
 /* ================= REGRAS ================= */
 const PRIZES=[1000,2000,3000,4000,5000,7000,10000,15000,20000,25000,30000,40000,50000,60000,75000,100000,125000,150000,200000,250000,300000,350000,400000,450000,500000,600000,700000,800000,900000,1000000];
 const LAST=PRIZES.length-1;
-const SAFE=new Set([10,17,22,26,LAST]); // fim de cada faixa de dificuldade
+const SAFE=new Set([8,14,20,25,LAST]); // fim de cada faixa de dificuldade
 const TIME=45;
 const fmt=v=>v>=1000000?"R$ 1 milhão":"R$ "+v.toLocaleString("pt-BR");
-const tierOf=l=>(l===5||l===6)?1:(l===11||l===12)?0:l<11?0:l<18?1:l<23?2:l<27?3:4; // 1–5 fácil · 6–7 intermediária · 8–13 fácil · 14–18 intermediária · 19–23 difícil · 24–27 muito difícil · 28–30 desafio
+const tierOf=l=>l<9?0:l<15?1:l<21?2:l<26?3:4; // Q1–9 fácil · Q10–15 intermediária · Q16–21 difícil · Q22–26 muito difícil · Q27–30 desafio
 const $=id=>document.getElementById(id);
 
 /* armazenamento */
