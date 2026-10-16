@@ -13,6 +13,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#16203A">
 <meta name="apple-mobile-web-app-title" content="Aprenda">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta property="og:image" content="https://aprendasedivertindo.com.br/icones/icone-512.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -268,6 +270,11 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
 .rkmng .mrow b{flex:1 1 140px;min-width:0;overflow-wrap:anywhere}
 .rkmng select{font:inherit;padding:8px;border:1.5px solid var(--line);border-radius:6px;background:var(--sheet);color:var(--ink)}
 .duelbox{display:grid;gap:8px;margin-top:4px}
+.instbox{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:4px;padding:12px 14px;border:1.5px solid var(--line);border-radius:8px;background:var(--sheet)}
+.instbox img{width:44px;height:44px;border-radius:10px;flex:none}
+.instbox div{flex:1 1 180px;display:grid;gap:2px}
+.instbox .btn{padding:9px 14px;font-size:.9rem}
+.inststeps{margin:0;padding-left:20px;display:grid;gap:8px}
 #ovPremium .dialog{max-height:calc(100dvh - 32px);overflow:auto}
 .pmlist{margin:0;padding-left:18px;display:grid;gap:4px}
 .pixcode{width:100%;font-family:var(--f-mono);font-size:.72rem;padding:8px;border:1.5px solid var(--line);border-radius:6px;background:var(--sheet);color:var(--ink);resize:none;word-break:break-all}
@@ -355,6 +362,12 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
       </div>
       <p class="small anoninfo" id="anonInfo" hidden></p>
       <div class="duelbox" id="duelBox" hidden></div>
+      <div class="instbox" id="instBox" hidden>
+        <img src="icones/icone-192.png" alt="">
+        <div><b>Instale o app no celular</b><span class="small">Grátis, abre direto da tela inicial, sem loja.</span></div>
+        <button class="btn money" type="button" id="btnInst">Instalar</button>
+        <button class="linkbtn" type="button" id="instNo">Agora não</button>
+      </div>
     </div>
 
     <div style="display:grid;gap:14px">
@@ -649,6 +662,17 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
       <button class="btn ghost" type="button" id="gIn">Já tenho conta</button>
     </div>
     <p class="small" style="margin:0"><button class="linkbtn" type="button" id="gNo">Agora não</button></p>
+  </div>
+</div>
+
+<!-- instalar -->
+<div class="ov" id="ovInstall" hidden>
+  <div class="sheet dialog" role="dialog" aria-modal="true" aria-labelledby="inTitle">
+    <span class="eyebrow">Aplicativo</span>
+    <h3 id="inTitle" style="margin:0">Instale o Aprenda se Divertindo</h3>
+    <ol class="small inststeps" id="inSteps"></ol>
+    <p class="small" style="margin:0">Pronto: o ícone aparece na tela inicial e o jogo abre em tela cheia, como um app.</p>
+    <div class="row"><button class="btn ghost" type="button" id="inClose">Entendi</button></div>
   </div>
 </div>
 
@@ -8840,6 +8864,30 @@ document.addEventListener("keydown",e=>{
 window.addEventListener("online",flushStudy);
 
 setSoundLabel();setTab(homeTab);applyTrack(track);loadCloud();
+
+/* ================= APP INSTALÁVEL (sem loja) */
+(function(){
+  if("serviceWorker" in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+  const ua=navigator.userAgent||"";
+  const ios=/iphone|ipad|ipod/i.test(ua)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+  const mobile=ios||/android|mobile/i.test(ua);
+  const inst=()=>matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
+  let deferred=null;
+  const off=()=>{try{return Date.now()<+(localStorage.getItem("gm-inst-off")||0)}catch(e){return false}};
+  const show=()=>{$("instBox").hidden=inst()||off()||!(deferred||mobile)};
+  addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferred=e;show()});
+  addEventListener("appinstalled",()=>{deferred=null;$("instBox").hidden=true});
+  $("instNo").onclick=()=>{try{localStorage.setItem("gm-inst-off",Date.now()+14*864e5)}catch(e){}$("instBox").hidden=true};
+  $("btnInst").onclick=async()=>{
+    if(deferred){deferred.prompt();try{await deferred.userChoice}catch(e){}deferred=null;show();return}
+    $("inSteps").innerHTML=ios
+      ?(/crios|fxios|edgios/i.test(ua)?'<li>Abra <b>aprendasedivertindo.com.br</b> no <b>Safari</b> (no iPhone, só ele instala).</li>':'')+'<li>Toque no botão <b>Compartilhar</b> (o quadrado com a seta para cima).</li><li>Role e toque em <b>Adicionar à Tela de Início</b>.</li><li>Toque em <b>Adicionar</b>.</li>'
+      :'<li>Toque no menu do navegador (<b>⋮</b>, no canto de cima).</li><li>Toque em <b>Instalar app</b> ou <b>Adicionar à tela inicial</b>.</li><li>Confirme em <b>Instalar</b>.</li>';
+    $("ovInstall").hidden=false;$("inClose").focus();
+  };
+  $("inClose").onclick=()=>{$("ovInstall").hidden=true};
+  show();
+})();
 </script>
 
 </body>

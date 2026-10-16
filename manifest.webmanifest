@@ -1,4 +1,5 @@
 {
+  "id": "./",
   "name": "Aprenda se Divertindo",
   "short_name": "Aprenda",
   "description": "Quiz de concursos e Enem: cada acerto sobe um degrau até R$ 1 milhão.",
@@ -9,8 +10,25 @@
   "background_color": "#16203A",
   "theme_color": "#16203A",
   "icons": [
-    {"src": "icones/icone-192.png", "sizes": "192x192", "type": "image/png"},
-    {"src": "icones/icone-512.png", "sizes": "512x512", "type": "image/png"},
-    {"src": "icones/icone-mascara-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+    {
+      "src": "icones/icone-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icones/icone-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icones/icone-mascara-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": [
+    "education",
+    "games"
   ]
 }
