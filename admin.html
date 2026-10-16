@@ -56,6 +56,13 @@ input[type=text],input[type=number],input[type=date],select,textarea{font:inheri
 .grid2 input[type=email]{min-width:0;width:100%}textarea{resize:vertical}
 .flash.ok{background:var(--money-soft);color:var(--money)}
 td .btn{padding:6px 12px;font-size:.85rem}
+.qform{display:grid;gap:10px}.qform label{display:grid;gap:4px}
+.qok input{border-color:var(--money);background:var(--money-soft)}
+.flash.warn{background:var(--warn-soft);color:var(--warn)}
+.qwarn ul{margin:4px 0 0;padding-left:18px;display:grid;gap:4px}
+.qlist{display:grid;gap:8px}.qitem{display:flex;gap:12px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px}
+.qitem>div:first-child{flex:1 1 320px;min-width:0}.qitem p{margin:2px 0;overflow-wrap:anywhere}.qitem .btn{padding:6px 12px;font-size:.85rem}
+#qSearch{flex:1 1 240px}.qfilters select{width:auto;flex:0 1 auto;max-width:100%}
 :focus-visible{outline:3px solid var(--focus);outline-offset:2px}
 @media (max-width:640px){header,main{padding-left:16px;padding-right:16px}.panel{padding:14px}}
 </style>
@@ -99,7 +106,7 @@ async function start(){
   shell();load();
 }
 function shell(){
-  const tabs=[["geral","Visão geral"],["retencao","Retenção"],["jogadores","Jogadores"],["conteudo","Conteúdo"],["rankings","Rankings"],["pagamentos","Pagamentos"],["assinantes","Assinantes"],["indicacoes","Indicações"],["config","Configurações"]];
+  const tabs=[["geral","Visão geral"],["retencao","Retenção"],["jogadores","Jogadores"],["conteudo","Conteúdo"],["questoes","Questões"],["rankings","Rankings"],["pagamentos","Pagamentos"],["assinantes","Assinantes"],["indicacoes","Indicações"],["config","Configurações"]];
   $("app").innerHTML='<div class="row" style="justify-content:space-between"><div class="tabs" role="tablist">'+tabs.map(([k,n])=>'<button class="tab" role="tab" data-t="'+k+'" aria-selected="'+(ST.tab===k)+'">'+n+'</button>').join("")+'</div><div class="row"><span class="small" id="upd"></span><button class="btn ghost" id="rel">Atualizar</button></div></div><div id="view" style="display:grid;gap:16px"></div>';
   document.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{ST.tab=b.dataset.t;document.querySelectorAll("[data-t]").forEach(x=>x.setAttribute("aria-selected",x===b));render()});
   $("rel").onclick=()=>{PAY.pag=PAY.ass=PAY.ind=PAY.cfg=null;load()};
@@ -113,7 +120,7 @@ async function load(){
     $("upd").textContent="Atualizado às "+new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});render();
   }catch(e){$("view").innerHTML='<div class="panel"><p class="flash" role="alert">'+esc(errMsg(e))+'</p></div>'}
 }
-function render(){const v=$("view");if(!ST.data.tot)return;({geral:vGeral,retencao:vRet,jogadores:vJog,conteudo:vCont,rankings:vRk,pagamentos:vPag,assinantes:vAss,indicacoes:vInd,config:vCfg})[ST.tab](v)}
+function render(){const v=$("view");if(!ST.data.tot)return;({geral:vGeral,retencao:vRet,jogadores:vJog,conteudo:vCont,rankings:vRk,questoes:vQue,pagamentos:vPag,assinantes:vAss,indicacoes:vInd,config:vCfg})[ST.tab](v)}
 
 /* gráfico de barras empilhadas em SVG */
 function bars(rows,series,opts){
@@ -299,6 +306,116 @@ async function vCfg(v){
   $("af").onsubmit=async e=>{e.preventDefault();try{await rpc("admin_adicionar_admin",{p_email:$("aEmail").value.trim()});PAY.msg="Administrador adicionado.";await payLoad("cfg",true);vCfg(v)}catch(err){alert(payErr(err))}};
   v.querySelectorAll("[data-ra]").forEach(b=>b.onclick=async()=>{const a=A.find(x=>x.user_id===b.dataset.ra);if(!confirm("Tirar o acesso de "+a.email+" à administração?"))return;
     try{await rpc("admin_remover_admin",{p_user:a.user_id});PAY.msg="Administrador removido.";await payLoad("cfg",true);vCfg(v)}catch(e){alert(payErr(e))}});
+}
+/* ===== lançar e editar questões ===== */
+const QS={all:null,off:null,err:null,loading:false,edit:null,f:{tr:"policial",m:"",n:0},bulk:null,bq:"",bf:{tr:"",m:"",n:"",so:""},msg:""};
+const nrm=t=>String(t||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase();
+const STOP=new Set("para pela pelo como qual quais sobre entre esta este essa esse isso aquela aquele quando onde mais menos muito pode deve devem sendo seja sera foram sido tera teria cada todo toda todos todas outro outra outros outras".split(" "));
+const toks=t=>new Set(nrm(t).replace(/[^a-z0-9 ]/g," ").split(/\s+/).filter(w=>w.length>=4&&!STOP.has(w)));
+async function qsLoad(force){
+  if(QS.all&&!force)return;QS.loading=true;
+  try{const rows=[];for(let from=0;;from+=1000){const {data,error}=await sb.from("questoes").select("id,materia,nivel,enunciado,opcoes,explicacao").order("id").range(from,from+999);if(error)throw error;rows.push(...data);if(data.length<1000)break}
+    QS.all=rows.map(r=>Object.assign(r,{ativa:true,_t:toks(r.enunciado+" "+(r.opcoes||[])[0])}));
+    try{QS.off=(await rpc("admin_questoes_inativas")).map(r=>Object.assign(r,{ativa:false,_t:toks(r.enunciado+" "+(r.opcoes||[])[0])}))}catch(e){QS.off=null;if(String(e.message||"").includes("Could not find"))QS.err="Rode o arquivo 58-admin-questoes.sql no Supabase para lançar e editar questões por aqui."}
+  }catch(e){QS.err=errMsg(e)}
+  QS.loading=false;
+}
+function qsSimilar(enun,certa,skipId){
+  const t=toks(enun+" "+certa);if(t.size<2)return[];const out=[];
+  for(const q of QS.all.concat(QS.off||[])){if(q.id===skipId)continue;let k=0;t.forEach(w=>{if(q._t.has(w))k++});const sc=k/Math.min(t.size,q._t.size||1);if(sc>=.6&&k>=3)out.push([sc,q])}
+  return out.sort((a,b)=>b[0]-a[0]).slice(0,4).map(x=>x[1]);
+}
+function subjOpts(tr,sel){const list=tr&&TRACKS[tr]?TRACKS[tr].s:Object.keys(SUBJ);return list.map(k=>'<option value="'+k+'"'+(k===sel?' selected':'')+'>'+esc(SUBJ[k])+'</option>').join("")}
+function trOpts(sel,all){return(all?'<option value="">Todas as trilhas</option>':'')+Object.entries(TRACKS).map(([k,t])=>'<option value="'+k+'"'+(k===sel?' selected':'')+'>'+esc(t.n)+'</option>').join("")}
+function nivOpts(sel,all){return(all?'<option value="">Todos os níveis</option>':'')+NIVEIS.map((n,i)=>'<option value="'+i+'"'+(String(i)===String(sel)?' selected':'')+'>'+n+'</option>').join("")}
+const MAT_ALIAS={};Object.entries(SUBJ).forEach(([k,n])=>{MAT_ALIAS[k]=k;MAT_ALIAS[nrm(n)]=k;MAT_ALIAS[nrm(n).replace(/^dir\. /,"direito ")]=k});
+Object.assign(MAT_ALIAS,{"portugues":"port","lingua portuguesa":"port","direito penal":"pen","penal":"pen","processo penal":"ppen","direito processual penal":"ppen","constitucional":"const","administrativo":"adm","legislacao":"leg","legislacao especial":"leg","informatica":"inf","raciocinio logico":"rl","rlm":"rl","matematica":"mat","fisica":"fis","quimica":"qui","biologia":"bio","historia":"his","geografia":"geo","filosofia":"fil","sociologia":"fil","linguagens":"ling","medicina legal":"ml","direitos humanos":"dh","estatistica":"est","contabilidade":"cont"});
+function parseNivel(x){const t=nrm(x).trim();if(/^[1-5]$/.test(t))return +t-1;const i=NIVEIS.map(nrm).indexOf(t);if(i>=0)return i;if(t==="facil")return 0;if(t.startsWith("inter"))return 1;if(t.startsWith("muito"))return 3;if(t.startsWith("dif"))return 2;if(t.startsWith("desa"))return 4;return null}
+function parseBulk(txt){
+  const lines=String(txt||"").split(/\r?\n/).map(l=>l.trim()).filter(Boolean);const out=[];
+  lines.forEach((l,i)=>{const sep=l.includes("\t")?"\t":";";const c=l.split(sep).map(x=>x.trim().replace(/^"(.*)"$/,"$1").replace(/""/g,'"'));
+    if(i===0&&/^mat[eé]ria$/i.test(c[0]))return; // cabeçalho do modelo
+    const r={linha:i+1,raw:c,materia:MAT_ALIAS[nrm(c[0]).trim()]||null,nivel:parseNivel(c[1]||""),enunciado:c[2]||"",opcoes:[c[3],c[4],c[5],c[6]].map(x=>(x||"").trim()),explicacao:c[7]||"",erro:null,parecida:null};
+    if(c.length<7)r.erro="faltam colunas (precisa de pelo menos 7)";
+    else if(!r.materia)r.erro="matéria não reconhecida: "+c[0];
+    else if(r.nivel==null)r.erro="nível não reconhecido: "+c[1];
+    else if(r.enunciado.length<8)r.erro="enunciado curto demais";
+    else if(r.opcoes.some(o=>!o))r.erro="falta alternativa";
+    else if(new Set(r.opcoes.map(o=>nrm(o))).size<4)r.erro="alternativas repetidas";
+    if(!r.erro){const s=qsSimilar(r.enunciado,r.opcoes[0]);if(s.length)r.parecida=s[0]}
+    out.push(r)});
+  const seenT=new Set();out.forEach(r=>{const k=nrm(r.enunciado);if(!r.erro&&seenT.has(k))r.erro="repetida dentro do lote";seenT.add(k)});
+  return out;
+}
+function qErr(e){const m=String(e&&e.message||"");const T={QUESTAO_MATERIA:"Escolha a matéria.",QUESTAO_NIVEL:"Escolha o nível.",QUESTAO_ENUNCIADO:"O enunciado está curto demais.",QUESTAO_OPCOES:"São 4 alternativas.",QUESTAO_OPCAO_VAZIA:"Preencha as 4 alternativas.",QUESTAO_OPCAO_REPETIDA:"Há alternativas repetidas.",LISTA_GRANDE:"No máximo 500 questões por vez.",NAO_ENCONTRADA:"Questão não encontrada."};
+  for(const k in T)if(m.includes(k))return T[k]+(m.match(/\(linha \d+\)/)?" "+m.match(/\(linha \d+\)/)[0]:"");if(m.includes("Could not find"))return"Rode o arquivo 58-admin-questoes.sql no Supabase.";return errMsg(e)}
+
+async function vQue(v){
+  if(!QS.all){v.innerHTML='<div class="panel"><p class="small">Carregando o banco de questões…</p></div>';await qsLoad();if(ST.tab!=="questoes")return}
+  if(QS.err&&!QS.all){v.innerHTML='<div class="panel"><p class="flash" role="alert">'+esc(QS.err)+'</p></div>';return}
+  const E=QS.edit,f=QS.f,o=E?E.opcoes:["","","",""];
+  const meus=QS.all.filter(q=>q.id>=1000000).length;
+  v.innerHTML=(QS.msg?'<p class="flash ok" role="status">'+esc(QS.msg)+'</p>':'')+(QS.err?'<p class="flash" role="alert">'+esc(QS.err)+'</p>':'')
+  +'<div class="panel"><div class="row" style="justify-content:space-between"><h2>'+(E?'Editar a questão nº '+E.id:'Lançar uma questão')+'</h2><span class="small">'+num(QS.all.length)+' questões ativas no banco · '+num(meus)+' lançadas por aqui</span></div>'
+  +'<p class="small">A questão entra no jogo assim que é salva. A alternativa certa vai no campo verde; o jogo embaralha a ordem para o jogador.</p>'
+  +'<form class="qform" id="qf"><div class="grid2"><label class="small">Trilha (filtra as matérias)<select id="qTr">'+trOpts(f.tr,true)+'</select></label><label class="small">Matéria<select id="qMat" required>'+subjOpts(f.tr,E?E.materia:f.m)+'</select></label><label class="small">Nível<select id="qNiv">'+nivOpts(E?E.nivel:f.n)+'</select></label></div>'
+  +'<label class="small">Enunciado<textarea id="qEnun" rows="3" required>'+esc(E?E.enunciado:"")+'</textarea></label>'
+  +'<div class="grid2"><label class="small qok">✔ Alternativa certa<input type="text" id="qO0" required value="'+esc(o[0])+'"></label><label class="small">Errada 1<input type="text" id="qO1" required value="'+esc(o[1])+'"></label><label class="small">Errada 2<input type="text" id="qO2" required value="'+esc(o[2])+'"></label><label class="small">Errada 3<input type="text" id="qO3" required value="'+esc(o[3])+'"></label></div>'
+  +'<label class="small">Explicação (aparece depois da resposta)<textarea id="qExp" rows="2">'+esc(E?E.explicacao:"")+'</textarea></label>'
+  +'<div id="qWarn" class="qwarn" aria-live="polite"></div>'
+  +'<div class="row"><button class="btn" type="submit" id="qSave">'+(E?'Salvar alterações':'Lançar questão')+'</button>'+(E?'<button class="btn ghost" type="button" id="qCancel">Cancelar edição</button>':'<button class="btn ghost" type="button" id="qClear">Limpar</button>')+'</div></form></div>'
+  +'<div class="panel"><h2>Lançar várias de uma vez</h2><p class="small">Cole aqui as linhas de uma planilha (Excel ou Google Planilhas), uma questão por linha, nesta ordem de colunas: <b>Matéria · Nível · Enunciado · Certa · Errada 1 · Errada 2 · Errada 3 · Explicação</b>. As colunas podem vir separadas por tabulação (copiar e colar da planilha) ou por ponto e vírgula. Nível: Fácil, Intermediária, Difícil, Muito difícil ou Desafio (ou 1 a 5). Até 500 por vez.</p>'
+  +'<textarea id="qBulk" rows="6" placeholder="Dir. Penal;Fácil;Pegar a bolsa de alguém sem violência é:;Furto;Roubo;Extorsão;Dano;Sem violência ou ameaça, é furto."></textarea>'
+  +'<div class="row"><button class="btn" type="button" id="qCheck">Conferir</button><button class="btn ghost" type="button" id="qModel">Baixar modelo de planilha</button></div><div id="qBulkOut"></div></div>'
+  +'<div class="panel"><h2>Buscar e editar</h2><div class="row qfilters"><input type="search" id="qSearch" placeholder="palavras do enunciado ou nº da questão" value="'+esc(QS.bq)+'" aria-label="Buscar questões"><select id="bTr" aria-label="Trilha">'+trOpts(QS.bf.tr,true)+'</select><select id="bMat" aria-label="Matéria"><option value="">Todas as matérias</option>'+subjOpts(QS.bf.tr,QS.bf.m)+'</select><select id="bNiv" aria-label="Nível">'+nivOpts(QS.bf.n,true)+'</select><select id="bSo" aria-label="Quais"><option value="">Ativas</option><option value="meus"'+(QS.bf.so==="meus"?" selected":"")+'>Lançadas por aqui</option><option value="off"'+(QS.bf.so==="off"?" selected":"")+'>Desativadas</option></select></div><div id="qList"></div></div>';
+  // formulário
+  const sel=$("qMat");if(!E&&f.m&&[...sel.options].some(x=>x.value===f.m))sel.value=f.m;
+  $("qTr").onchange=()=>{f.tr=$("qTr").value;const cur=sel.value;sel.innerHTML=subjOpts(f.tr,cur);f.m=sel.value};
+  sel.onchange=()=>{f.m=sel.value};$("qNiv").onchange=()=>{f.n=+$("qNiv").value};
+  const warn=()=>{const en=$("qEnun").value,ops=[0,1,2,3].map(i=>$("qO"+i).value.trim());let h="";
+    const sim=en.trim().length>=15?qsSimilar(en,ops[0],E&&E.id):[];
+    if(sim.length)h+='<p class="flash warn">Parecida com questão que já existe:</p><ul class="small">'+sim.map(q=>'<li><b>nº '+q.id+'</b> ('+esc(SUBJ[q.materia]||q.materia)+', '+NIVEIS[q.nivel]+'): '+esc(q.enunciado)+' <i>→ '+esc((q.opcoes||[])[0])+'</i></li>').join("")+'</ul>';
+    if(ops.every(Boolean)){const L=ops.map(x=>x.length),mx=Math.max(...L);if(L[0]===mx&&L.filter(x=>x===mx).length===1&&mx>L[1]+8&&mx>L[2]+8&&mx>L[3]+8)h+='<p class="small">Dica: a certa é bem mais longa que as erradas. Os jogadores costumam acertar pelo tamanho; vale alongar alguma errada.</p>';
+      if(new Set(ops.map(nrm)).size<4)h+='<p class="flash">Há alternativas repetidas.</p>'}
+    $("qWarn").innerHTML=h};
+  ["qEnun","qO0","qO1","qO2","qO3"].forEach(id=>$(id).oninput=warn);warn();
+  $("qf").onsubmit=async e=>{e.preventDefault();const b=$("qSave");b.disabled=true;
+    const args={p_id:E?E.id:null,p_materia:sel.value,p_nivel:+$("qNiv").value,p_enunciado:$("qEnun").value,p_opcoes:[0,1,2,3].map(i=>$("qO"+i).value.trim()),p_explicacao:$("qExp").value};
+    try{const id=await rpc("admin_questao_salvar",args);const row={id,materia:args.p_materia,nivel:args.p_nivel,enunciado:args.p_enunciado.trim(),opcoes:args.p_opcoes,explicacao:args.p_explicacao.trim(),ativa:E?E.ativa:true};row._t=toks(row.enunciado+" "+row.opcoes[0]);
+      const list=row.ativa?QS.all:(QS.off||[]);const ix=list.findIndex(q=>q.id===id);if(ix>=0)list[ix]=row;else list.push(row);
+      QS.msg=E?"Questão nº "+id+" atualizada.":"Questão nº "+id+" lançada ("+SUBJ[row.materia]+", "+NIVEIS[row.nivel]+"). Já está no jogo.";QS.edit=null;f.m=row.materia;f.n=row.nivel;vQue(v)}
+    catch(err){alert(qErr(err));b.disabled=false}};
+  if($("qCancel"))$("qCancel").onclick=()=>{QS.edit=null;QS.msg="";vQue(v)};
+  if($("qClear"))$("qClear").onclick=()=>{QS.msg="";vQue(v)};
+  // em lote
+  const out=$("qBulkOut");
+  const drawBulk=()=>{const R=QS.bulk||[];if(!R.length){out.innerHTML="";return}const ok=R.filter(r=>!r.erro);
+    out.innerHTML='<p class="small"><b>'+ok.length+'</b> prontas para lançar · '+(R.length-ok.length)+' com problema · '+ok.filter(r=>r.parecida).length+' parecidas com questões do banco (desmarque se forem repetidas)</p><div class="tablewrap" style="max-height:50vh"><table><thead><tr><th>Lançar</th><th>Linha</th><th>Matéria</th><th>Nível</th><th>Enunciado</th><th>Certa</th><th>Situação</th></tr></thead><tbody>'
+    +R.map((r,i)=>'<tr><td>'+(r.erro?'':'<input type="checkbox" data-bi="'+i+'"'+(r.skip?'':' checked')+' aria-label="Lançar linha '+r.linha+'">')+'</td><td class="n">'+r.linha+'</td><td>'+esc(r.materia?SUBJ[r.materia]:(r.raw[0]||""))+'</td><td>'+(r.nivel!=null?NIVEIS[r.nivel]:esc(r.raw[1]||""))+'</td><td style="white-space:normal;min-width:260px">'+esc(r.enunciado)+'</td><td style="white-space:normal">'+esc(r.opcoes[0])+'</td><td style="white-space:normal">'+(r.erro?'<span class="pill bad">'+esc(r.erro)+'</span>':r.parecida?'<span class="pill warn">parecida com nº '+r.parecida.id+'</span><br><span class="small">'+esc(r.parecida.enunciado)+'</span>':'<span class="pill ok">ok</span>')+'</td></tr>').join("")+'</tbody></table></div>'
+    +'<div class="row"><button class="btn" type="button" id="qGo"'+(ok.length?'':' disabled')+'>Lançar '+ok.filter(r=>!r.skip).length+' questões</button></div>';
+    out.querySelectorAll("[data-bi]").forEach(c=>c.onchange=()=>{R[+c.dataset.bi].skip=!c.checked;drawBulk()});
+    if($("qGo"))$("qGo").onclick=async()=>{const go=R.filter(r=>!r.erro&&!r.skip);if(!go.length)return;if(!confirm("Lançar "+go.length+" questões no jogo?"))return;$("qGo").disabled=true;
+      try{const r=await rpc("admin_questoes_importar",{p_lista:go.map(x=>({materia:x.materia,nivel:x.nivel,enunciado:x.enunciado,opcoes:x.opcoes,explicacao:x.explicacao}))});
+        QS.msg=r.inseridas+" questões lançadas (nº "+r.primeiro_id+" a "+r.ultimo_id+"). Já estão no jogo.";QS.bulk=null;await qsLoad(true);vQue(v)}
+      catch(err){alert(qErr(err));$("qGo").disabled=false}}};
+  $("qCheck").onclick=()=>{QS.bulk=parseBulk($("qBulk").value);drawBulk()};
+  $("qModel").onclick=()=>csvDown("modelo-questoes",["Matéria","Nível","Enunciado","Certa","Errada 1","Errada 2","Errada 3","Explicação"],[["Dir. Penal","Fácil","Pegar a bolsa de alguém, sem violência e sem a pessoa perceber, é:","Furto","Roubo","Extorsão","Dano","Sem violência ou grave ameaça, o crime é furto."]]);
+  drawBulk();
+  // busca
+  const list=$("qList");
+  const drawList=()=>{const q=nrm(QS.bq).trim(),F=QS.bf;const base=F.so==="off"?(QS.off||[]):F.so==="meus"?QS.all.filter(x=>x.id>=1000000):QS.all;
+    const subs=F.tr&&TRACKS[F.tr]?TRACKS[F.tr].s:null;
+    let R=base.filter(x=>(!subs||subs.includes(x.materia))&&(!F.m||x.materia===F.m)&&(F.n===""||String(x.nivel)===String(F.n)));
+    if(q){if(/^\d+$/.test(q))R=R.filter(x=>String(x.id)===q);else{const w=q.split(/\s+/);R=R.filter(x=>{const t=nrm(x.enunciado+" "+(x.opcoes||[]).join(" "));return w.every(p=>t.includes(p))})}}
+    const tot=R.length;R=R.slice().sort((a,b)=>b.id-a.id).slice(0,50);
+    list.innerHTML='<p class="small">'+num(tot)+' questões'+(tot>50?' (mostrando as 50 mais novas; refine a busca)':'')+'</p><div class="qlist">'+(R.length?R.map(x=>'<div class="qitem"><div><span class="small">nº '+x.id+' · '+esc(SUBJ[x.materia]||x.materia)+' · '+NIVEIS[x.nivel]+'</span><p>'+esc(x.enunciado)+'</p><p class="small">✔ '+esc((x.opcoes||[])[0])+' · ✘ '+esc((x.opcoes||[]).slice(1).join(" · "))+'</p></div><div class="row"><button class="btn ghost" data-ed="'+x.id+'">Editar</button><button class="btn ghost" data-tg="'+x.id+'">'+(x.ativa?'Desativar':'Reativar')+'</button></div></div>').join(""):'<p class="small">Nada encontrado.</p>')+'</div>';
+    list.querySelectorAll("[data-ed]").forEach(b=>b.onclick=()=>{const x=QS.all.concat(QS.off||[]).find(y=>y.id===+b.dataset.ed);QS.edit=x;QS.msg="";vQue(v);window.scrollTo({top:0,behavior:"smooth"})});
+    list.querySelectorAll("[data-tg]").forEach(b=>b.onclick=async()=>{const id=+b.dataset.tg,x=QS.all.concat(QS.off||[]).find(y=>y.id===id);if(x.ativa&&!confirm("Desativar a questão nº "+id+"? Ela some do jogo (dá para reativar depois)."))return;b.disabled=true;
+      try{await rpc("admin_questao_ativar",{p_id:id,p_ativa:!x.ativa});if(x.ativa){QS.all=QS.all.filter(y=>y.id!==id);x.ativa=false;(QS.off=QS.off||[]).unshift(x)}else{QS.off=QS.off.filter(y=>y.id!==id);x.ativa=true;QS.all.push(x)}drawList()}catch(e){alert(qErr(e));b.disabled=false}})};
+  const qs=$("qSearch");qs.oninput=()=>{QS.bq=qs.value;drawList()};
+  $("bTr").onchange=()=>{QS.bf.tr=$("bTr").value;QS.bf.m="";$("bMat").innerHTML='<option value="">Todas as matérias</option>'+subjOpts(QS.bf.tr,"");drawList()};
+  $("bMat").onchange=()=>{QS.bf.m=$("bMat").value;drawList()};$("bNiv").onchange=()=>{QS.bf.n=$("bNiv").value;drawList()};$("bSo").onchange=()=>{QS.bf.so=$("bSo").value;drawList()};
+  drawList();
 }
 boot();
 </script>

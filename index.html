@@ -8311,7 +8311,8 @@ async function syncQuestions(){
     if(ok.length<500)return; // banco vazio ou incompleto: continua com as questões do arquivo
     // o banco manda; questões do arquivo que ainda não estão no banco continuam valendo
     const fromDb=new Map(ok.map(r=>[r.id,{id:r.id,s:r.materia,d:r.nivel,t:r.enunciado,o:r.opcoes,e:r.explicacao||""}]));
-    const extra=Q.filter(q=>!fromDb.has(q.id));
+    let off=new Set();try{const {data:ina,error:ie}=await sb.rpc("questoes_inativas");if(!ie&&Array.isArray(ina))off=new Set(ina.map(x=>typeof x==="object"&&x?Object.values(x)[0]:x))}catch(e){}
+    const extra=Q.filter(q=>!fromDb.has(q.id)&&!off.has(q.id));
     Q.length=0;fromDb.forEach(q=>Q.push(q));extra.forEach(q=>Q.push(q));
     if(!$("start").hidden)updatePool();
   }catch(e){}
