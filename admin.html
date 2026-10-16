@@ -347,7 +347,7 @@ function parseBulk(txt){
   const seenT=new Set();out.forEach(r=>{const k=nrm(r.enunciado);if(!r.erro&&seenT.has(k))r.erro="repetida dentro do lote";seenT.add(k)});
   return out;
 }
-function qErr(e){const m=String(e&&e.message||"");const T={QUESTAO_MATERIA:"Escolha a matéria.",QUESTAO_NIVEL:"Escolha o nível.",QUESTAO_ENUNCIADO:"O enunciado está curto demais.",QUESTAO_OPCOES:"São 4 alternativas.",QUESTAO_OPCAO_VAZIA:"Preencha as 4 alternativas.",QUESTAO_OPCAO_REPETIDA:"Há alternativas repetidas.",LISTA_GRANDE:"No máximo 500 questões por vez.",NAO_ENCONTRADA:"Questão não encontrada."};
+function qErr(e){const m=String(e&&e.message||"");const T={QUESTAO_ID:"O arquivo tem uma questão com número inválido.",QUESTAO_MATERIA:"Escolha a matéria.",QUESTAO_NIVEL:"Escolha o nível.",QUESTAO_ENUNCIADO:"O enunciado está curto demais.",QUESTAO_OPCOES:"São 4 alternativas.",QUESTAO_OPCAO_VAZIA:"Preencha as 4 alternativas.",QUESTAO_OPCAO_REPETIDA:"Há alternativas repetidas.",LISTA_GRANDE:"No máximo 500 questões por vez.",NAO_ENCONTRADA:"Questão não encontrada."};
   for(const k in T)if(m.includes(k))return T[k]+(m.match(/\(linha \d+\)/)?" "+m.match(/\(linha \d+\)/)[0]:"");if(m.includes("Could not find"))return"Rode o arquivo 58-admin-questoes.sql no Supabase.";return errMsg(e)}
 
 async function vQue(v){
@@ -367,6 +367,8 @@ async function vQue(v){
   +'<div class="panel"><h2>Lançar várias de uma vez</h2><p class="small">Cole aqui as linhas de uma planilha (Excel ou Google Planilhas), uma questão por linha, nesta ordem de colunas: <b>Matéria · Nível · Enunciado · Certa · Errada 1 · Errada 2 · Errada 3 · Explicação</b>. As colunas podem vir separadas por tabulação (copiar e colar da planilha) ou por ponto e vírgula. Nível: Fácil, Intermediária, Difícil, Muito difícil ou Desafio (ou 1 a 5). Até 500 por vez.</p>'
   +'<textarea id="qBulk" rows="6" placeholder="Dir. Penal;Fácil;Pegar a bolsa de alguém sem violência é:;Furto;Roubo;Extorsão;Dano;Sem violência ou ameaça, é furto."></textarea>'
   +'<div class="row"><button class="btn" type="button" id="qCheck">Conferir</button><button class="btn ghost" type="button" id="qModel">Baixar modelo de planilha</button></div><div id="qBulkOut"></div></div>'
+  +'<div class="panel"><h2>Carregar arquivo de lote</h2><p class="small">Os arquivos .sql de questões que o Claude gera (por exemplo, <span class="mono">56-trilha-enem-13.sql</span>) podem ser carregados aqui, sem abrir o Supabase. As questões mantêm os números do arquivo; se alguma já existir, ela é atualizada. Arquivos que mudam outras partes do jogo (como planos ou rankings) continuam sendo rodados no Supabase.</p>'
+  +'<div class="row"><label class="btn ghost" for="qFile" style="cursor:pointer">Escolher arquivo…</label><input type="file" id="qFile" accept=".sql,.json,.txt" multiple hidden><span class="small" id="qFileName">Nenhum arquivo escolhido</span></div><div id="qFileOut"></div></div>'
   +'<div class="panel"><h2>Buscar e editar</h2><div class="row qfilters"><input type="search" id="qSearch" placeholder="palavras do enunciado ou nº da questão" value="'+esc(QS.bq)+'" aria-label="Buscar questões"><select id="bTr" aria-label="Trilha">'+trOpts(QS.bf.tr,true)+'</select><select id="bMat" aria-label="Matéria"><option value="">Todas as matérias</option>'+subjOpts(QS.bf.tr,QS.bf.m)+'</select><select id="bNiv" aria-label="Nível">'+nivOpts(QS.bf.n,true)+'</select><select id="bSo" aria-label="Quais"><option value="">Ativas</option><option value="meus"'+(QS.bf.so==="meus"?" selected":"")+'>Lançadas por aqui</option><option value="off"'+(QS.bf.so==="off"?" selected":"")+'>Desativadas</option></select></div><div id="qList"></div></div>';
   // formulário
   const sel=$("qMat");if(!E&&f.m&&[...sel.options].some(x=>x.value===f.m))sel.value=f.m;
@@ -401,6 +403,27 @@ async function vQue(v){
   $("qCheck").onclick=()=>{QS.bulk=parseBulk($("qBulk").value);drawBulk()};
   $("qModel").onclick=()=>csvDown("modelo-questoes",["Matéria","Nível","Enunciado","Certa","Errada 1","Errada 2","Errada 3","Explicação"],[["Dir. Penal","Fácil","Pegar a bolsa de alguém, sem violência e sem a pessoa perceber, é:","Furto","Roubo","Extorsão","Dano","Sem violência ou grave ameaça, o crime é furto."]]);
   drawBulk();
+  // arquivo de lote
+  const fo=$("qFileOut");
+  $("qFile").onchange=async()=>{const files=[...$("qFile").files];if(!files.length)return;$("qFileName").textContent=files.map(f=>f.name).join(", ");fo.innerHTML='<p class="small">Lendo…</p>';
+    const rows=[],probs=[],heads=[];
+    for(const f of files){const t=await f.text();let L=null;const h=(t.split("\n")[0]||"").replace(/^--\s*/,"").trim();
+      try{const a=t.indexOf("$q$");if(a>=0){const b=t.indexOf("$q$",a+3);L=JSON.parse(t.slice(a+3,b))}else if(t.trim().startsWith("["))L=JSON.parse(t)}catch(e){L=null}
+      if(!Array.isArray(L)){probs.push(f.name+": não é um arquivo de lote de questões. Se for um arquivo que muda o jogo (planos, rankings, administração), rode pelo Supabase.");continue}
+      heads.push(h||f.name);
+      L.forEach((r,i)=>{const ok=Number.isInteger(r.id)&&r.id>=0&&r.id<1000000&&SUBJ[r.materia]&&r.nivel>=0&&r.nivel<=4&&r.enunciado&&Array.isArray(r.opcoes)&&r.opcoes.length===4&&new Set(r.opcoes.map(nrm)).size===4;
+        if(ok)rows.push({id:r.id,materia:r.materia,nivel:r.nivel,enunciado:r.enunciado,opcoes:r.opcoes,explicacao:r.explicacao||r.e||""});else probs.push(f.name+", questão "+(i+1)+(r&&r.id!=null?" (nº "+r.id+")":"")+": dados incompletos")})}
+    const byId=new Map();rows.forEach(r=>byId.set(r.id,r));const U=[...byId.values()];
+    const have=new Set(QS.all.concat(QS.off||[]).map(q=>q.id)),novas=U.filter(r=>!have.has(r.id)).length;
+    const bySub={};U.forEach(r=>{(bySub[r.materia]=bySub[r.materia]||[0,0,0,0,0])[r.nivel]++});
+    fo.innerHTML=(heads.length?'<p class="small"><b>'+esc(heads.join(" · "))+'</b></p>':'')
+      +(U.length?'<p class="small"><b>'+num(U.length)+'</b> questões no arquivo · <b>'+num(novas)+'</b> novas · '+num(U.length-novas)+' já estão no banco (serão atualizadas)</p><div class="tablewrap" style="max-height:40vh"><table><thead><tr><th>Matéria</th>'+NIVEIS.map(n=>'<th class="n">'+n+'</th>').join("")+'<th class="n">Total</th></tr></thead><tbody>'+Object.entries(bySub).map(([m,p])=>'<tr><td>'+esc(SUBJ[m])+'</td>'+p.map(x=>'<td class="n">'+x+'</td>').join("")+'<td class="n"><b>'+p.reduce((a,b)=>a+b,0)+'</b></td></tr>').join("")+'</tbody></table></div>':'')
+      +(probs.length?'<p class="flash">'+probs.slice(0,8).map(esc).join("<br>")+(probs.length>8?'<br>… e mais '+(probs.length-8):'')+'</p>':'')
+      +(U.length?'<div class="row"><button class="btn" type="button" id="qLoad">Carregar '+num(U.length)+' questões</button></div><p class="small" id="qLoadMsg" role="status"></p>':'');
+    if($("qLoad"))$("qLoad").onclick=async()=>{const b=$("qLoad");b.disabled=true;let nv=0,at=0;
+      try{for(let i=0;i<U.length;i+=500){$("qLoadMsg").textContent="Carregando "+Math.min(i+500,U.length)+" de "+U.length+"…";const r=await rpc("admin_questoes_carregar",{p_lista:U.slice(i,i+500)});nv+=r.novas;at+=r.atualizadas}
+        QS.msg="Arquivo carregado: "+nv+" questões novas e "+at+" atualizadas. Já estão no jogo.";await qsLoad(true);vQue(v)}
+      catch(e){$("qLoadMsg").textContent=qErr(e)+(nv+at?" ("+(nv+at)+" já tinham sido carregadas.)":"");b.disabled=false}}};
   // busca
   const list=$("qList");
   const drawList=()=>{const q=nrm(QS.bq).trim(),F=QS.bf;const base=F.so==="off"?(QS.off||[]):F.so==="meus"?QS.all.filter(x=>x.id>=1000000):QS.all;

@@ -4,6 +4,7 @@
 -- As questões lançadas pela administração recebem números a partir de 1.000.000, para nunca
 -- se misturarem com os lotes que vêm no arquivo do jogo. Elas aparecem para os jogadores na hora.
 -- Questões desativadas somem do jogo (inclusive as que vieram no arquivo).
+-- Os arquivos de lote de questões (.sql) também podem ser carregados pela administração, sem passar pelo Supabase.
 
 -- números das questões desativadas (o jogo usa para esconder as do arquivo)
 create or replace function public.questoes_inativas()
@@ -98,12 +99,38 @@ begin
                    from public.questoes q where not q.ativa), '[]'::json);
 end $$;
 
+
+-- carregar um arquivo de lote (os .sql de questões): mantém os números das questões do arquivo
+create or replace function public.admin_questoes_carregar(p_lista jsonb)
+returns json language plpgsql security definer set search_path = '' as $$
+declare q jsonb; prob text; i integer := 0; novas integer := 0; atual integer := 0; ins boolean;
+begin
+  perform public.admin_exigir();
+  if jsonb_typeof(p_lista) <> 'array' or jsonb_array_length(p_lista) = 0 then raise exception 'LISTA_VAZIA'; end if;
+  if jsonb_array_length(p_lista) > 1000 then raise exception 'LISTA_GRANDE'; end if;
+  for q in select * from jsonb_array_elements(p_lista) loop
+    i := i + 1;
+    if (q->>'id') is null or (q->>'id') !~ '^[0-9]+$' or (q->>'id')::bigint >= 1000000 then raise exception 'QUESTAO_ID (linha %)', i; end if;
+    prob := public.questao_problema(q->>'materia', (q->>'nivel')::integer, q->>'enunciado', q->'opcoes');
+    if prob is not null then raise exception 'QUESTAO_% (linha %)', prob, i; end if;
+  end loop;
+  for q in select * from jsonb_array_elements(p_lista) loop
+    insert into public.questoes (id, materia, nivel, enunciado, opcoes, explicacao)
+    values ((q->>'id')::integer, q->>'materia', (q->>'nivel')::integer, q->>'enunciado', q->'opcoes', coalesce(q->>'explicacao', ''))
+    on conflict (id) do update set materia = excluded.materia, nivel = excluded.nivel, enunciado = excluded.enunciado,
+                                   opcoes = excluded.opcoes, explicacao = excluded.explicacao
+    returning (xmax = 0) into ins;
+    if ins then novas := novas + 1; else atual := atual + 1; end if;
+  end loop;
+  return json_build_object('novas', novas, 'atualizadas', atual);
+end $$;
+
 revoke all on function public.questao_problema(text, integer, text, jsonb), public.questao_proximo_id() from public, anon, authenticated;
 revoke all on function public.questoes_inativas() from public;
 grant execute on function public.questoes_inativas() to anon, authenticated;
 revoke all on function public.admin_questao_salvar(integer, text, integer, text, jsonb, text), public.admin_questoes_importar(jsonb),
-  public.admin_questao_ativar(integer, boolean), public.admin_questoes_inativas() from public, anon;
+  public.admin_questao_ativar(integer, boolean), public.admin_questoes_inativas(), public.admin_questoes_carregar(jsonb) from public, anon;
 grant execute on function public.admin_questao_salvar(integer, text, integer, text, jsonb, text), public.admin_questoes_importar(jsonb),
-  public.admin_questao_ativar(integer, boolean), public.admin_questoes_inativas() to authenticated;
+  public.admin_questao_ativar(integer, boolean), public.admin_questoes_inativas(), public.admin_questoes_carregar(jsonb) to authenticated;
 
 select 'lançamento de questões pronto' as status, (select count(*) from public.questoes) as questoes_no_banco;
