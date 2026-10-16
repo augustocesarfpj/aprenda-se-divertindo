@@ -9334,8 +9334,22 @@ $("npForm").onsubmit=async ev=>{
   go.disabled=false;
 };
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("ovNewPass").hidden)$("npClose").click()});
+const QSYNC="gm-qsync";
+function applyDb(diff,off){
+  // o banco manda: questões corrigidas ou novas substituem as do arquivo; desativadas somem
+  const byId=new Map(diff.map(r=>[r.id,r])),seenIds=new Set(),out=[];
+  Q.forEach(q=>{if(off.has(q.id))return;seenIds.add(q.id);out.push(byId.get(q.id)||q)});
+  diff.forEach(r=>{if(!seenIds.has(r.id)&&!off.has(r.id))out.push(r)});
+  Q.length=0;out.forEach(q=>Q.push(q));
+  if(!$("start").hidden)updatePool();
+}
 async function syncQuestions(){
   try{
+    // 1) pergunta só a "impressão digital" das questões (poucos bytes)
+    let ver=null;try{const {data,error}=await sb.rpc("questoes_versao");if(!error&&typeof data==="string"&&data)ver=data}catch(e){}
+    if(ver){let c=null;try{c=JSON.parse(localStorage.getItem(QSYNC)||"null")}catch(e){}
+      if(c&&c.v===ver&&Array.isArray(c.d)&&Array.isArray(c.off)){applyDb(c.d,new Set(c.off));return}}
+    // 2) mudou algo (ou é a primeira visita): baixa tudo uma vez
     const rows=[];
     for(let from=0;;from+=1000){
       const {data,error}=await sb.from("questoes").select("id,materia,nivel,enunciado,opcoes,explicacao").eq("ativa",true).order("id").range(from,from+999);
@@ -9343,12 +9357,13 @@ async function syncQuestions(){
     }
     const ok=rows.filter(r=>SUBJ[r.materia]&&r.nivel>=0&&r.nivel<=4&&Array.isArray(r.opcoes)&&r.opcoes.length===4&&r.enunciado);
     if(ok.length<500)return; // banco vazio ou incompleto: continua com as questões do arquivo
-    // o banco manda; questões do arquivo que ainda não estão no banco continuam valendo
-    const fromDb=new Map(ok.map(r=>[r.id,{id:r.id,s:r.materia,d:r.nivel,t:r.enunciado,o:r.opcoes,e:r.explicacao||""}]));
-    let off=new Set();try{const {data:ina,error:ie}=await sb.rpc("questoes_inativas");if(!ie&&Array.isArray(ina))off=new Set(ina.map(x=>typeof x==="object"&&x?Object.values(x)[0]:x))}catch(e){}
-    const extra=Q.filter(q=>!fromDb.has(q.id)&&!off.has(q.id));
-    Q.length=0;fromDb.forEach(q=>Q.push(q));extra.forEach(q=>Q.push(q));
-    if(!$("start").hidden)updatePool();
+    let off=[];try{const {data:ina,error:ie}=await sb.rpc("questoes_inativas");if(!ie&&Array.isArray(ina))off=ina.map(x=>typeof x==="object"&&x?Object.values(x)[0]:x)}catch(e){}
+    // guarda só o que difere do arquivo do jogo (normalmente quase nada)
+    const file=new Map(Q.map(q=>[q.id,q]));
+    const diff=ok.map(r=>({id:r.id,s:r.materia,d:r.nivel,t:r.enunciado,o:r.opcoes,e:r.explicacao||""}))
+      .filter(r=>{const f=file.get(r.id);return !f||f.s!==r.s||f.d!==r.d||f.t!==r.t||f.e!==r.e||JSON.stringify(f.o)!==JSON.stringify(r.o)});
+    if(ver){try{localStorage.setItem(QSYNC,JSON.stringify({v:ver,d:diff,off}))}catch(e){}}
+    applyDb(diff,new Set(off));
   }catch(e){}
 }
 /* ===== plano Premium (Pix) e indicação ===== */
