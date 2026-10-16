@@ -268,6 +268,19 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
 .rkmng .mrow b{flex:1 1 140px;min-width:0;overflow-wrap:anywhere}
 .rkmng select{font:inherit;padding:8px;border:1.5px solid var(--line);border-radius:6px;background:var(--sheet);color:var(--ink)}
 .duelbox{display:grid;gap:8px;margin-top:4px}
+#ovPremium .dialog{max-height:calc(100dvh - 32px);overflow:auto}
+.pmlist{margin:0;padding-left:18px;display:grid;gap:4px}
+.pixcode{width:100%;font-family:var(--f-mono);font-size:.72rem;padding:8px;border:1.5px solid var(--line);border-radius:6px;background:var(--sheet);color:var(--ink);resize:none;word-break:break-all}
+.plan{display:grid;gap:6px;padding:12px;border:1.5px solid var(--line);border-radius:8px}
+.plan.pro{border-color:var(--money);background:var(--money-soft)}
+.usage{font-size:.85rem;color:var(--muted)}.usage.err{color:var(--danger,#c8364c)}
+.pmplans{display:grid;gap:6px}
+.pmopt{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;cursor:pointer}
+.pmopt:has(input:checked){border-color:var(--money);background:var(--money-soft)}
+.pmopt input{margin-top:4px;accent-color:var(--money)}.pmopt>span{display:grid;gap:1px}
+.reflink{display:flex;gap:8px;flex-wrap:wrap}.reflink input,.refsaque input{flex:1 1 200px;min-width:0;font:inherit;font-size:.9rem;padding:8px 10px;border:1.5px solid var(--line);border-radius:6px;background:var(--sheet);color:var(--ink)}
+.refstats{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.85rem;color:var(--muted)}.refstats b{color:var(--ink)}
+.refsaque{display:grid;gap:6px}.reflist{margin:6px 0 0;padding-left:18px}
 .tabbar .tab{position:relative}
 .tabdot{position:absolute;top:4px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--danger,#c8364c);color:#fff;font-size:.7rem;font-weight:800;line-height:18px;text-align:center}
 .rkfeed{list-style:none;margin:0;padding:0;display:grid;gap:6px}
@@ -636,6 +649,22 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
       <button class="btn ghost" type="button" id="gIn">Já tenho conta</button>
     </div>
     <p class="small" style="margin:0"><button class="linkbtn" type="button" id="gNo">Agora não</button></p>
+  </div>
+</div>
+
+<!-- premium -->
+<div class="ov" id="ovPremium" hidden>
+  <div class="sheet dialog" role="dialog" aria-modal="true" aria-labelledby="pmTitle">
+    <span class="eyebrow">💎 Aprenda se Divertindo Premium</span>
+    <h3 id="pmTitle" style="margin:0"></h3>
+    <p class="small" id="pmWhy" style="margin:0"></p>
+    <ul class="small pmlist">
+      <li><b>Provas ilimitadas</b> em todas as trilhas (grátis: <span data-lim="provas">5</span> por dia)</li>
+      <li><b>Estudo ilimitado</b> com os cartões (grátis: <span data-lim="cartoes">5</span> por dia)</li>
+      <li>Ranking, disputas e Sábado do Saque continuam liberados para todos</li>
+    </ul>
+    <div id="pmBody" style="display:grid;gap:10px"></div>
+    <div class="row"><button class="btn ghost" type="button" id="pmClose">Fechar</button></div>
   </div>
 </div>
 
@@ -7867,7 +7896,12 @@ function gateOk(){
 }
 function renderAnonInfo(){
   const el=$("anonInfo");if(!el)return;
-  if(user){el.hidden=true;return}
+  if(user){
+    if(!plFree()){el.hidden=true;return}
+    const r=Math.max(0,LIM.provas-plUsed("provas"));el.hidden=false;
+    el.innerHTML=(r?'Plano grátis: <b>'+r+' de '+LIM.provas+'</b> prova'+(r===1?'':'s')+' restante'+(r===1?'':'s')+' hoje.':'Você jogou as '+LIM.provas+' provas grátis de hoje.')+' <button class="linkbtn" type="button" id="anonUp">💎 Seja Premium</button> para jogar sem limite.';
+    $("anonUp").onclick=()=>{sfx.click();openPremium()};return;
+  }
   const r=Math.max(0,ANON_MAX-anonGames());el.hidden=false;
   el.innerHTML=r?'Sem conta: <b>'+r+' de '+ANON_MAX+'</b> partida'+(r===1?'':'s')+' grátis restante'+(r===1?'':'s')+'. <button class="linkbtn" type="button" id="anonUp">Criar conta</button> para jogar sem limite.'
     :'Você já usou as '+ANON_MAX+' partidas sem conta. <button class="linkbtn" type="button" id="anonUp">Crie uma conta grátis</button> para continuar jogando.';
@@ -7879,6 +7913,8 @@ $("gNo").onclick=()=>{$("ovGate").hidden=true};
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("ovGate").hidden)$("gNo").click()});
 function newGame(){
   if(!gateOk())return;
+  if(user&&!plCan("provas")){openPremium("Você já jogou as "+LIM.provas+" provas grátis de hoje. Amanhã tem mais, ou libere tudo agora com o Premium.");return}
+  if(user&&plFree())plBump("provas");
   S={level:0,mode:"classic",used:new Set(),subjects:selectedSubjects(),help:{skip:3,elim:1,poll:1,prof:1,risk:1},riskArmed:false,hist:[],cur:null,sel:null,locked:false,left:TIME,paused:false};
   gameStart=Date.now();show("game");loadQuestion();
 }
@@ -8240,7 +8276,7 @@ function cleanUrl(){try{history.replaceState(null,"",location.pathname)}catch(e)
 function openNewPass(){$("npTitle").textContent="Crie sua senha nova";$("npTitle").previousElementSibling.textContent="Recuperar senha";$("npMsg").textContent="";$("npMsg").className="small";$("npPass").value="";$("npPass2").value="";$("ovNewPass").hidden=false;$("npPass").focus()}
 async function initCloud(){
   try{sb=window.supabase.createClient(SB_URL,SB_KEY)}catch(e){sb=null;return}
-  syncQuestions();
+  syncQuestions();loadPlanoInfo();
   renderAcct();
   try{const {data}=await sb.auth.getSession();await setUser(data&&data.session?data.session.user:null)}catch(e){}
   logVisit();
@@ -8280,6 +8316,157 @@ async function syncQuestions(){
     if(!$("start").hidden)updatePool();
   }catch(e){}
 }
+/* ===== plano Premium (Pix) e indicação ===== */
+const esc=t=>String(t==null?"":t).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const PLANOS=[["mensal","Mensal",1],["trimestral","Trimestral",3],["semestral","Semestral",6],["anual","Anual",12]];
+const PREMIUM={loaded:false,cobranca:false,precos:{mensal:12.9,trimestral:38.7,semestral:77.4,anual:154.8},pix:{chave:"",nome:"",cidade:"",whats:""},emails:[CONTATO],ind:{ativa:false,fim:null,valor:2.9,minimo:50}};
+let LIM={provas:5,cartoes:5};
+const PL={loaded:false,premium:false,ate:null,origem:null,plano:null,pendente:null,recusado:null,srv:{provas:0,cartoes:0},escolha:"trimestral"};
+const REF={data:null,loading:false,err:null,saque:false,msg:""};
+const fmtBRL=v=>"R$ "+Number(v||0).toFixed(2).replace(".",",");
+const fmtDate=iso=>new Date(String(iso).length===10?iso+"T12:00:00":iso).toLocaleDateString("pt-BR");
+const planName=k=>(PLANOS.find(p=>p[0]===k)||[k,k])[1];
+function plKey(){return "gm-uso-"+(user?user.id:"x")+"-"+dayKey()}
+function plLocal(){try{return Object.assign({provas:0,cartoes:0},JSON.parse(localStorage.getItem(plKey()))||{})}catch(e){return{provas:0,cartoes:0}}}
+function plBump(k){const u=plLocal();u[k]=(u[k]||0)+1;try{localStorage.setItem(plKey(),JSON.stringify(u))}catch(e){}renderPlan()}
+function plUsed(k){return Math.max(plLocal()[k]||0,PL.srv[k]||0)}
+function plFree(){return !!(user&&PL.loaded&&PREMIUM.cobranca&&!PL.premium)}
+function plCan(k){return !plFree()||plUsed(k)<LIM[k]}
+async function loadPlanoInfo(){
+  if(!sb)return;
+  try{const {data,error}=await sb.rpc("plano_info");if(error)throw error;const d=data||{};
+    PREMIUM.cobranca=!!d.cobranca;if(d.precos)PREMIUM.precos=Object.fromEntries(Object.entries(d.precos).map(([k,v])=>[k,+v]));
+    if(d.pix)PREMIUM.pix=Object.assign({chave:"",nome:"",cidade:"",whats:""},d.pix);
+    if(Array.isArray(d.emails)&&d.emails.length)PREMIUM.emails=d.emails;
+    if(d.indicacao)PREMIUM.ind={ativa:!!d.indicacao.ativa,fim:d.indicacao.fim||null,valor:+d.indicacao.valor||0,minimo:+d.indicacao.minimo||50};
+    if(d.limites)LIM={provas:+d.limites.provas||5,cartoes:+d.limites.cartoes||5};
+    PREMIUM.loaded=true;
+  }catch(e){} // sem o SQL do plano pago: nada fica bloqueado
+  renderPlan();if(user&&PREMIUM.loaded)refLoad();else renderRef();
+}
+async function plLoad(){
+  PL.loaded=false;PL.premium=false;PL.ate=null;PL.pendente=null;PL.recusado=null;
+  if(!sb||!user){renderPlan();return}
+  try{const {data,error}=await sb.rpc("meu_plano");if(error)throw error;const r=data||{};
+    PL.premium=!!r.premium;PL.ate=r.ate;PL.origem=r.origem;PL.plano=r.plano;PL.pendente=r.pendente||null;PL.recusado=r.ultimo_recusado||null;
+    PL.srv={provas:r.provas_hoje||0,cartoes:r.cartoes_hoje||0};if(r.limites)LIM={provas:+r.limites.provas||5,cartoes:+r.limites.cartoes||5};
+    if(typeof r.cobranca==="boolean")PREMIUM.cobranca=r.cobranca;PL.loaded=true}
+  catch(e){}
+  renderPlan();
+}
+/* Pix copia e cola (padrão EMV do Banco Central) */
+function pixTLV(id,v){return id+String(v.length).padStart(2,"0")+v}
+function pixCRC(str){let c=0xFFFF;for(let i=0;i<str.length;i++){c^=str.charCodeAt(i)<<8;for(let j=0;j<8;j++)c=c&0x8000?((c<<1)^0x1021)&0xFFFF:(c<<1)&0xFFFF}return c.toString(16).toUpperCase().padStart(4,"0")}
+function pixClean(t,n){return String(t||"").normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^A-Za-z0-9 ]/g,"").toUpperCase().slice(0,n)}
+function pixCode(valor,txid){const P=PREMIUM.pix;if(!P.chave||!P.nome||!P.cidade)return null;
+  const body=pixTLV("00","01")+pixTLV("26",pixTLV("00","br.gov.bcb.pix")+pixTLV("01",P.chave.trim()))+pixTLV("52","0000")+pixTLV("53","986")+pixTLV("54",Number(valor).toFixed(2))+pixTLV("58","BR")+pixTLV("59",pixClean(P.nome,25)||"RECEBEDOR")+pixTLV("60",pixClean(P.cidade,15)||"BRASIL")+pixTLV("62",pixTLV("05",pixClean(txid||"PREMIUM",25).replace(/ /g,"")||"PREMIUM"))+"6304";
+  return body+pixCRC(body)}
+function pmProofLinks(p){
+  const em=user&&user.email?user.email:"",ped=p&&p.id?String(p.id).slice(0,8).toUpperCase():"";
+  const msg="Olá! Fiz o Pix do plano "+planName(p.plano)+" ("+fmtBRL(p.valor)+") do Aprenda se Divertindo.\nE-mail da conta: "+em+"\nPedido: "+ped+"\nSegue o comprovante.";
+  const mail="mailto:"+PREMIUM.emails.join(",")+"?subject="+encodeURIComponent("Comprovante Premium · "+em)+"&body="+encodeURIComponent(msg);
+  const w=String(PREMIUM.pix.whats||"").replace(/\D/g,"");
+  return{mail,whats:w?"https://wa.me/"+(w.length<=11?"55"+w:w)+"?text="+encodeURIComponent(msg):""};
+}
+function openPremium(why){
+  document.querySelectorAll("#ovPremium [data-lim]").forEach(s=>{s.textContent=LIM[s.dataset.lim]});
+  $("pmTitle").textContent=PL.premium?"Você é Premium 💎":"Estude sem limites";
+  $("pmWhy").textContent=PL.premium?"Seu Premium vale até "+fmtDate(PL.ate)+". Se renovar agora, os meses novos são somados ao que falta.":(why||"No plano grátis são "+LIM.provas+" provas e "+LIM.cartoes+" cartões de estudo por dia. Com o Premium, tudo fica liberado.");
+  renderPmBody();$("ovPremium").hidden=false;($("ovPremium").querySelector("#pmBody .btn")||$("pmClose")).focus();
+}
+function renderPmBody(){
+  const box=$("pmBody");
+  if(!user){box.innerHTML='<p class="small" style="margin:0">Primeiro crie sua conta grátis: o Premium fica ligado a ela.</p><div class="row"><button class="btn money" type="button" id="pmUp">Criar conta grátis</button><button class="btn ghost" type="button" id="pmIn">Já tenho conta</button></div>';
+    $("pmUp").onclick=()=>{$("ovPremium").hidden=true;openAuth("up")};$("pmIn").onclick=()=>{$("ovPremium").hidden=true;openAuth("in")};return}
+  const p=PL.pendente;
+  if(p){
+    const code=pixCode(p.valor,"P"+String(p.id).slice(0,8)),L=pmProofLinks(p);
+    box.innerHTML='<div class="plan pro"><b>Pedido aguardando confirmação</b><span class="usage">Plano '+esc(planName(p.plano))+' · '+fmtBRL(p.valor)+' · feito em '+fmtDate(p.criado_em)+'</span><span class="usage">Assim que o pagamento for confirmado, o Premium é liberado na sua conta, normalmente em poucas horas.</span></div>'
+      +(code?'<span class="eyebrow">Pix copia e cola</span><textarea class="pixcode" id="pmCode" rows="3" readonly></textarea><div class="row"><button class="btn money" type="button" id="pmCopy">Copiar código Pix</button></div><p class="small" id="pmCopied" role="status" style="margin:0"></p><span class="small">Ou use a chave Pix: <b id="pmKey"></b></span>':'<p class="small" style="margin:0">Mande uma mensagem para receber os dados do Pix.</p>')
+      +'<span class="eyebrow">Envie o comprovante</span><div class="row"><a class="btn'+(code?' ghost':' money')+'" id="pmMail" target="_blank" rel="noopener">Enviar por e-mail</a>'+(L.whats?'<a class="btn ghost" id="pmWa" target="_blank" rel="noopener">Enviar pelo WhatsApp</a>':'')+'</div>'
+      +'<div class="row"><button class="linkbtn" type="button" id="pmSwap">Trocar de plano</button><button class="linkbtn" type="button" id="pmCancel">Cancelar pedido</button></div><p class="small err" id="pmErr" role="alert" style="margin:0" hidden></p>';
+    if(code){$("pmCode").value=code;$("pmKey").textContent=PREMIUM.pix.chave;$("pmCopy").onclick=()=>pmCopy(code)}
+    $("pmMail").href=L.mail;if(L.whats)$("pmWa").href=L.whats;
+    $("pmSwap").onclick=()=>{PL.pendente=null;PL.escolha=p.plano;renderPmBody()};
+    $("pmCancel").onclick=async()=>{try{const {error}=await sb.rpc("cancelar_pedido");if(error)throw error;PL.pendente=null;renderPmBody();renderPlan()}catch(e){pmErr(e)}};
+    return;
+  }
+  const mens=PREMIUM.precos.mensal||12.9;
+  box.innerHTML='<span class="eyebrow">1. Escolha o plano</span><div class="pmplans" role="radiogroup" aria-label="Planos">'+PLANOS.filter(([k])=>PREMIUM.precos[k]>0).map(([k,n,m])=>{const v=PREMIUM.precos[k],eco=Math.round((1-v/(mens*m))*100);
+      return'<label class="pmopt"><input type="radio" name="pmPlan" value="'+k+'"'+(PL.escolha===k?' checked':'')+'><span><b>'+n+'</b><span class="usage">'+fmtBRL(v)+(m>1?' · '+fmtBRL(v/m)+'/mês':' por mês')+(eco>=1?' · economia de '+eco+'%':'')+'</span></span></label>'}).join("")+'</div>'
+    +'<span class="eyebrow">2. Pague pelo Pix</span><div id="pmPix" style="display:grid;gap:8px"></div>'
+    +'<span class="eyebrow">3. Avise que pagou</span><div class="row"><button class="btn money" type="button" id="pmDone">Já paguei · enviar comprovante</button></div><p class="small" style="margin:0">Pagamento único, sem renovação automática. Para renovar, é só pagar de novo: os meses são somados.</p><p class="small err" id="pmErr" role="alert" style="margin:0" hidden></p>';
+  const drawPix=()=>{const v=PREMIUM.precos[PL.escolha],code=pixCode(v,"PREMIUM"),el=$("pmPix");
+    if(code){el.innerHTML='<textarea class="pixcode" id="pmCode" rows="3" readonly></textarea><div class="row"><button class="btn" type="button" id="pmCopy">Copiar código Pix ('+fmtBRL(v)+')</button></div><p class="small" id="pmCopied" role="status" style="margin:0"></p><span class="small">Ou use a chave Pix: <b id="pmKey"></b></span>';
+      $("pmCode").value=code;$("pmKey").textContent=PREMIUM.pix.chave;$("pmCopy").onclick=()=>pmCopy(code)}
+    else el.innerHTML='<p class="small" style="margin:0">Toque em “Já paguei” para registrar o pedido de '+fmtBRL(v)+' e mandar uma mensagem: respondemos com os dados do Pix.</p>'};
+  box.querySelectorAll("input[name=pmPlan]").forEach(r=>r.onchange=()=>{PL.escolha=r.value;drawPix()});
+  if(!PREMIUM.precos[PL.escolha])PL.escolha=(PLANOS.find(([k])=>PREMIUM.precos[k]>0)||["mensal"])[0];
+  drawPix();
+  $("pmDone").onclick=async()=>{const b=$("pmDone");b.disabled=true;
+    try{const {data,error}=await sb.rpc("solicitar_assinatura",{p_plano:PL.escolha});if(error)throw error;PL.pendente=data;renderPmBody();renderPlan();
+      const a=$("pmMail");if(a){a.classList.remove("ghost");a.classList.add("money");a.focus()}}
+    catch(e){pmErr(e);b.disabled=false}};
+}
+function pmErr(e){const el=$("pmErr");if(!el)return;const m=String(e&&e.message||"");el.hidden=false;el.textContent=m.includes("fetch")?"Sem conexão. Tente de novo.":m.includes("PLANO_INVALIDO")?"Esse plano não está disponível agora.":"Não deu certo agora. Tente de novo em instantes."}
+function pmCopy(code){const ok=()=>{$("pmCopied").textContent="Código copiado! No app do seu banco, escolha Pix copia e cola e cole."};
+  try{navigator.clipboard.writeText(code).then(ok,()=>{$("pmCode").select();$("pmCopied").textContent="Selecione o código acima e copie."})}catch(e){$("pmCode").select()}}
+$("pmClose").onclick=()=>{$("ovPremium").hidden=true};
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("ovPremium").hidden)$("ovPremium").hidden=true});
+function plUsageText(){return "Hoje: "+Math.min(plUsed("provas"),LIM.provas)+"/"+LIM.provas+" provas · "+Math.min(plUsed("cartoes"),LIM.cartoes)+"/"+LIM.cartoes+" cartões de estudo"}
+function renderPlan(){
+  const el=$("planBox");
+  if(el){
+    if(!user||!PL.loaded||(!PREMIUM.cobranca&&!PL.premium)){el.hidden=true}
+    else{el.hidden=false;let h;
+      if(PL.premium)h='<div class="plan pro"><b>💎 Premium até '+fmtDate(PL.ate)+'</b><span class="usage">'+(PL.origem==="fundador"?"Presente para quem já jogava: 3 meses grátis. Obrigado por estar aqui desde o começo! ":PL.origem==="cortesia"?"Cortesia do Aprenda se Divertindo. ":"")+'Provas e estudo sem limite.</span>'+(PL.pendente?'<span class="usage">Renovação aguardando confirmação: plano '+esc(planName(PL.pendente.plano))+' · '+fmtBRL(PL.pendente.valor)+'.</span>':'')+'<div class="row"><button class="btn ghost" type="button" id="planBtn">'+(PL.pendente?"Ver pedido":"Renovar")+'</button></div></div>';
+      else h='<div class="plan"><b>Plano grátis</b><span class="usage">'+plUsageText()+'</span>'+(PL.pendente?'<span class="usage"><b>Pagamento em análise:</b> plano '+esc(planName(PL.pendente.plano))+' · '+fmtBRL(PL.pendente.valor)+'. Assim que confirmarmos, o Premium é liberado.</span>':PL.recusado?'<span class="usage err">Não confirmamos o pagamento do plano '+esc(planName(PL.recusado.plano))+(PL.recusado.obs?' ('+esc(PL.recusado.obs)+')':'')+'. Fale com a gente se já pagou.</span>':'')+'<div class="row"><button class="btn money" type="button" id="planBtn">'+(PL.pendente?"Ver pedido e Pix":"💎 Seja Premium · "+fmtBRL(PREMIUM.precos.mensal||12.9)+"/mês")+'</button></div></div>';
+      el.innerHTML=h;$("planBtn").onclick=()=>{sfx.click();openPremium()}}
+  }
+  renderAnonInfo();
+}
+/* indicação: link, saldo e saque */
+const REF_KEY="gm-ref";
+try{const u=new URL(location.href),r=u.searchParams.get("ref");if(r){localStorage.setItem(REF_KEY,r.trim().toUpperCase().slice(0,12));u.searchParams.delete("ref");history.replaceState(null,"",u.pathname+(u.search||"")+u.hash)}}catch(e){}
+async function refClaim(){
+  let code=null;try{code=localStorage.getItem(REF_KEY)}catch(e){}
+  if(!code||!sb||!user)return;
+  try{const {error}=await sb.rpc("registrar_indicacao",{p_codigo:code});
+    if(!error||!/fetch|network/i.test(String(error.message||"")))localStorage.removeItem(REF_KEY)}catch(e){}
+}
+function refLink(c){return SHARE_URL+"?ref="+c}
+async function refLoad(){
+  if(!sb||!user||REF.loading)return;REF.loading=true;REF.err=null;
+  try{if(PREMIUM.ind.ativa){await sb.rpc("meu_codigo")}
+    const {data,error}=await sb.rpc("minha_indicacao");if(error)throw error;REF.data=data||null}
+  catch(e){REF.err=e;REF.data=null}
+  REF.loading=false;renderRef();
+}
+function renderRef(){
+  const el=$("refBox");if(!el)return;const d=REF.data,I=PREMIUM.ind;
+  const temSaldo=d&&(+d.a_liberar>0||+d.disponivel>0||+d.em_saque>0||(d.saques||[]).length);
+  if(!user||!PREMIUM.loaded||!d||(!I.ativa&&!temSaldo)){el.hidden=true;return}
+  el.hidden=false;
+  const podeSacar=+d.disponivel>=I.minimo&&!(+d.em_saque>0);
+  let h='<div class="plan"><b>🎁 Indique e ganhe '+fmtBRL(I.valor)+' por pagamento</b>'
+    +(I.ativa?'<span class="usage">Cada amigo que assinar o Premium pelo seu link rende '+fmtBRL(I.valor)+' para você a cada pagamento dele (mensal, trimestral, semestral ou anual), enquanto ele mantiver a assinatura. As comissões fecham no dia 30 e são liberadas no dia 5 do mês seguinte. Saque a partir de '+fmtBRL(I.minimo)+'. Promoção por tempo limitado'+(I.fim?', até '+fmtDate(I.fim):'')+'.</span>'
+      +(d.codigo?'<div class="reflink"><input type="text" id="refUrl" readonly aria-label="Seu link de indicação"><button class="btn" type="button" id="refCopy">Copiar link</button>'+(navigator.share?'<button class="btn ghost" type="button" id="refShare">Compartilhar</button>':'')+'</div><p class="small" id="refMsg" role="status" style="margin:0"></p>':'')
+      :'<span class="usage">A promoção de indicação terminou, mas os amigos que você já indicou continuam rendendo enquanto mantiverem a assinatura.</span>')
+    +'<div class="refstats"><span><b>'+(d.indicados||0)+'</b> indicados</span><span><b>'+(d.assinantes||0)+'</b> assinantes</span><span><b>'+fmtBRL(d.a_liberar)+'</b> a liberar'+(d.proxima_liberacao?' ('+fmtDate(d.proxima_liberacao)+')':'')+'</span><span><b>'+fmtBRL(d.disponivel)+'</b> disponível</span>'+(+d.em_saque>0?'<span><b>'+fmtBRL(d.em_saque)+'</b> em saque</span>':'')+(+d.recebido>0?'<span><b>'+fmtBRL(d.recebido)+'</b> recebido</span>':'')+'</div>';
+  if(REF.saque&&podeSacar)h+='<form class="refsaque" id="refForm"><label class="small" for="refKey">Sua chave Pix para receber '+fmtBRL(d.disponivel)+'</label><input type="text" id="refKey" maxlength="140" required autocomplete="off" placeholder="CPF, e-mail, celular ou chave aleatória"><div class="row"><button class="btn money" type="submit" id="refGo">Confirmar saque</button><button class="btn ghost" type="button" id="refNo">Cancelar</button></div><span class="usage">Os saques são pagos no dia 5.</span></form>';
+  else h+='<div class="row"><button class="btn'+(podeSacar?' money':' ghost')+'" type="button" id="refSaque"'+(podeSacar?'':' disabled')+'>Solicitar saque</button></div>'+(!podeSacar&&!(+d.em_saque>0)?'<span class="usage">O saque fica liberado quando o saldo disponível chegar a '+fmtBRL(I.minimo)+'.</span>':'')+(+d.em_saque>0?'<span class="usage">Seu pedido de saque de '+fmtBRL(d.em_saque)+' será pago no próximo dia 5.</span>':'');
+  if(REF.msg)h+='<p class="small" role="status" style="margin:0">'+esc(REF.msg)+'</p>';
+  if((d.saques||[]).length)h+='<details><summary class="small">Meus saques</summary><ul class="small reflist">'+d.saques.map(s=>'<li>'+fmtDate(s.criado_em)+' · '+fmtBRL(s.valor)+' · '+({pendente:"aguardando o dia 5",pago:"pago"+(s.decidido_em?" em "+fmtDate(s.decidido_em):""),recusado:"não pago"+(s.obs?" ("+esc(s.obs)+")":"")+": o valor voltou para o saldo"}[s.status]||s.status)+'</li>').join("")+'</ul></details>';
+  el.innerHTML=h+'</div>';
+  if($("refUrl")){const link=refLink(d.codigo);$("refUrl").value=link;
+    $("refCopy").onclick=()=>{const ok=()=>{$("refMsg").textContent="Link copiado! Mande para os amigos que estudam para concurso ou para o Enem."};try{navigator.clipboard.writeText(link).then(ok,()=>{$("refUrl").select()})}catch(e){$("refUrl").select()}};
+    if($("refShare"))$("refShare").onclick=()=>{navigator.share({title:"Aprenda se Divertindo",text:"Estou estudando para concurso jogando o Show do Milhão de questões. Entra pelo meu link:",url:link}).catch(()=>{})}}
+  if($("refSaque"))$("refSaque").onclick=()=>{REF.saque=true;REF.msg="";renderRef();$("refKey").focus()};
+  if($("refNo"))$("refNo").onclick=()=>{REF.saque=false;renderRef()};
+  if($("refForm"))$("refForm").onsubmit=async ev=>{ev.preventDefault();const b=$("refGo");b.disabled=true;
+    try{const {data,error}=await sb.rpc("solicitar_saque",{p_chave:$("refKey").value});if(error)throw error;REF.saque=false;REF.msg="Pedido de saque de "+fmtBRL(data.valor)+" registrado. O pagamento é feito no dia 5.";await refLoad()}
+    catch(e){const m=String(e&&e.message||"");REF.msg=m.includes("SALDO_MINIMO")?"O saldo disponível ainda não chegou a "+fmtBRL(I.minimo)+".":m.includes("SAQUE_PENDENTE")?"Você já tem um saque aguardando pagamento.":m.includes("CHAVE_INVALIDA")?"Confira a chave Pix.":"Não deu certo agora. Tente de novo.";REF.saque=false;renderRef()}};
+}
 async function setUser(u){
   user=u||null;perfil=null;if(user)delNotice=false;
   if(user){
@@ -8292,7 +8479,8 @@ async function setUser(u){
       if(lastResult&&!lastResult.saved)cloudSave(lastResult);
     }catch(e){}
   }
-  studyReset();renderAcct();renderStudyBox();renderAnonInfo();if(user)loadStudy(true);
+  REF.data=null;REF.saque=false;REF.msg="";PL.loaded=false;
+  studyReset();renderAcct();renderStudyBox();renderAnonInfo();if(user)loadStudy(true);plLoad();if(user)refClaim().then(refLoad);
   DL.list=null;DL.t=0;dlLoad(true);RK.list=null;RK.sel=null;RK.rows=null;RK.champs=null;RK.err=null;RK.msg="";RK.inv=false;RK.leave=false;RK.mng=false;RK.del=false;RK.week=0;renderRanking();setTimeout(handleInvite,0);
 }
 function mergeProgress(p){
@@ -8334,10 +8522,11 @@ function renderAcct(){
   const a=$("acct");
   if(!sb){a.innerHTML='<p class="small" style="margin:0">As contas estão indisponíveis no momento. Seu histórico continua salvo neste aparelho.</p>';return}
   if(user){
-    a.innerHTML='<div class="who"><b></b><span></span><span>Progresso, partidas e estudo salvos na conta.</span></div><div class="acts"><button class="btn ghost" type="button" id="btnPass">Trocar senha</button><button class="btn ghost" type="button" id="btnLogout">Sair da conta</button><button class="btn danger" type="button" id="btnDelete">Excluir conta</button></div><p class="small" style="margin:0">Excluir apaga para sempre seu nome, e-mail, progresso, partidas e estudo.</p>';
+    a.innerHTML='<div class="who"><b></b><span></span><span>Progresso, partidas e estudo salvos na conta.</span></div><div id="planBox" hidden></div><div id="refBox" hidden></div><div class="acts"><button class="btn ghost" type="button" id="btnPass">Trocar senha</button><button class="btn ghost" type="button" id="btnLogout">Sair da conta</button><button class="btn danger" type="button" id="btnDelete">Excluir conta</button></div><p class="small" style="margin:0">Excluir apaga para sempre seu nome, e-mail, progresso, partidas e estudo.</p>';
     a.querySelector(".who b").textContent=perfil?perfil.nome:"Sua conta";a.querySelector(".who span").textContent=user.email||"";
     $("btnLogout").onclick=async()=>{sfx.click();try{await sb.auth.signOut()}catch(e){}setUser(null)};
     $("btnPass").onclick=()=>{sfx.click();openNewPass();$("npTitle").textContent="Trocar sua senha";$("npTitle").previousElementSibling.textContent="Sua conta"};
+    renderPlan();renderRef();
     $("btnDelete").onclick=()=>{sfx.click();$("delMsg").textContent="";$("delMsg").className="small";$("delYes").disabled=false;$("ovDelete").hidden=false};
     const uid=user.id;sb.rpc("admin_eu").then(({data})=>{if(data===true&&user&&user.id===uid&&!a.querySelector("#admLink")){const l=document.createElement("a");l.id="admLink";l.className="btn ghost";l.href="admin.html";l.textContent="Administração";l.style.textDecoration="none";a.querySelector(".acts").prepend(l)}},()=>{});
   }else{
@@ -8538,6 +8727,7 @@ $("howGo").onclick=()=>{sfx.click();$("ovHowto").hidden=true;startStudy()};
 $("howNo").onclick=()=>{$("ovHowto").hidden=true};
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("ovHowto").hidden)$("howNo").click()});
 function startStudy(){
+  if(!plCan("cartoes")){openPremium("Você já estudou os "+LIM.cartoes+" cartões grátis de hoje. Amanhã tem mais, ou libere o estudo ilimitado agora.");return}
   const t=studyToday();
   const revs=t.due.map(r=>({q:qById(r.questao_id),novo:false}));
   const novos=pickNew(t.novosRestantes).map(q=>({q,novo:true}));
@@ -8547,6 +8737,7 @@ function startStudy(){
 }
 function nextCard(){
   if(!ST.queue.length){finishStudy();return}
+  if(!ST.firstPass.has(ST.queue[0].q.id)&&!plCan("cartoes")){ST.queue=[];stopSTimer();finishStudy();openPremium("Você já estudou os "+LIM.cartoes+" cartões grátis de hoje. Amanhã tem mais, ou libere o estudo ilimitado agora.");return}
   ST.cur=ST.queue.shift();ST.phase="ask";ST.conf=null;
   const q=ST.cur.q;
   $("sKind").textContent=(ST.cur.again?"De novo":ST.cur.novo?"Novo":"Revisão")+" · "+SUBJ[q.s]+" · "+TIER[q.d];
@@ -8591,7 +8782,7 @@ function grade(ok){
   if(ST.phase!=="grade")return;ST.phase="saving";
   const c=ST.cur,q=c.q,sabia=ST.conf,today=dayKey();
   const prev=ST.rows.get(q.id);
-  const first=!ST.firstPass.has(q.id);ST.firstPass.add(q.id);
+  const first=!ST.firstPass.has(q.id);ST.firstPass.add(q.id);if(first&&plFree())plBump("cartoes");
   let r=prev?{...prev}:{questao_id:q.id,caixa:1,vence:today,alerta:false,vistas:0,acertos:0,falsas_certezas:0,primeira_vez:today};
   r.vistas++;if(ok)r.acertos++;
   if(first){

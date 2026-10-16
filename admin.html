@@ -50,6 +50,12 @@ input[type=search],input[type=email],input[type=password]{font:inherit;padding:9
 .legend{display:flex;gap:14px;font-size:.82rem;color:var(--muted)}.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
 .cohort td.c{text-align:center;font-variant-numeric:tabular-nums}
 form.login{display:grid;gap:10px;max-width:360px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;align-items:end}.grid1{display:grid;gap:10px}
+.grid2 label,.grid1 label{display:grid;gap:4px}.grid2 label span{display:flex;gap:8px;align-items:center}
+input[type=text],input[type=number],input[type=date],select,textarea{font:inherit;padding:9px 12px;border:1.5px solid var(--line);border-radius:8px;background:var(--sheet);color:var(--ink);min-width:0;width:100%}
+.grid2 input[type=email]{min-width:0;width:100%}textarea{resize:vertical}
+.flash.ok{background:var(--money-soft);color:var(--money)}
+td .btn{padding:6px 12px;font-size:.85rem}
 :focus-visible{outline:3px solid var(--focus);outline-offset:2px}
 @media (max-width:640px){header,main{padding-left:16px;padding-right:16px}.panel{padding:14px}}
 </style>
@@ -93,10 +99,10 @@ async function start(){
   shell();load();
 }
 function shell(){
-  const tabs=[["geral","Visão geral"],["retencao","Retenção"],["jogadores","Jogadores"],["conteudo","Conteúdo"],["rankings","Rankings"]];
+  const tabs=[["geral","Visão geral"],["retencao","Retenção"],["jogadores","Jogadores"],["conteudo","Conteúdo"],["rankings","Rankings"],["pagamentos","Pagamentos"],["assinantes","Assinantes"],["indicacoes","Indicações"],["config","Configurações"]];
   $("app").innerHTML='<div class="row" style="justify-content:space-between"><div class="tabs" role="tablist">'+tabs.map(([k,n])=>'<button class="tab" role="tab" data-t="'+k+'" aria-selected="'+(ST.tab===k)+'">'+n+'</button>').join("")+'</div><div class="row"><span class="small" id="upd"></span><button class="btn ghost" id="rel">Atualizar</button></div></div><div id="view" style="display:grid;gap:16px"></div>';
   document.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{ST.tab=b.dataset.t;document.querySelectorAll("[data-t]").forEach(x=>x.setAttribute("aria-selected",x===b));render()});
-  $("rel").onclick=()=>load();
+  $("rel").onclick=()=>{PAY.pag=PAY.ass=PAY.ind=PAY.cfg=null;load()};
 }
 async function load(){
   $("view").innerHTML='<div class="panel"><p class="small">Carregando os dados…</p></div>';
@@ -107,7 +113,7 @@ async function load(){
     $("upd").textContent="Atualizado às "+new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});render();
   }catch(e){$("view").innerHTML='<div class="panel"><p class="flash" role="alert">'+esc(errMsg(e))+'</p></div>'}
 }
-function render(){const v=$("view");if(!ST.data.tot)return;({geral:vGeral,retencao:vRet,jogadores:vJog,conteudo:vCont,rankings:vRk})[ST.tab](v)}
+function render(){const v=$("view");if(!ST.data.tot)return;({geral:vGeral,retencao:vRet,jogadores:vJog,conteudo:vCont,rankings:vRk,pagamentos:vPag,assinantes:vAss,indicacoes:vInd,config:vCfg})[ST.tab](v)}
 
 /* gráfico de barras empilhadas em SVG */
 function bars(rows,series,opts){
@@ -175,6 +181,124 @@ function vRk(v){
   const R=ST.data.rk;
   v.innerHTML='<div class="panel"><div class="row" style="justify-content:space-between"><h2>Rankings</h2><span class="small">'+R.length+' rankings · '+R.filter(r=>r.saque).length+' com Sábado do Saque</span></div><div class="tablewrap"><table><thead><tr><th>Ranking</th><th>Administrador</th><th class="n">Participantes</th><th class="n">Partidas na semana</th><th class="n">Disputas (7 dias)</th><th class="n">Saques (7 dias)</th><th>Saque</th><th>Criado em</th></tr></thead><tbody>'
   +(R.length?R.map(r=>'<tr><td><b>'+esc(r.nome)+'</b></td><td>'+esc(r.dono)+'</td><td class="n">'+num(r.membros)+'</td><td class="n">'+num(r.partidas_semana)+'</td><td class="n">'+num(r.disputas_7d)+'</td><td class="n">'+num(r.saques_7d)+'</td><td>'+(r.saque?'<span class="pill ok">ativo</span>':'<span class="small">desligado</span>')+'</td><td>'+dt(r.criado_em)+'</td></tr>').join(""):'<tr><td colspan="8" class="small">Nenhum ranking ainda.</td></tr>')+'</tbody></table></div><p class="small">“Partidas na semana” soma as partidas dos participantes desde segunda às 00h.</p></div>';
+}
+/* ===== plano pago: pagamentos, assinantes, indicações e configurações ===== */
+const PAY={pag:null,ass:null,ind:null,cfg:null,err:null,filtro:"pendente",q:"",qa:"",msg:""};
+const PLAN_N={mensal:"Mensal",trimestral:"Trimestral",semestral:"Semestral",anual:"Anual"};
+const TIPO_N={pix:"Pix",manual:"Pago por fora",cortesia:"Cortesia"},ORIG_N={pix:"Pix",manual:"Pago por fora",cortesia:"Cortesia",fundador:"Presente (já jogava)"};
+const reais=v=>"R$ "+Number(v||0).toFixed(2).replace(".",",").replace(/\B(?=(\d{3})+(?!\d))/g,".");
+const dth=s=>s?new Date(s).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"2-digit",hour:"2-digit",minute:"2-digit"}):"–";
+const dday=s=>s?new Date(String(s).length===10?s+"T12:00:00":s).toLocaleDateString("pt-BR"):"–";
+function payErr(e){const m=String(e&&(e.message||e.details)||"");
+  if(m.includes("Could not find")||m.includes("does not exist"))return"Rode o arquivo 57-plano-pago-indicacoes.sql no Supabase para ativar esta parte.";
+  const T={USUARIO_NAO_ENCONTRADO:"Não existe conta com esse e-mail no jogo.",JA_DECIDIDO:"Esse item já foi resolvido por outra pessoa. Atualize a página.",PLANO_INVALIDO:"Escolha um plano válido.",NAO_PODE_SI:"Você não pode remover a si mesmo.",ULTIMO_ADMIN:"Precisa sobrar pelo menos um administrador.",VALOR_INVALIDO:"Confira os valores digitados.",CONTA_EXCLUIDA:"A conta desse jogador foi excluída."};
+  for(const k in T)if(m.includes(k))return T[k];return errMsg(e)}
+async function payLoad(which,force){
+  try{
+    if(which==="pag"&&(force||!PAY.pag))PAY.pag=await rpc("admin_pagamentos",{p_status:null});
+    if(which==="ass"&&(force||!PAY.ass))PAY.ass=await rpc("admin_assinantes");
+    if(which==="ind"&&(force||!PAY.ind))PAY.ind=await rpc("admin_indicacoes");
+    if(which==="cfg"&&(force||!PAY.cfg))PAY.cfg=await rpc("admin_config");
+    PAY.err=null;
+  }catch(e){PAY.err=payErr(e)}
+}
+function payShell(v,title){v.innerHTML='<div class="panel"><p class="small">Carregando…</p></div>'}
+function flash(){const m=PAY.msg;PAY.msg="";return m?'<p class="flash ok" role="status">'+esc(m)+'</p>':''}
+function csvDown(name,head,rows){const lines=[head.join(";")].concat(rows.map(r=>r.map(x=>'"'+String(x==null?"":x).replace(/"/g,'""')+'"').join(";")));
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob(["﻿"+lines.join("\n")],{type:"text/csv;charset=utf-8"}));a.download=name+"-"+new Date().toISOString().slice(0,10)+".csv";a.click()}
+const STATUS_PILL={pendente:'<span class="pill warn">pendente</span>',confirmado:'<span class="pill ok">confirmado</span>',recusado:'<span class="pill bad">recusado</span>',cancelado:'<span class="small">cancelado</span>',pago:'<span class="pill ok">pago</span>'};
+
+async function vPag(v){
+  if(!PAY.pag){payShell(v);await payLoad("pag");if(ST.tab!=="pagamentos")return}
+  if(PAY.err){v.innerHTML='<div class="panel"><p class="flash" role="alert">'+esc(PAY.err)+'</p></div>';return}
+  const P=PAY.pag,now=new Date(),mk=d=>{const x=new Date(new Date(d).getTime()-3*36e5);return x.getUTCFullYear()+"-"+String(x.getUTCMonth()+1).padStart(2,"0")},mes=mk(now);
+  const conf=P.filter(p=>p.status==="confirmado"&&+p.valor>0);
+  const pend=P.filter(p=>p.status==="pendente");
+  const doMes=conf.filter(p=>mk(p.decidido_em||p.criado_em)===mes);
+  const q=PAY.q.toLowerCase();
+  const rows=P.filter(p=>(PAY.filtro==="todos"||p.status===PAY.filtro)&&(!q||((p.nome||"")+" "+(p.email||"")).toLowerCase().includes(q)));
+  const porMes={};conf.forEach(p=>{const k=mk(p.decidido_em||p.criado_em);const o=porMes[k]=porMes[k]||{n:0,v:0};o.n++;o.v+=+p.valor});
+  const chips=[["pendente","Pendentes ("+pend.length+")"],["confirmado","Confirmados"],["recusado","Recusados"],["cancelado","Cancelados"],["todos","Todos"]];
+  v.innerHTML=flash()+'<div class="panel"><div class="row" style="justify-content:space-between"><h2>Pagamentos</h2><span class="small">Confirme aqui os Pix recebidos: o Premium é liberado na hora e a comissão de quem indicou é gerada.</span></div>'
+  +'<div class="tiles">'+tile(pend.length,"pagamentos aguardando confirmação")+'<div class="tile"><b>'+reais(doMes.reduce((a,p)=>a+ +p.valor,0))+'</b><span>recebido neste mês</span><small>'+doMes.length+' pagamentos</small></div><div class="tile"><b>'+reais(conf.reduce((a,p)=>a+ +p.valor,0))+'</b><span>recebido no total</span><small>'+conf.length+' pagamentos</small></div></div>'
+  +'<div class="row"><div class="row" role="group" aria-label="Filtro">'+chips.map(([k,n])=>'<button class="chip" data-pf="'+k+'" aria-pressed="'+(PAY.filtro===k)+'">'+n+'</button>').join("")+'</div><input type="search" id="pq" placeholder="nome ou e-mail" value="'+esc(PAY.q)+'" aria-label="Buscar"><button class="btn ghost" id="pcsv">Baixar planilha (CSV)</button></div>'
+  +'<div class="tablewrap" style="max-height:65vh"><table><thead><tr><th>Data</th><th>Jogador</th><th>Plano</th><th class="n">Valor</th><th>Tipo</th><th>Situação</th><th>Indicado por</th><th class="n">Comissão</th><th>Ações</th></tr></thead><tbody>'
+  +(rows.length?rows.map(p=>'<tr><td>'+dth(p.criado_em)+'</td><td><b>'+esc(p.nome||"–")+'</b><br><span class="small">'+esc(p.email||"conta excluída")+'</span></td><td>'+esc(PLAN_N[p.plano]||p.plano)+'</td><td class="n">'+reais(p.valor)+'</td><td>'+esc(TIPO_N[p.tipo]||p.tipo)+'</td><td>'+(STATUS_PILL[p.status]||esc(p.status))+(p.decidido_em&&p.status!=="pendente"?'<br><span class="small">'+dth(p.decidido_em)+(p.decidido_por?' · '+esc(p.decidido_por):'')+'</span>':'')+(p.obs?'<br><span class="small">'+esc(p.obs)+'</span>':'')+'</td><td>'+esc(p.indicado_por||"–")+'</td><td class="n">'+(p.comissao?reais(p.comissao):"–")+'</td><td>'+(p.status==="pendente"?'<div class="row"><button class="btn" data-ok="'+p.id+'">Confirmar</button><button class="btn ghost" data-no="'+p.id+'">Recusar</button></div>':'')+'</td></tr>').join(""):'<tr><td colspan="9" class="small">Nada aqui.</td></tr>')
+  +'</tbody></table></div></div>'
+  +'<div class="panel"><h2>Recebido por mês</h2><div class="tablewrap"><table><thead><tr><th>Mês</th><th class="n">Pagamentos</th><th class="n">Valor</th></tr></thead><tbody>'
+  +(Object.keys(porMes).length?Object.keys(porMes).sort().reverse().map(k=>'<tr><td>'+k.slice(5)+'/'+k.slice(0,4)+'</td><td class="n">'+porMes[k].n+'</td><td class="n">'+reais(porMes[k].v)+'</td></tr>').join(""):'<tr><td colspan="3" class="small">Nenhum pagamento confirmado ainda.</td></tr>')+'</tbody></table></div></div>';
+  v.querySelectorAll("[data-pf]").forEach(b=>b.onclick=()=>{PAY.filtro=b.dataset.pf;vPag(v)});
+  const pq=$("pq");pq.oninput=()=>{PAY.q=pq.value;const pos=pq.selectionStart;vPag(v);const n=$("pq");n.focus();n.setSelectionRange(pos,pos)};
+  $("pcsv").onclick=()=>csvDown("pagamentos",["Data","Nome","E-mail","Plano","Valor","Tipo","Situação","Decidido em","Por","Obs","Indicado por","Comissão"],rows.map(p=>[dth(p.criado_em),p.nome,p.email,PLAN_N[p.plano]||p.plano,Number(p.valor).toFixed(2).replace(".",","),TIPO_N[p.tipo]||p.tipo,p.status,dth(p.decidido_em),p.decidido_por,p.obs,p.indicado_por,p.comissao?Number(p.comissao).toFixed(2).replace(".",","):""]));
+  v.querySelectorAll("[data-ok]").forEach(b=>b.onclick=async()=>{const p=P.find(x=>x.id===b.dataset.ok);if(!confirm("Confirmar o pagamento de "+reais(p.valor)+" de "+(p.email||"")+" (plano "+(PLAN_N[p.plano]||p.plano)+")? O Premium será liberado."))return;b.disabled=true;
+    try{const r=await rpc("admin_confirmar_pagamento",{p_id:p.id});PAY.msg="Pagamento confirmado. Premium de "+p.email+" vale até "+dday(r.ate)+(+r.comissao>0?". Comissão de "+reais(r.comissao)+" para quem indicou.":".");PAY.ass=null;PAY.ind=null;await payLoad("pag",true);vPag(v)}catch(e){alert(payErr(e));b.disabled=false}});
+  v.querySelectorAll("[data-no]").forEach(b=>b.onclick=async()=>{const p=P.find(x=>x.id===b.dataset.no);const obs=prompt("Motivo da recusa (aparece para o jogador):","Pix não encontrado");if(obs===null)return;b.disabled=true;
+    try{await rpc("admin_recusar_pagamento",{p_id:p.id,p_obs:obs});PAY.msg="Pagamento recusado.";await payLoad("pag",true);vPag(v)}catch(e){alert(payErr(e));b.disabled=false}});
+}
+
+async function vAss(v){
+  if(!PAY.ass){payShell(v);await payLoad("ass");if(ST.tab!=="assinantes")return}
+  if(PAY.err){v.innerHTML='<div class="panel"><p class="flash" role="alert">'+esc(PAY.err)+'</p></div>';return}
+  const A=PAY.ass,q=PAY.qa.toLowerCase(),rows=A.filter(a=>!q||((a.nome||"")+" "+(a.email||"")).toLowerCase().includes(q)),ativos=A.filter(a=>a.ativo);
+  v.innerHTML=flash()+'<div class="panel"><h2>Habilitar Premium para um jogador</h2><p class="small">Use quando o pagamento chegou por fora do pedido no jogo, ou para dar uma cortesia. Os meses são somados ao que a pessoa já tem.</p>'
+  +'<form class="grid2" id="hf"><label class="small">E-mail da conta<input type="email" id="hEmail" required placeholder="email@do.jogador"></label><label class="small">Plano<select id="hPlano">'+Object.entries(PLAN_N).map(([k,n])=>'<option value="'+k+'">'+n+'</option>').join("")+'</select></label><label class="small">Tipo<select id="hTipo"><option value="manual">Pagou por fora (gera comissão)</option><option value="cortesia">Cortesia (sem valor)</option></select></label><label class="small">Observação<input type="text" id="hObs" maxlength="140" placeholder="opcional"></label><div class="row"><button class="btn" type="submit">Habilitar</button></div></form></div>'
+  +'<div class="panel"><div class="row" style="justify-content:space-between"><h2>Assinantes</h2><span class="small">'+ativos.length+' com Premium ativo · '+(A.length-ativos.length)+' expirados</span></div><div class="row"><input type="search" id="aq" placeholder="nome ou e-mail" value="'+esc(PAY.qa)+'" aria-label="Buscar"><button class="btn ghost" id="acsv">Baixar planilha (CSV)</button></div>'
+  +'<div class="tablewrap" style="max-height:65vh"><table><thead><tr><th>Jogador</th><th>Plano</th><th>Origem</th><th>Válido até</th><th>Situação</th><th class="n">Total pago</th><th>Indicado por</th><th>Ações</th></tr></thead><tbody>'
+  +(rows.length?rows.map(a=>'<tr><td><b>'+esc(a.nome||"–")+'</b><br><span class="small">'+esc(a.email)+'</span></td><td>'+esc(PLAN_N[a.plano]||a.plano||"–")+'</td><td>'+esc(ORIG_N[a.origem]||a.origem)+'</td><td>'+dday(a.ate)+'</td><td>'+(a.ativo?'<span class="pill ok">ativo</span>':'<span class="pill bad">expirado</span>')+'</td><td class="n">'+reais(a.total_pago)+'</td><td>'+esc(a.indicado_por||"–")+'</td><td><button class="btn ghost" data-rm="'+a.user_id+'">Remover Premium</button></td></tr>').join(""):'<tr><td colspan="8" class="small">Ninguém por aqui.</td></tr>')
+  +'</tbody></table></div></div>';
+  $("hf").onsubmit=async e=>{e.preventDefault();const b=e.target.querySelector("button");b.disabled=true;const em=$("hEmail").value.trim(),pl=$("hPlano").value,tp=$("hTipo").value;
+    try{const r=await rpc("admin_habilitar",{p_email:em,p_plano:pl,p_tipo:tp,p_obs:$("hObs").value});PAY.msg=em+" agora é Premium até "+dday(r.ate)+(+r.comissao>0?". Comissão de "+reais(r.comissao)+" para quem indicou.":".");PAY.pag=null;PAY.ind=null;await payLoad("ass",true);vAss(v)}catch(err){alert(payErr(err));b.disabled=false}};
+  const aq=$("aq");aq.oninput=()=>{PAY.qa=aq.value;const pos=aq.selectionStart;vAss(v);const n=$("aq");n.focus();n.setSelectionRange(pos,pos)};
+  $("acsv").onclick=()=>csvDown("assinantes",["Nome","E-mail","Plano","Origem","Válido até","Situação","Total pago","Indicado por"],rows.map(a=>[a.nome,a.email,PLAN_N[a.plano]||a.plano,ORIG_N[a.origem]||a.origem,dday(a.ate),a.ativo?"ativo":"expirado",Number(a.total_pago||0).toFixed(2).replace(".",","),a.indicado_por]));
+  v.querySelectorAll("[data-rm]").forEach(b=>b.onclick=async()=>{const a=A.find(x=>x.user_id===b.dataset.rm);if(!confirm("Remover o Premium de "+a.email+"? A pessoa volta para o plano grátis na hora."))return;b.disabled=true;
+    try{await rpc("admin_remover_premium",{p_user:a.user_id});PAY.msg="Premium de "+a.email+" removido.";await payLoad("ass",true);vAss(v)}catch(e){alert(payErr(e));b.disabled=false}});
+}
+
+async function vInd(v){
+  if(!PAY.ind){payShell(v);await payLoad("ind");if(ST.tab!=="indicacoes")return}
+  if(PAY.err){v.innerHTML='<div class="panel"><p class="flash" role="alert">'+esc(PAY.err)+'</p></div>';return}
+  const I=PAY.ind,S=I.saques||[],R=I.resumo||[],C=I.comissoes||[],pend=S.filter(s=>s.status==="pendente");
+  const sum=(a,k)=>a.reduce((x,r)=>x+ +r[k],0);
+  v.innerHTML=flash()+'<div class="panel"><h2>Indicações</h2><p class="small">Cada pagamento confirmado de um indicado gera a comissão para quem indicou. As comissões fecham no dia 30 e ficam disponíveis no dia 5 do mês seguinte; o jogador pede o saque a partir do valor mínimo e vocês pagam no dia 5. Ligar, desligar ou mudar a data final da promoção fica em Configurações.</p>'
+  +'<div class="tiles">'+tile(pend.length,"saques para pagar",pend.length?reais(sum(pend,"valor"))+" no total":"")+'<div class="tile"><b>'+reais(sum(R,"a_liberar"))+'</b><span>comissões a liberar</span></div><div class="tile"><b>'+reais(sum(R,"disponivel"))+'</b><span>disponível para saque</span></div><div class="tile"><b>'+reais(sum(R,"pago"))+'</b><span>já pago em saques</span></div></div></div>'
+  +'<div class="panel"><div class="row" style="justify-content:space-between"><h2>Saques</h2><button class="btn ghost" id="scsv">Baixar planilha (CSV)</button></div><div class="tablewrap" style="max-height:50vh"><table><thead><tr><th>Pedido em</th><th>Jogador</th><th class="n">Valor</th><th>Chave Pix</th><th>Situação</th><th>Ações</th></tr></thead><tbody>'
+  +(S.length?S.map(s=>'<tr><td>'+dth(s.criado_em)+'</td><td><b>'+esc(s.nome||"–")+'</b><br><span class="small">'+esc(s.email||"")+'</span></td><td class="n">'+reais(s.valor)+'</td><td class="mono">'+esc(s.chave_pix)+'</td><td>'+(STATUS_PILL[s.status]||esc(s.status))+(s.decidido_em?'<br><span class="small">'+dth(s.decidido_em)+(s.decidido_por?' · '+esc(s.decidido_por):'')+'</span>':'')+(s.obs?'<br><span class="small">'+esc(s.obs)+'</span>':'')+'</td><td>'+(s.status==="pendente"?'<div class="row"><button class="btn" data-sp="'+s.id+'">Marcar como pago</button><button class="btn ghost" data-sr="'+s.id+'">Recusar</button></div>':'')+'</td></tr>').join(""):'<tr><td colspan="6" class="small">Nenhum pedido de saque ainda.</td></tr>')+'</tbody></table></div></div>'
+  +'<div class="panel"><h2>Quem está indicando</h2><div class="tablewrap" style="max-height:50vh"><table><thead><tr><th>Jogador</th><th>Código</th><th class="n">Indicados</th><th class="n">Assinantes</th><th class="n">A liberar</th><th class="n">Disponível</th><th class="n">Em saque</th><th class="n">Pago</th></tr></thead><tbody>'
+  +(R.length?R.map(r=>'<tr><td><b>'+esc(r.nome||"–")+'</b><br><span class="small">'+esc(r.email||"")+'</span></td><td class="mono">'+esc(r.codigo)+'</td><td class="n">'+r.indicados+'</td><td class="n">'+r.assinantes+'</td><td class="n">'+reais(r.a_liberar)+'</td><td class="n">'+reais(r.disponivel)+'</td><td class="n">'+reais(r.em_saque)+'</td><td class="n">'+reais(r.pago)+'</td></tr>').join(""):'<tr><td colspan="8" class="small">Ninguém entrou por indicação ainda.</td></tr>')+'</tbody></table></div></div>'
+  +'<div class="panel"><h2>Comissões</h2><div class="tablewrap" style="max-height:50vh"><table><thead><tr><th>Gerada em</th><th>Quem indicou</th><th>Indicado</th><th class="n">Valor</th><th>Libera em</th><th>Situação</th></tr></thead><tbody>'
+  +(C.length?C.map(c=>'<tr><td>'+dth(c.criado_em)+'</td><td>'+esc(c.indicador||"–")+'</td><td>'+esc(c.indicado||"conta excluída")+'</td><td class="n">'+reais(c.valor)+'</td><td>'+dday(c.libera_em)+'</td><td>'+(c.sacada?'<span class="small">em saque ou paga</span>':new Date(c.libera_em+"T00:00:00-03:00")<=new Date()?'<span class="pill ok">disponível</span>':'<span class="pill warn">a liberar</span>')+'</td></tr>').join(""):'<tr><td colspan="6" class="small">Nenhuma comissão ainda.</td></tr>')+'</tbody></table></div></div>';
+  $("scsv").onclick=()=>csvDown("saques",["Pedido em","Nome","E-mail","Valor","Chave Pix","Situação","Decidido em","Obs"],S.map(s=>[dth(s.criado_em),s.nome,s.email,Number(s.valor).toFixed(2).replace(".",","),s.chave_pix,s.status,dth(s.decidido_em),s.obs]));
+  const dec=async(id,pago,b)=>{const s=S.find(x=>x.id===id);let obs=null;
+    if(pago){if(!confirm("Confirma que o Pix de "+reais(s.valor)+" para a chave "+s.chave_pix+" foi feito?"))return}
+    else{obs=prompt("Motivo (aparece para o jogador). O valor volta para o saldo dele:","Chave Pix inválida");if(obs===null)return}
+    b.disabled=true;try{await rpc("admin_decidir_saque",{p_id:id,p_pago:pago,p_obs:obs});PAY.msg=pago?"Saque marcado como pago.":"Saque recusado; o valor voltou para o saldo.";await payLoad("ind",true);vInd(v)}catch(e){alert(payErr(e));b.disabled=false}};
+  v.querySelectorAll("[data-sp]").forEach(b=>b.onclick=()=>dec(b.dataset.sp,true,b));
+  v.querySelectorAll("[data-sr]").forEach(b=>b.onclick=()=>dec(b.dataset.sr,false,b));
+}
+
+async function vCfg(v){
+  if(!PAY.cfg){payShell(v);await payLoad("cfg");if(ST.tab!=="config")return}
+  if(PAY.err){v.innerHTML='<div class="panel"><p class="flash" role="alert">'+esc(PAY.err)+'</p></div>';return}
+  const C=PAY.cfg.config||{},A=PAY.cfg.admins||[],cob=C.cobranca||{},lim=C.limites||{},pr=C.precos||{},px=C.pix||{},em=C.emails||[],ind=C.indicacao||{};
+  const money=x=>x==null?"":Number(x).toFixed(2);
+  v.innerHTML=flash()
+  +'<div class="panel"><h2>E-mails de notificação</h2><p class="small">Para onde vão os comprovantes de Pix que os jogadores enviam pelo botão “Enviar por e-mail”. Um e-mail por linha.</p><form class="grid1" data-cfg="emails"><textarea id="cEmails" rows="3">'+esc(em.join("\n"))+'</textarea><div class="row"><button class="btn" type="submit">Salvar e-mails</button></div></form></div>'
+  +'<div class="panel"><h2>Pix para receber</h2><p class="small">Com chave, nome e cidade preenchidos, o jogo gera o Pix copia e cola com o valor do plano escolhido. O WhatsApp é opcional: se preenchido, aparece também o botão “Enviar pelo WhatsApp”.</p><form class="grid2" data-cfg="pix"><label class="small">Chave Pix<input type="text" id="cChave" value="'+esc(px.chave||"")+'" maxlength="77"></label><label class="small">Nome de quem recebe<input type="text" id="cNome" value="'+esc(px.nome||"")+'" maxlength="25"></label><label class="small">Cidade<input type="text" id="cCidade" value="'+esc(px.cidade||"")+'" maxlength="15"></label><label class="small">WhatsApp (com DDD)<input type="text" id="cWhats" value="'+esc(px.whats||"")+'" maxlength="20" placeholder="opcional"></label><div class="row"><button class="btn" type="submit">Salvar Pix</button></div></form></div>'
+  +'<div class="panel"><h2>Planos e limites</h2><form class="grid2" data-cfg="precos">'+Object.entries(PLAN_N).map(([k,n])=>'<label class="small">'+n+' (R$)<input type="number" step="0.01" min="0" data-pr="'+k+'" value="'+money(pr[k])+'"></label>').join("")+'<div class="row"><button class="btn" type="submit">Salvar preços</button></div></form>'
+  +'<form class="grid2" data-cfg="limites" style="margin-top:8px"><label class="small"><span><input type="checkbox" id="cCob"'+(cob.ativa?' checked':'')+'> Cobrança ligada (limites do plano grátis valendo)</span></label><label class="small">Provas grátis por dia<input type="number" min="0" id="cProvas" value="'+(lim.provas??5)+'"></label><label class="small">Cartões grátis por dia<input type="number" min="0" id="cCartoes" value="'+(lim.cartoes??5)+'"></label><div class="row"><button class="btn" type="submit">Salvar limites</button></div></form></div>'
+  +'<div class="panel"><h2>Promoção de indicação</h2><p class="small">Com a promoção ligada, cada jogador ganha um link de indicação. Depois do fim, ninguém novo entra por indicação, mas quem já foi indicado continua gerando comissão enquanto mantiver a assinatura.</p><form class="grid2" data-cfg="indicacao"><label class="small"><span><input type="checkbox" id="cInd"'+(ind.ativa?' checked':'')+'> Promoção ligada</span></label><label class="small">Termina em (vazio = sem data)<input type="date" id="cFim" value="'+esc(ind.fim||"")+'"></label><label class="small">Comissão por pagamento (R$)<input type="number" step="0.01" min="0" id="cVal" value="'+money(ind.valor??2.9)+'"></label><label class="small">Saque mínimo (R$)<input type="number" step="0.01" min="0" id="cMin" value="'+money(ind.minimo??50)+'"></label><div class="row"><button class="btn" type="submit">Salvar promoção</button></div></form></div>'
+  +'<div class="panel"><h2>Administradores</h2><p class="small">Quem está aqui vê todos os dados desta página e pode confirmar pagamentos. A pessoa precisa ter conta no jogo.</p><div class="tablewrap"><table><thead><tr><th>Nome</th><th>E-mail</th><th></th></tr></thead><tbody>'+A.map(a=>'<tr><td>'+esc(a.nome||"–")+'</td><td>'+esc(a.email)+'</td><td>'+(a.eu?'<span class="small">você</span>':'<button class="btn ghost" data-ra="'+a.user_id+'">Remover</button>')+'</td></tr>').join("")+'</tbody></table></div>'
+  +'<form class="row" id="af"><input type="email" id="aEmail" required placeholder="email@da.pessoa" aria-label="E-mail do novo administrador"><button class="btn" type="submit">Adicionar administrador</button></form></div>';
+  const save=async(chave,valor,label)=>{try{await rpc("admin_salvar_config",{p_chave:chave,p_valor:valor});PAY.msg="Salvo: "+label+".";await payLoad("cfg",true);vCfg(v)}catch(e){alert(payErr(e))}};
+  v.querySelectorAll("form[data-cfg]").forEach(f=>f.onsubmit=e=>{e.preventDefault();const k=f.dataset.cfg;
+    if(k==="emails"){const list=$("cEmails").value.split(/[\s,;]+/).map(x=>x.trim().toLowerCase()).filter(Boolean);const bad=list.filter(x=>!/^\S+@\S+\.\S+$/.test(x));if(!list.length||bad.length)return alert("Confira os e-mails"+(bad.length?": "+bad.join(", "):"."));save("emails",list,"E-mails")}
+    if(k==="pix")save("pix",{chave:$("cChave").value.trim(),nome:$("cNome").value.trim(),cidade:$("cCidade").value.trim(),whats:$("cWhats").value.trim()},"Pix");
+    if(k==="precos"){const o={};f.querySelectorAll("[data-pr]").forEach(i=>{o[i.dataset.pr]=Math.round((+i.value||0)*100)/100});save("precos",o,"Preços")}
+    if(k==="limites"){save("cobranca",{ativa:$("cCob").checked},"Cobrança").then(()=>save("limites",{provas:Math.max(0,+$("cProvas").value|0),cartoes:Math.max(0,+$("cCartoes").value|0)},"Limites"))}
+    if(k==="indicacao")save("indicacao",{ativa:$("cInd").checked,fim:$("cFim").value||null,valor:Math.round((+$("cVal").value||0)*100)/100,minimo:Math.round((+$("cMin").value||0)*100)/100},"Promoção")});
+  $("af").onsubmit=async e=>{e.preventDefault();try{await rpc("admin_adicionar_admin",{p_email:$("aEmail").value.trim()});PAY.msg="Administrador adicionado.";await payLoad("cfg",true);vCfg(v)}catch(err){alert(payErr(err))}};
+  v.querySelectorAll("[data-ra]").forEach(b=>b.onclick=async()=>{const a=A.find(x=>x.user_id===b.dataset.ra);if(!confirm("Tirar o acesso de "+a.email+" à administração?"))return;
+    try{await rpc("admin_remover_admin",{p_user:a.user_id});PAY.msg="Administrador removido.";await payLoad("cfg",true);vCfg(v)}catch(e){alert(payErr(e))}});
 }
 boot();
 </script>
