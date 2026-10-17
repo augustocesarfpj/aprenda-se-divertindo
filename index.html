@@ -377,7 +377,7 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
         <ol>
           <li>Cada questão tem 4 alternativas e só uma correta. Você tem 45 segundos.</li>
           <li>Acertou, sobe na escada. Parou, leva o acumulado. Errou ou o tempo acabou, leva metade.</li>
-          <li>Na questão do milhão, errar zera tudo.</li>
+          <li>Na questão do milhão, errar zera tudo e não vale usar ajudas.</li>
           <li>Ajudas: pular (3 vezes), eliminar duas, consultar a turma e perguntar ao professor (1 vez cada).</li>
           <li>Resposta de risco (1 vez): ative antes de responder. Se errar, você volta 3 questões em vez de sair. Se acertar, perde a ajuda.</li>
           <li>Depois de cada resposta aparece o comentário do gabarito. Estude por ele.</li>
@@ -8971,9 +8971,10 @@ function loadQuestion(){
   $("qsub").textContent=SUBJ[qq.s];
   $("qtier").textContent=TIER[qq.d];
   $("qtot").textContent=daily?DAILY_N:PRIZES.length;
-  $("qref").textContent=daily?"Desafio do dia · sem ajudas":"Valendo "+fmt(PRIZES[S.level]);
+  $("qref").textContent=daily?"Desafio do dia · sem ajudas":"Valendo "+fmt(PRIZES[S.level])+(S.level===LAST?" · sem ajudas":"");
   $("qtext").textContent=qq.t;
   ["prizesRow","helpsRow","actionsRow","btnLadder"].forEach(id=>$(id).hidden=daily);$("dailyTag").hidden=!daily;
+  if(S.level===LAST&&S.riskArmed)S.riskArmed=false;
   if(!daily){refreshErr();$("pStop").textContent=fmt(acc());$("pHit").textContent=fmt(PRIZES[S.level])}
   $("helpout").hidden=true;
   const box=$("answers");box.innerHTML="";
@@ -9088,20 +9089,21 @@ function resolve(ok,timeout){
 
 /* ajudas */
 function updateHelps(){
-  $("hSkip").disabled=S.help.skip<=0;$("hSkipN").textContent=S.help.skip+(S.help.skip===1?" restante":" restantes");
-  $("hElim").disabled=!S.help.elim;$("hPoll").disabled=!S.help.poll;$("hProf").disabled=!S.help.prof;
-  const r=$("hRisk");r.disabled=!S.help.risk;r.classList.toggle("armed",!!S.riskArmed);r.setAttribute("aria-pressed",S.riskArmed?"true":"false");
+  const fin=S.level===LAST;
+  $("hSkip").disabled=fin||S.help.skip<=0;$("hSkipN").textContent=fin?"sem ajudas no milhão":S.help.skip+(S.help.skip===1?" restante":" restantes");
+  $("hElim").disabled=fin||!S.help.elim;$("hPoll").disabled=fin||!S.help.poll;$("hProf").disabled=fin||!S.help.prof;
+  const r=$("hRisk");r.disabled=fin||!S.help.risk;r.classList.toggle("armed",!!S.riskArmed);r.setAttribute("aria-pressed",S.riskArmed?"true":"false");
   $("hRiskN").textContent=!S.help.risk?"já usada":S.riskArmed?"ATIVADA · toque p/ cancelar":"errou, volta 3";
 }
-$("hSkip").onclick=()=>{if(S.locked||S.help.skip<=0)return;S.help.skip--;sfx.click();loadQuestion()};
+$("hSkip").onclick=()=>{if(S.locked||S.level===LAST||S.help.skip<=0)return;S.help.skip--;sfx.click();loadQuestion()};
 $("hElim").onclick=()=>{
-  if(S.locked||!S.help.elim)return;S.help.elim=0;sfx.click();
+  if(S.locked||S.level===LAST||!S.help.elim)return;S.help.elim=0;sfx.click();
   const wrong=shuffle([0,1,2,3].filter(p=>p!==S.cur.correctPos)).slice(0,2);
   wrong.forEach(p=>{S.cur.gone.add(p);const b=document.querySelector('.ans[data-pos="'+p+'"]');b.classList.add("gone");b.disabled=true});
   updateHelps();
 };
 $("hPoll").onclick=()=>{
-  if(S.locked||!S.help.poll)return;S.help.poll=0;sfx.click();
+  if(S.locked||S.level===LAST||!S.help.poll)return;S.help.poll=0;sfx.click();
   const t=tierOf(S.level),cp=S.cur.correctPos;
   const base=[.82,.72,.55,.42,.33][t];
   const live=[0,1,2,3].filter(p=>!S.cur.gone.has(p));
@@ -9118,7 +9120,7 @@ $("hPoll").onclick=()=>{
   updateHelps();
 };
 $("hProf").onclick=()=>{
-  if(S.locked||!S.help.prof)return;S.help.prof=0;sfx.click();
+  if(S.locked||S.level===LAST||!S.help.prof)return;S.help.prof=0;sfx.click();
   const t=tierOf(S.level),cp=S.cur.correctPos;
   const acc=[.99,.97,.88,.78,.68][t];
   const live=[0,1,2,3].filter(p=>!S.cur.gone.has(p));
@@ -9136,7 +9138,7 @@ $("hProf").onclick=()=>{
 };
 $("btnStop").onclick=()=>{if(S.locked||S.level===0)return;openConfirm("stop")};
 $("hRisk").onclick=()=>{
-  if(S.locked||!S.help.risk)return;sfx.click();
+  if(S.locked||S.level===LAST||!S.help.risk)return;sfx.click();
   S.riskArmed=!S.riskArmed;updateHelps();refreshErr();
 };
 
