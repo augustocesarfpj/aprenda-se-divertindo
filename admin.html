@@ -244,10 +244,16 @@ async function vPag(v){
 }
 
 async function vAss(v){
-  if(!PAY.ass){payShell(v);await payLoad("ass");if(ST.tab!=="assinantes")return}
+  if(!PAY.ass||!PAY.pag){payShell(v);await payLoad("ass");if(!PAY.err)await payLoad("pag");if(ST.tab!=="assinantes")return}
   if(PAY.err){v.innerHTML='<div class="panel"><p class="flash" role="alert">'+esc(PAY.err)+'</p></div>';return}
+  const PE=(PAY.pag||[]).filter(p=>p.status==="pendente").sort((x,y)=>new Date(x.criado_em)-new Date(y.criado_em));
   const A=PAY.ass,q=PAY.qa.toLowerCase(),rows=A.filter(a=>!q||((a.nome||"")+" "+(a.email||"")).toLowerCase().includes(q)),ativos=A.filter(a=>a.ativo);
-  v.innerHTML=flash()+'<div class="panel"><h2>Habilitar Premium para um jogador</h2><p class="small">Use quando o pagamento chegou por fora do pedido no jogo, ou para dar uma cortesia. Os meses são somados ao que a pessoa já tem.</p>'
+  v.innerHTML=flash()
+  +'<div class="panel"'+(PE.length?' style="border-color:#E9B23B"':'')+'><div class="row" style="justify-content:space-between"><h2>Aguardando liberação'+(PE.length?' ('+PE.length+')':'')+'</h2><span class="small">Quem já pagou o Pix e espera o Premium. Confira o valor no seu banco e confirme: o plano é liberado na hora.</span></div>'
+  +(PE.length?'<div class="tablewrap"><table><thead><tr><th>Pediu em</th><th>Jogador</th><th>Plano</th><th class="n">Valor</th><th>Indicado por</th><th>Ações</th></tr></thead><tbody>'
+    +PE.map(p=>'<tr><td>'+dth(p.criado_em)+'</td><td><b>'+esc(p.nome||"–")+'</b><br><span class="small">'+esc(p.email||"conta excluída")+'</span></td><td>'+esc(PLAN_N[p.plano]||p.plano)+'</td><td class="n">'+reais(p.valor)+'</td><td>'+esc(p.indicado_por||"–")+'</td><td><div class="row"><button class="btn" data-aok="'+p.id+'">Confirmar e liberar</button><button class="btn ghost" data-ano="'+p.id+'">Recusar</button></div></td></tr>').join("")
+    +'</tbody></table></div>':'<p class="small" style="margin:0">Ninguém aguardando agora.</p>')+'</div>'
+  +'<div class="panel"><h2>Habilitar Premium para um jogador</h2><p class="small">Use quando o pagamento chegou por fora do pedido no jogo, ou para dar uma cortesia. Os meses são somados ao que a pessoa já tem.</p>'
   +'<form class="grid2" id="hf"><label class="small">E-mail da conta<input type="email" id="hEmail" required placeholder="email@do.jogador"></label><label class="small">Plano<select id="hPlano">'+Object.entries(PLAN_N).map(([k,n])=>'<option value="'+k+'">'+n+'</option>').join("")+'</select></label><label class="small">Tipo<select id="hTipo"><option value="manual">Pagou por fora (gera comissão)</option><option value="cortesia">Cortesia (sem valor)</option></select></label><label class="small">Observação<input type="text" id="hObs" maxlength="140" placeholder="opcional"></label><div class="row"><button class="btn" type="submit">Habilitar</button></div></form></div>'
   +'<div class="panel"><div class="row" style="justify-content:space-between"><h2>Assinantes</h2><span class="small">'+ativos.length+' com Premium ativo · '+(A.length-ativos.length)+' expirados</span></div><div class="row"><input type="search" id="aq" placeholder="nome ou e-mail" value="'+esc(PAY.qa)+'" aria-label="Buscar"><button class="btn ghost" id="acsv">Baixar planilha (CSV)</button></div>'
   +'<div class="tablewrap" style="max-height:65vh"><table><thead><tr><th>Jogador</th><th>Plano</th><th>Origem</th><th>Válido até</th><th>Situação</th><th class="n">Total pago</th><th>Indicado por</th><th>Ações</th></tr></thead><tbody>'
@@ -257,6 +263,10 @@ async function vAss(v){
     try{const r=await rpc("admin_habilitar",{p_email:em,p_plano:pl,p_tipo:tp,p_obs:$("hObs").value});PAY.msg=em+" agora é Premium até "+dday(r.ate)+(+r.comissao>0?". Comissão de "+reais(r.comissao)+" para quem indicou.":".");PAY.pag=null;PAY.ind=null;await payLoad("ass",true);vAss(v)}catch(err){alert(payErr(err));b.disabled=false}};
   const aq=$("aq");aq.oninput=()=>{PAY.qa=aq.value;const pos=aq.selectionStart;vAss(v);const n=$("aq");n.focus();n.setSelectionRange(pos,pos)};
   $("acsv").onclick=()=>csvDown("assinantes",["Nome","E-mail","Plano","Origem","Válido até","Situação","Total pago","Indicado por"],rows.map(a=>[a.nome,a.email,PLAN_N[a.plano]||a.plano,ORIG_N[a.origem]||a.origem,dday(a.ate),a.ativo?"ativo":"expirado",Number(a.total_pago||0).toFixed(2).replace(".",","),a.indicado_por]));
+  v.querySelectorAll("[data-aok]").forEach(b=>b.onclick=async()=>{const p=PE.find(x=>x.id===b.dataset.aok);if(!confirm("Confirmar o pagamento de "+reais(p.valor)+" de "+(p.email||"")+" (plano "+(PLAN_N[p.plano]||p.plano)+")? O Premium será liberado."))return;b.disabled=true;
+    try{const r=await rpc("admin_confirmar_pagamento",{p_id:p.id});PAY.msg="Pagamento confirmado. Premium de "+p.email+" vale até "+dday(r.ate)+(+r.comissao>0?". Comissão de "+reais(r.comissao)+" para quem indicou.":".");PAY.ind=null;await payLoad("pag",true);await payLoad("ass",true);vAss(v)}catch(e){alert(payErr(e));b.disabled=false}});
+  v.querySelectorAll("[data-ano]").forEach(b=>b.onclick=async()=>{const p=PE.find(x=>x.id===b.dataset.ano);const obs=prompt("Motivo da recusa (aparece para o jogador):","Pix não encontrado");if(obs===null)return;b.disabled=true;
+    try{await rpc("admin_recusar_pagamento",{p_id:p.id,p_obs:obs});PAY.msg="Pagamento recusado.";await payLoad("pag",true);vAss(v)}catch(e){alert(payErr(e));b.disabled=false}});
   v.querySelectorAll("[data-rm]").forEach(b=>b.onclick=async()=>{const a=A.find(x=>x.user_id===b.dataset.rm);if(!confirm("Remover o Premium de "+a.email+"? A pessoa volta para o plano grátis na hora."))return;b.disabled=true;
     try{await rpc("admin_remover_premium",{p_user:a.user_id});PAY.msg="Premium de "+a.email+" removido.";await payLoad("ass",true);vAss(v)}catch(e){alert(payErr(e));b.disabled=false}});
 }
