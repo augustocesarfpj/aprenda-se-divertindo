@@ -9950,8 +9950,8 @@ async function loadStudy(force){
   ST.loading=false;renderStudyBox();
 }
 /* baralho próprio de cartões (por trilha); sem baralho, o estudo usa as questões do jogo */
-const DECK={byId:new Map(),tr:{},loaded:false};
-function deckApply(rows){DECK.byId=new Map();DECK.tr={};(rows||[]).forEach(r=>{const c={id:r.id,s:r.materia,d:-1,t:r.frente,o:[r.verso],e:r.explicacao,card:true,tipo:r.tipo,a:r.assunto,tr:r.trilha};DECK.byId.set(c.id,c);(DECK.tr[c.tr]=DECK.tr[c.tr]||[]).push(c)});DECK.loaded=true}
+const DECK={byId:new Map(),tr:{},mat:{},loaded:false};
+function deckApply(rows){DECK.byId=new Map();DECK.tr={};DECK.mat={};(rows||[]).forEach(r=>{const c={id:r.id,s:r.materia,d:-1,t:r.frente,o:[r.verso],e:r.explicacao,card:true,tipo:r.tipo,a:r.assunto,tr:r.trilha};DECK.byId.set(c.id,c);(DECK.tr[c.tr]=DECK.tr[c.tr]||[]).push(c);(DECK.mat[c.s]=DECK.mat[c.s]||[]).push(c)});DECK.loaded=true}
 async function deckLoad(){
   if(!sb)return;let cache=null;try{cache=JSON.parse(localStorage.getItem("gm-deck")||"null")}catch(e){}
   if(cache&&cache.rows&&!DECK.loaded)deckApply(cache.rows);
@@ -9961,11 +9961,12 @@ async function deckLoad(){
     deckApply(rows);try{localStorage.setItem("gm-deck",JSON.stringify({v,rows}))}catch(e){}
   }catch(e){}
 }
-const hasDeck=k=>!!(DECK.tr[k]&&DECK.tr[k].length);
+/* os cartões valem por matéria: o de Português serve a todas as trilhas que têm Português */
+const hasDeckSub=k=>!!(DECK.mat[k]&&DECK.mat[k].length);
 const qById=id=>id>=2000000000?DECK.byId.get(id):Q.find(q=>q.id===id);
 /* matérias escolhidas para o estudo, por trilha (fica neste aparelho) */
 const SSK="gm-study-subj";
-function studyAvail(){if(hasDeck(track))return trackSubs().filter(k=>DECK.tr[track].some(c=>c.s===k));return trackSubs().filter(k=>Q.some(q=>q.s===k&&q.d>=1&&q.d<=3))}
+function studyAvail(){return trackSubs().filter(k=>hasDeckSub(k)||Q.some(q=>q.s===k&&q.d>=1&&q.d<=3))}
 function studyPicked(){
   const av=studyAvail();let m={};try{m=JSON.parse(localStorage.getItem(SSK))||{}}catch(e){}
   const sel=(m[track]||[]).filter(k=>av.includes(k));return sel.length?sel:av;
@@ -9985,12 +9986,14 @@ function studyToday(){
   const recovery=due.length>3*ST.meta;
   const novosRestantes=recovery?0:Math.max(0,ST.meta-novosHoje);
   let dom=0,alertas=0,emEstudo=0;ST.rows.forEach(r=>{const q=qById(r.questao_id);if(!inTrack(q))return;if(r.caixa===6)dom++;else emEstudo++;if(r.alerta)alertas++});
-  const total=hasDeck(track)?DECK.tr[track].filter(inTrack).length:Q.filter(inTrack).length;
+  const total=subs.reduce((a,k)=>a+(hasDeckSub(k)?DECK.mat[k].length:Q.filter(q=>q.s===k).length),0);
   return {due,novosHoje,novosRestantes,recovery,dom,alertas,emEstudo,total};
 }
 function pickNew(n){
   const subs=studyPicked();
-  if(hasDeck(track)){const pool=DECK.tr[track].filter(c=>subs.includes(c.s)&&!ST.rows.has(c.id)),w={},out=[],used=new Set();pool.forEach(c=>w[c.s]=(w[c.s]||0)+1);
+  if(subs.some(hasDeckSub)){ // matérias com baralho usam os cartões; as demais seguem com as questões do jogo
+    const pool=subs.filter(hasDeckSub).flatMap(k=>DECK.mat[k]).filter(c=>!ST.rows.has(c.id)),w={},out=[],used=new Set();pool.forEach(c=>w[c.s]=(w[c.s]||0)+1);
+    const qs=subs.filter(k=>!hasDeckSub(k));qs.forEach(k=>w[k]=40);pool.push(...Q.filter(q=>qs.includes(q.s)&&q.d>=1&&q.d<=3&&!ST.rows.has(q.id)));
     for(let i=0;i<n;i++){const left=pool.filter(c=>!used.has(c.id));if(!left.length)break;const c=evenPick(left,Math.random,w);used.add(c.id);out.push(c)}return out}
   const pool=Q.filter(q=>subs.includes(q.s)&&!ST.rows.has(q.id));
   const W=[0,40,35,25,0],out=[],used=new Set(); // estudo usa intermediária, difícil e muito difícil
@@ -10034,7 +10037,7 @@ function openStudySubj(){
   const av=studyAvail(),pk=studyPicked(),box=$("ssChips");box.innerHTML="";
   $("ssTitle").textContent="Matérias da trilha "+TRACKS[track].n;
   av.forEach(k=>{
-    const n=hasDeck(track)?DECK.tr[track].filter(c=>c.s===k).length:Q.filter(q=>q.s===k&&q.d>=1&&q.d<=3).length,done=[...ST.rows.keys()].filter(id=>{const q=qById(id);return q&&q.s===k}).length;
+    const n=hasDeckSub(k)?DECK.mat[k].length:Q.filter(q=>q.s===k&&q.d>=1&&q.d<=3).length,done=[...ST.rows.keys()].filter(id=>{const q=qById(id);return q&&q.s===k}).length;
     const l=document.createElement("label");l.className="chip";
     l.innerHTML='<input type="checkbox" value="'+k+'"><span class="dot"></span><span></span>';
     l.querySelector("input").checked=pk.includes(k);l.lastChild.textContent=SUBJ[k];
