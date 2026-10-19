@@ -3,11 +3,12 @@
 --
 -- Como funciona:
 --   • Cada trilha pode ter um simulado por domingo, com questões no formato de prova (A a E, texto-base opcional).
---   • O simulado só abre no domingo marcado, das 0h às 23h59 (horário de Brasília), para quem tem conta.
+--   • Exclusivo para assinantes Premium. Só abre no domingo marcado, das 0h às 23h59 (horário de Brasília).
 --   • Cada pessoa faz uma vez. O relógio começa quando ela inicia; o prazo é o tempo da prova ou 23h59, o que vier antes.
 --   • As respostas ficam salvas no servidor durante a prova. Acabou o tempo, a prova é entregue com o que estiver marcado.
 --   • A nota é calculada aqui no servidor: o gabarito nunca vai para o celular antes de o domingo acabar.
---   • Ranking do simulado por trilha: mais acertos primeiro; empate, quem fez em menos tempo.
+--   • Cada pessoa vê só a própria posição ("37º de 412"): a lista de nomes do ranking não é mostrada.
+--     Classificação: mais acertos primeiro; empate, quem fez em menos tempo.
 --   • O gabarito comentado é liberado na segunda-feira, às 0h.
 --   • A administração (admin.html, aba Simulados) cria o simulado, carrega as questões e publica.
 
@@ -157,6 +158,8 @@ begin
   if s.id is null then raise exception 'NAO_ENCONTRADO'; end if;
   if s.data <> public.sim_hoje() then raise exception 'FECHADO'; end if;
   if not exists (select 1 from public.simulado_questoes q where q.simulado_id = s.id) then raise exception 'SEM_QUESTOES'; end if;
+  if not exists (select 1 from public.simulado_respostas x where x.simulado_id = s.id and x.user_id = uid)
+     and not public.eh_premium(uid) then raise exception 'PREMIUM'; end if;
   insert into public.simulado_respostas (simulado_id, user_id, iniciado_em) values (s.id, uid, public.sim_agora())
   on conflict do nothing;
   perform public.sim_fechar_vencidos(s.id);
@@ -216,7 +219,7 @@ begin
   return public.simulado_resultado(p_simulado);
 end $$;
 
--- resultado, ranking e (depois do domingo) gabarito comentado
+-- resultado (nota e a própria posição) e, depois do domingo, gabarito comentado
 create or replace function public.simulado_resultado(p_simulado bigint)
 returns jsonb language plpgsql security definer set search_path = '' as $$
 declare uid uuid := auth.uid(); s public.simulados; r public.simulado_respostas; lib boolean;
@@ -228,6 +231,7 @@ begin
   select * into r from public.simulado_respostas where simulado_id = s.id and user_id = uid;
   lib := public.sim_agora() >= public.sim_fim(s.data);
   if (r.entregue_em is null) and not lib then raise exception 'NAO_ENTREGUE'; end if;
+  if r.user_id is null and not public.eh_premium(uid) then raise exception 'PREMIUM'; end if;
   return public.sim_cabecalho(s) || jsonb_build_object(
     'meu', public.sim_meu(s.id, uid),
     'por_materia', case when r.entregue_em is null then '[]'::jsonb else (
@@ -235,13 +239,6 @@ begin
        from (select q.materia, count(*) tot,
                     count(*) filter (where (r.respostas ->> q.ordem::text) ~ '^[0-4]$' and (r.respostas ->> q.ordem::text)::int = q.gabarito) ac
                from public.simulado_questoes q where q.simulado_id = s.id group by q.materia) x) end,
-    'ranking', (select coalesce(jsonb_agg(jsonb_build_object('pos', z.pos, 'nome', z.nome, 'acertos', z.acertos, 'total', z.total,
-                   'tempo_seg', z.tempo_seg, 'eu', z.user_id = uid) order by z.pos, z.nome), '[]'::jsonb)
-                from (select rank() over (order by o.acertos desc, o.tempo_seg) pos, coalesce(pf.nome, 'Jogador') nome,
-                             o.acertos, o.total, o.tempo_seg, o.user_id
-                        from public.simulado_respostas o left join public.perfis pf on pf.id = o.user_id
-                       where o.simulado_id = s.id and o.entregue_em is not null
-                       order by o.acertos desc, o.tempo_seg limit 50) z),
     'gabarito', case when not lib then null else (
        select coalesce(jsonb_agg(jsonb_build_object('ordem', q.ordem, 'materia', q.materia, 'texto_base', q.texto_base,
                 'enunciado', q.enunciado, 'opcoes', q.opcoes, 'gabarito', q.gabarito, 'explicacao', q.explicacao,

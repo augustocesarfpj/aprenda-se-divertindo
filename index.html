@@ -9464,7 +9464,7 @@ async function plLoad(){
     PL.srv={provas:r.provas_hoje||0,cartoes:r.cartoes_hoje||0};if(r.limites)LIM={provas:+r.limites.provas||5,cartoes:+r.limites.cartoes||5};
     if(typeof r.cobranca==="boolean")PREMIUM.cobranca=r.cobranca;PL.loaded=true}
   catch(e){}
-  renderPlan();
+  renderPlan();if(typeof renderSimBoxNow==="function"&&SIM.info[track])renderSimBoxNow();
 }
 /* Pix copia e cola (padrão EMV do Banco Central) */
 function pixTLV(id,v){return id+String(v.length).padStart(2,"0")+v}
@@ -9582,7 +9582,7 @@ function renderRef(){
 
 /* ===== simulado de domingo ===== */
 const SIM={info:{},t:{},missing:false,cur:null,ans:{},idx:0,clock:null,saveT:null,saving:false,dirty:false,off:0,deadline:0,sending:false,res:null,onlyErr:false};
-const SIM_ERR={LOGIN:"Entre na sua conta para fazer o simulado.",FECHADO:"O simulado só fica aberto no domingo marcado, das 0h às 23h59.",NAO_ENCONTRADO:"Este simulado não está mais disponível.",SEM_QUESTOES:"Este simulado ainda está sendo preparado.",NAO_ENTREGUE:"O resultado aparece depois que você entregar a prova (ou na segunda, quando o gabarito sai).",NAO_INICIADO:"Você ainda não começou este simulado."};
+const SIM_ERR={LOGIN:"Entre na sua conta para fazer o simulado.",FECHADO:"O simulado só fica aberto no domingo marcado, das 0h às 23h59.",NAO_ENCONTRADO:"Este simulado não está mais disponível.",SEM_QUESTOES:"Este simulado ainda está sendo preparado.",NAO_ENTREGUE:"O resultado aparece depois que você entregar a prova (ou na segunda, quando o gabarito sai).",NAO_INICIADO:"Você ainda não começou este simulado.",PREMIUM:"O Simulado de Domingo é exclusivo para assinantes Premium."};
 function simErr(e){const m=String(e&&e.message||"");for(const k in SIM_ERR)if(m.includes(k))return SIM_ERR[k];if(m.includes("fetch")||m.includes("network"))return"Sem conexão com o servidor. Tente de novo.";return"Não deu certo agora. Tente de novo."}
 const simDur=m=>{const h=Math.floor(m/60),r=m%60;return h?(h+"h"+(r?String(r).padStart(2,"0"):"")):r+" min"};
 const simDia=d=>{const x=new Date(d+"T12:00:00");return x.toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"})};
@@ -9604,22 +9604,24 @@ function renderSimBox(){
 function renderSimBoxNow(){
   const box=$("simBox"),d=SIM.info[track];if(!d){box.hidden=true;return}
   box.hidden=false;const tn=TRACKS[track].n;let h="";
-  const specs=x=>'<div class="specs"><span><b>'+x.n_questoes+'</b> questões</span><span>estilo <b>'+esc(x.estilo)+'</b></span><span><b>'+simDur(x.duracao_min)+'</b> de prova</span><span>ranking da trilha</span></div>';
+  const specs=x=>'<div class="specs"><span><b>'+x.n_questoes+'</b> questões</span><span>estilo <b>'+esc(x.estilo)+'</b></span><span><b>'+simDur(x.duracao_min)+'</b> de prova</span><span>💎 Premium</span></div>';
   const a=d.atual,pr=d.proximo,u=d.ultimo;
   if(a){
     const m=a.meu;h+='<span class="eyebrow">📝 Simulado de Domingo · Trilha '+tn+' · aberto até 23h59</span><h2>'+esc(a.titulo||"Simulado de hoje")+'</h2>'+specs(a);
-    if(!user)h+='<p class="small" style="margin:0">Para fazer o simulado e entrar no ranking, entre na sua conta. É grátis.</p><div class="row"><button class="btn money" type="button" id="simUp">Criar conta grátis</button><button class="btn ghost" type="button" id="simIn">Já tenho conta</button></div>';
+    if(!user)h+='<p class="small" style="margin:0">💎 Exclusivo para assinantes Premium. Entre na sua conta para fazer.</p><div class="row"><button class="btn money" type="button" id="simUp">Criar conta</button><button class="btn ghost" type="button" id="simIn">Já tenho conta</button></div>';
+    else if((!m||m.status==="nao_iniciado")&&PL.loaded&&!PL.premium)h+='<p class="small" style="margin:0">💎 Exclusivo para assinantes Premium. Assine para fazer a prova de hoje e receber sua nota, sua posição e o gabarito comentado.</p><div class="row"><button class="btn money" type="button" id="simPm">Quero o Premium</button></div>';
     else if(!m||m.status==="nao_iniciado")h+='<p class="small" style="margin:0">Uma tentativa por pessoa. O relógio começa quando você tocar em começar e a prova fecha às 23h59. Sem ajudas, como na prova de verdade.'+(a.participantes?' <b>'+a.participantes+'</b> já começaram.':'')+'</p><div class="row"><button class="btn money" type="button" id="simGo">Começar o simulado →</button></div>';
     else if(m.status==="fazendo"){const left=Math.max(0,Date.parse(m.prazo)-Date.now());h+='<p class="small" style="margin:0">Você está fazendo: <b>'+m.respondidas+'/'+a.n_questoes+'</b> respondidas · faltam <b>'+simTempo(left/1000)+'</b>.</p><div class="row"><button class="btn money" type="button" id="simGo">Continuar a prova →</button></div>'}
-    else h+='<p style="margin:0;font-size:1.05rem">Você acertou <b>'+m.acertos+' de '+m.total+'</b> · <b>'+m.posicao+'º</b> de '+m.participantes+' até agora.</p><p class="small" style="margin:0">O ranking fecha às 23h59 e o gabarito comentado sai na segunda, às 0h.</p><div class="row"><button class="btn" type="button" id="simRes1" data-id="'+a.id+'">Ver resultado e ranking</button></div>';
+    else h+='<p style="margin:0;font-size:1.05rem">Você acertou <b>'+m.acertos+' de '+m.total+'</b> · sua posição: <b>'+m.posicao+'º</b> de '+m.participantes+' até agora.</p><p class="small" style="margin:0">A classificação fecha às 23h59 e o gabarito comentado sai na segunda, às 0h.</p><div class="row"><button class="btn" type="button" id="simRes1" data-id="'+a.id+'">Ver meu resultado</button></div>';
   }else{
-    if(pr)h+='<span class="eyebrow">📝 Simulado de Domingo · Trilha '+tn+'</span><h2>Próximo: domingo, '+simDia(pr.data)+'</h2>'+specs(pr)+'<p class="small" style="margin:0">Abre às 0h e fica aberto até 23h59. Uma tentativa por pessoa, com ranking da trilha e gabarito comentado na segunda.</p>';
-    else h+='<span class="eyebrow">📝 Simulado de Domingo · em breve</span><h2>Provas no formato de concurso, aos domingos</h2><p class="small" style="margin:0">Questões elaboradas no estilo das bancas, com texto-base, cinco alternativas, tempo de prova de verdade, ranking da trilha e gabarito comentado. Fique de olho!</p>';
+    if(pr)h+='<span class="eyebrow">📝 Simulado de Domingo · Trilha '+tn+'</span><h2>Próximo: domingo, '+simDia(pr.data)+'</h2>'+specs(pr)+'<p class="small" style="margin:0">Abre às 0h e fica aberto até 23h59. Uma tentativa por pessoa, com nota, sua posição na trilha e gabarito comentado na segunda. Exclusivo Premium 💎</p>';
+    else h+='<span class="eyebrow">📝 Simulado de Domingo · em breve</span><h2>Provas no formato de concurso, aos domingos</h2><p class="small" style="margin:0">Questões elaboradas no estilo das bancas, com texto-base, cinco alternativas, tempo de prova de verdade, sua posição na trilha e gabarito comentado. Exclusivo para assinantes Premium 💎</p>';
     if(u&&user&&(u.liberado||(u.meu&&u.meu.status==="entregue")))h+='<div class="row"><button class="btn ghost" type="button" id="simRes1" data-id="'+u.id+'">'+(u.meu&&u.meu.status==="entregue"?'Seu resultado de '+simDia(u.data)+' · '+u.meu.acertos+'/'+u.meu.total:'Gabarito do simulado de '+simDia(u.data))+' →</button></div>';
   }
   box.innerHTML=h;
   if($("simUp"))$("simUp").onclick=()=>{sfx.click();openAuth("up")};
   if($("simIn"))$("simIn").onclick=()=>{sfx.click();openAuth("in")};
+  if($("simPm"))$("simPm").onclick=()=>{sfx.click();openPremium("O Simulado de Domingo é exclusivo do Premium: prova no formato de concurso, com nota, sua posição na trilha e gabarito comentado.")};
   if($("simGo"))$("simGo").onclick=()=>{sfx.click();simStart(a.id)};
   if($("simRes1"))$("simRes1").onclick=()=>{sfx.click();simOpenResult(+$("simRes1").dataset.id)};
 }
@@ -9641,6 +9643,7 @@ async function simStart(id){
     show("sim");simRender();simTick();SIM.clock=setInterval(simTick,1000);if(SIM.dirty)simSaveSoon(500);
   }catch(e){
     const m=String(e&&e.message||"");if(m.includes("JA_ENTREGUE")){simOpenResult(id);return}
+    if(m.includes("PREMIUM")){if(b)b.disabled=false;openPremium(SIM_ERR.PREMIUM);return}
     alert(simErr(e));
   }
   if(b)b.disabled=false;
@@ -9703,7 +9706,6 @@ function simShowResult(d){
   else h+='<p class="small" style="margin:0">Você não fez este simulado, mas o gabarito comentado está liberado para estudar.</p>';
   h+='</div>';
   if(ok&&(d.por_materia||[]).length)h+='<div class="sheet panel"><span class="eyebrow">Desempenho por matéria</span><div class="simmat">'+d.por_materia.map(x=>{const p=x.total?Math.round(x.acertos/x.total*100):0;return'<div class="bar"><span>'+esc(SUBJ[x.materia]||x.materia)+'</span><i><u style="width:'+p+'%"></u></i><span class="mono">'+x.acertos+'/'+x.total+'</span></div>'}).join("")+'</div></div>';
-  if((d.ranking||[]).length)h+='<div class="sheet panel"><span class="eyebrow">Ranking do simulado'+(d.liberado?'':' (parcial, fecha às 23h59)')+'</span><div class="tablewrap" style="max-height:50vh;overflow:auto"><table class="simrk"><thead><tr><th>#</th><th>Nome</th><th class="n">Acertos</th><th class="n">Tempo</th></tr></thead><tbody>'+d.ranking.map(x=>'<tr class="'+(x.eu?'me':'')+'"><td>'+x.pos+'º</td><td>'+esc(x.nome)+(x.eu?' (você)':'')+'</td><td class="n">'+x.acertos+'/'+x.total+'</td><td class="n">'+simTempo(x.tempo_seg)+'</td></tr>').join("")+'</tbody></table></div></div>';
   if(d.gabarito){
     const G=d.gabarito,err=G.filter(q=>q.minha!==q.gabarito).length;
     h+='<div class="sheet panel"><div class="row" style="justify-content:space-between"><span class="eyebrow">Gabarito comentado</span>'+(ok?'<button class="chipbtn" type="button" id="simOnlyErr" aria-pressed="'+SIM.onlyErr+'">Só as que errei ('+err+')</button>':'')+'</div><div class="simgab" id="simGab"></div></div>';
