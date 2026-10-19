@@ -586,7 +586,7 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
       <p class="sq" id="sQ"></p>
       <ul class="sopts" id="sOpts" hidden></ul>
       <div id="sAsk" class="sacts">
-        <p class="small" style="margin:0">Pense na resposta. Você sabe?</p>
+        <p class="small" style="margin:0" id="sAskTip">Pense na resposta. Você sabe?</p>
         <div class="row"><button class="btn" type="button" id="sKnow">Sei <kbd>1</kbd></button><button class="btn ghost" type="button" id="sDont">Não sei <kbd>2</kbd></button></div>
       </div>
       <div id="sAnswer" class="sans" hidden>
@@ -9888,6 +9888,7 @@ async function loadStudy(force){
       if(error)throw error;data.forEach(r=>rows.set(r.questao_id,r));if(data.length<1000)break;
     }
     ST.rows=rows;ST.missing=false;
+    await deckLoad();
     const {data:p}=await sb.from("perfis").select("meta_estudo").eq("id",user.id).maybeSingle();
     if(p&&META_OPTS[p.meta_estudo])ST.meta=p.meta_estudo;
     ST.loaded=true;
@@ -9897,10 +9898,23 @@ async function loadStudy(force){
   }
   ST.loading=false;renderStudyBox();
 }
-const qById=id=>Q.find(q=>q.id===id);
+/* baralho próprio de cartões (por trilha); sem baralho, o estudo usa as questões do jogo */
+const DECK={byId:new Map(),tr:{},loaded:false};
+function deckApply(rows){DECK.byId=new Map();DECK.tr={};(rows||[]).forEach(r=>{const c={id:r.id,s:r.materia,d:-1,t:r.frente,o:[r.verso],e:r.explicacao,card:true,tipo:r.tipo,a:r.assunto,tr:r.trilha};DECK.byId.set(c.id,c);(DECK.tr[c.tr]=DECK.tr[c.tr]||[]).push(c)});DECK.loaded=true}
+async function deckLoad(){
+  if(!sb)return;let cache=null;try{cache=JSON.parse(localStorage.getItem("gm-deck")||"null")}catch(e){}
+  if(cache&&cache.rows&&!DECK.loaded)deckApply(cache.rows);
+  try{
+    const {data:v,error}=await sb.rpc("cartoes_versao");if(error)throw error;if(cache&&cache.v===v&&DECK.loaded)return;
+    const rows=[];for(let f=0;;f+=1000){const {data,error:e2}=await sb.from("cartoes").select("id,trilha,materia,assunto,tipo,frente,verso,explicacao").order("id").range(f,f+999);if(e2)throw e2;rows.push(...data);if(data.length<1000)break}
+    deckApply(rows);try{localStorage.setItem("gm-deck",JSON.stringify({v,rows}))}catch(e){}
+  }catch(e){}
+}
+const hasDeck=k=>!!(DECK.tr[k]&&DECK.tr[k].length);
+const qById=id=>id>=1000000?DECK.byId.get(id):Q.find(q=>q.id===id);
 /* matérias escolhidas para o estudo, por trilha (fica neste aparelho) */
 const SSK="gm-study-subj";
-function studyAvail(){return trackSubs().filter(k=>Q.some(q=>q.s===k&&q.d>=1&&q.d<=3))}
+function studyAvail(){if(hasDeck(track))return trackSubs().filter(k=>DECK.tr[track].some(c=>c.s===k));return trackSubs().filter(k=>Q.some(q=>q.s===k&&q.d>=1&&q.d<=3))}
 function studyPicked(){
   const av=studyAvail();let m={};try{m=JSON.parse(localStorage.getItem(SSK))||{}}catch(e){}
   const sel=(m[track]||[]).filter(k=>av.includes(k));return sel.length?sel:av;
@@ -9920,11 +9934,13 @@ function studyToday(){
   const recovery=due.length>3*ST.meta;
   const novosRestantes=recovery?0:Math.max(0,ST.meta-novosHoje);
   let dom=0,alertas=0,emEstudo=0;ST.rows.forEach(r=>{const q=qById(r.questao_id);if(!inTrack(q))return;if(r.caixa===6)dom++;else emEstudo++;if(r.alerta)alertas++});
-  const total=Q.filter(inTrack).length;
+  const total=hasDeck(track)?DECK.tr[track].filter(inTrack).length:Q.filter(inTrack).length;
   return {due,novosHoje,novosRestantes,recovery,dom,alertas,emEstudo,total};
 }
 function pickNew(n){
   const subs=studyPicked();
+  if(hasDeck(track)){const pool=DECK.tr[track].filter(c=>subs.includes(c.s)&&!ST.rows.has(c.id)),w={},out=[],used=new Set();pool.forEach(c=>w[c.s]=(w[c.s]||0)+1);
+    for(let i=0;i<n;i++){const left=pool.filter(c=>!used.has(c.id));if(!left.length)break;const c=evenPick(left,Math.random,w);used.add(c.id);out.push(c)}return out}
   const pool=Q.filter(q=>subs.includes(q.s)&&!ST.rows.has(q.id));
   const W=[0,40,35,25,0],out=[],used=new Set(); // estudo usa intermediária, difícil e muito difícil
   for(let i=0;i<n;i++){
@@ -9962,12 +9978,12 @@ function renderStudyBox(){
     const {error}=await sb.from("perfis").update({meta_estudo:v}).eq("id",user.id);if(error){ST.meta=old;renderStudyBox()}
   });
 }
-function needsOptions(q){return /dest[ae]s|qual (frase|palavra|grafia|alternativa|op[cç][aã]o)|qual é a grafia|N[ÃA]O |EXCETO|correta(mente)?\?|qual destes|completa|complete/i.test(q.t)}
+function needsOptions(q){if(q.card)return false;return /dest[ae]s|qual (frase|palavra|grafia|alternativa|op[cç][aã]o)|qual é a grafia|N[ÃA]O |EXCETO|correta(mente)?\?|qual destes|completa|complete/i.test(q.t)}
 function openStudySubj(){
   const av=studyAvail(),pk=studyPicked(),box=$("ssChips");box.innerHTML="";
   $("ssTitle").textContent="Matérias da trilha "+TRACKS[track].n;
   av.forEach(k=>{
-    const n=Q.filter(q=>q.s===k&&q.d>=1&&q.d<=3).length,done=[...ST.rows.keys()].filter(id=>{const q=qById(id);return q&&q.s===k}).length;
+    const n=hasDeck(track)?DECK.tr[track].filter(c=>c.s===k).length:Q.filter(q=>q.s===k&&q.d>=1&&q.d<=3).length,done=[...ST.rows.keys()].filter(id=>{const q=qById(id);return q&&q.s===k}).length;
     const l=document.createElement("label");l.className="chip";
     l.innerHTML='<input type="checkbox" value="'+k+'"><span class="dot"></span><span></span>';
     l.querySelector("input").checked=pk.includes(k);l.lastChild.textContent=SUBJ[k];
@@ -10009,7 +10025,8 @@ function nextCard(){
   if(!ST.firstPass.has(ST.queue[0].q.id)&&!plCan("cartoes")){ST.queue=[];stopSTimer();finishStudy();openPremium("Você já estudou os "+LIM.cartoes+" cartões grátis de hoje. Amanhã tem mais, ou libere o estudo ilimitado agora.");return}
   ST.cur=ST.queue.shift();ST.phase="ask";ST.conf=null;
   const q=ST.cur.q;
-  $("sKind").textContent=(ST.cur.again?"De novo":ST.cur.novo?"Novo":"Revisão")+" · "+SUBJ[q.s]+" · "+TIER[q.d];
+  $("sKind").textContent=(ST.cur.again?"De novo":ST.cur.novo?"Novo":"Revisão")+" · "+SUBJ[q.s]+" · "+(q.card?q.a:TIER[q.d]);
+  $("sAskTip").textContent=q.card?({certo_errado:"Certo ou errado? Pense e responda.",lacuna:"Complete a lacuna. Você sabe?",pares:"Explique a diferença. Você sabe?"}[q.tipo]||"Pense na resposta. Você sabe?"):"Pense na resposta. Você sabe?";
   $("sKind").className="eyebrow"+(ST.cur.again?" again":"");
   $("sQ").textContent=q.t;
   const ul=$("sOpts");ul.innerHTML="";
