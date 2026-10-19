@@ -338,6 +338,36 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
 .howto li::marker{font-weight:700}
 .foot{text-align:center;margin:22px 0 0}
 .foot a,.dialog .small a{color:var(--ink);font-weight:700}
+
+/* simulado de domingo */
+.simbox{border-color:var(--money)}
+.simbox .specs{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.85rem;color:var(--muted)}.simbox .specs b{color:var(--ink)}
+.simwrap{max-width:760px;margin:0 auto;display:grid;gap:14px;padding-bottom:30px}
+.simtop{display:flex;justify-content:space-between;align-items:center;gap:10px;position:sticky;top:0;z-index:5;background:var(--paper);padding:8px 0}
+.simclock{font-weight:700;font-size:1.15rem;padding:6px 12px;border:1.5px solid var(--line);border-radius:8px;background:var(--sheet)}
+.simclock.low{color:var(--dropout);border-color:var(--dropout)}
+.simhead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.simq{padding:20px clamp(16px,4vw,26px);display:grid;gap:12px}
+.simtexto{white-space:pre-wrap;font-size:.95rem;line-height:1.6;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:14px;max-height:46vh;overflow:auto}
+.simtexto b.tb{display:block;font-family:var(--f-mono);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.simenun{margin:0;font-weight:700;font-size:1.08rem;line-height:1.45;white-space:pre-wrap}
+.simnav{justify-content:space-between}
+.simgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(38px,1fr));gap:6px}
+.simgrid button{height:36px;border:1.5px solid var(--line);border-radius:6px;background:var(--sheet);font-family:var(--f-mono);font-size:.8rem;color:var(--ink);cursor:pointer}
+.simgrid button.ok{background:var(--ink);color:var(--sheet);border-color:var(--ink)}
+.simgrid button.cur{outline:2px solid var(--money);outline-offset:1px}
+.simres .big{font-family:var(--f-display);font-weight:800;font-size:2.4rem;line-height:1;margin:0}
+.simmat{display:grid;gap:6px}
+.simmat .bar{display:grid;grid-template-columns:minmax(0,1fr) 110px 64px;gap:10px;align-items:center;font-size:.88rem}
+.simmat .bar i{height:8px;background:var(--line);border-radius:99px;overflow:hidden}.simmat .bar u{display:block;height:100%;background:var(--money)}
+.simrk{width:100%;border-collapse:collapse;font-size:.88rem}.simrk td,.simrk th{padding:7px 6px;border-bottom:1px solid var(--line);text-align:left}.simrk tr.me td{background:var(--money-soft);font-weight:700}.simrk .n{text-align:right;font-family:var(--f-mono)}
+.simgab{display:grid;gap:12px}
+.simgab .gq{border:1.5px solid var(--line);border-radius:8px;padding:14px;display:grid;gap:8px}
+.simgab .gq.err{border-color:var(--dropout)}
+.simgab ol{margin:0;padding-left:0;list-style:none;display:grid;gap:5px}
+.simgab li{padding:7px 10px;border-radius:6px;border:1px solid var(--line);font-size:.92rem}
+.simgab li.ok{border-color:var(--money);background:var(--money-soft);font-weight:700}
+.simgab li.bad{border-color:var(--dropout);background:var(--dropout-soft)}
 </style>
 </head>
 <body>
@@ -372,6 +402,7 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
 
     <div style="display:grid;gap:14px">
       <div class="sheet daily" id="dailyBox"></div>
+      <div class="sheet daily simbox" id="simBox" hidden></div>
       <div class="sheet instr">
         <h2>Instruções ao candidato</h2>
         <ol>
@@ -575,6 +606,34 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
       <p class="small" id="seMsg" style="margin:0"></p>
       <div class="row"><button class="btn" type="button" id="seHome">Voltar à capa</button></div>
     </div>
+  </div>
+</section>
+
+<!-- SIMULADO DE DOMINGO -->
+<section id="sim" hidden>
+  <div class="simwrap">
+    <div class="simtop">
+      <button class="iconbtn" type="button" id="simBack">← Voltar à capa</button>
+      <span class="simclock mono" id="simClock" role="timer" aria-label="Tempo restante">--:--:--</span>
+    </div>
+    <div id="simExam" style="display:grid;gap:14px">
+      <div class="simhead"><span class="eyebrow" id="simTitle"></span><span class="small mono" id="simProg"></span></div>
+      <div class="sbar"><i id="simBar"></i></div>
+      <div class="sheet simq">
+        <span class="eyebrow" id="simQn"></span>
+        <div class="simtexto" id="simTexto" hidden></div>
+        <p class="simenun" id="simEnun"></p>
+        <div class="answers" id="simOpts" style="margin-top:4px"></div>
+      </div>
+      <div class="row simnav"><button class="btn ghost" type="button" id="simPrev">← Anterior</button><button class="btn" type="button" id="simNext">Próxima →</button></div>
+      <div class="sheet panel">
+        <div class="row" style="justify-content:space-between"><span class="eyebrow">Mapa da prova</span><span class="small" id="simSaved" role="status"></span></div>
+        <div class="simgrid" id="simGrid"></div>
+        <div class="row"><button class="btn money" type="button" id="simSend">Entregar prova</button><button class="btn ghost" type="button" id="simSendNo" hidden>Continuar fazendo</button></div>
+        <p class="small" id="simSendMsg" style="margin:0"></p>
+      </div>
+    </div>
+    <div id="simRes" class="simres" hidden style="display:grid;gap:14px"></div>
   </div>
 </section>
 </div>
@@ -9187,7 +9246,7 @@ function renderReview(){
 $("btnAgain").onclick=()=>{sfx.click();newGame()};
 $("btnHome").onclick=()=>{renderStart();show("start")};
 
-function show(id){["start","game","end","study"].forEach(s=>$(s).hidden=s!==id);window.scrollTo(0,0)}
+function show(id){if(id!=="sim"&&typeof simStopClock==="function")simStopClock();["start","game","end","study","sim"].forEach(s=>$(s).hidden=s!==id);window.scrollTo(0,0)}
 let homeTab="jogo";try{const t=localStorage.getItem("gm-tab");if(["jogo","estudo","ranking","conta"].includes(t))homeTab=t}catch(e){}
 function setTab(t){
   homeTab=t;try{localStorage.setItem("gm-tab",t)}catch(e){}
@@ -9228,6 +9287,7 @@ function renderStart(){
   });
   updatePool();
   renderStudyBox();
+  renderSimBox();
   dlLoad();
 }
 function updatePool(){
@@ -9519,6 +9579,161 @@ function renderRef(){
     try{const {data,error}=await sb.rpc("solicitar_saque",{p_chave:$("refKey").value});if(error)throw error;REF.saque=false;REF.msg="Pedido de saque de "+fmtBRL(data.valor)+" registrado. O pagamento é feito no dia 5.";await refLoad()}
     catch(e){const m=String(e&&e.message||"");REF.msg=m.includes("SALDO_MINIMO")?"O saldo disponível ainda não chegou a "+fmtBRL(I.minimo)+".":m.includes("SAQUE_PENDENTE")?"Você já tem um saque aguardando pagamento.":m.includes("CHAVE_INVALIDA")?"Confira a chave Pix.":"Não deu certo agora. Tente de novo.";REF.saque=false;renderRef()}};
 }
+
+/* ===== simulado de domingo ===== */
+const SIM={info:{},t:{},missing:false,cur:null,ans:{},idx:0,clock:null,saveT:null,saving:false,dirty:false,off:0,deadline:0,sending:false,res:null,onlyErr:false};
+const SIM_ERR={LOGIN:"Entre na sua conta para fazer o simulado.",FECHADO:"O simulado só fica aberto no domingo marcado, das 0h às 23h59.",NAO_ENCONTRADO:"Este simulado não está mais disponível.",SEM_QUESTOES:"Este simulado ainda está sendo preparado.",NAO_ENTREGUE:"O resultado aparece depois que você entregar a prova (ou na segunda, quando o gabarito sai).",NAO_INICIADO:"Você ainda não começou este simulado."};
+function simErr(e){const m=String(e&&e.message||"");for(const k in SIM_ERR)if(m.includes(k))return SIM_ERR[k];if(m.includes("fetch")||m.includes("network"))return"Sem conexão com o servidor. Tente de novo.";return"Não deu certo agora. Tente de novo."}
+const simDur=m=>{const h=Math.floor(m/60),r=m%60;return h?(h+"h"+(r?String(r).padStart(2,"0"):"")):r+" min"};
+const simDia=d=>{const x=new Date(d+"T12:00:00");return x.toLocaleDateString("pt-BR",{day:"2-digit",month:"2-digit"})};
+const simTempo=sg=>{sg=Math.max(0,sg|0);const h=Math.floor(sg/3600),m=Math.floor(sg%3600/60);return h?h+"h"+String(m).padStart(2,"0"):m+" min"};
+async function simLoad(force){
+  if(!sb)return null;const k=track;
+  if(!force&&SIM.info[k]!==undefined&&Date.now()-(SIM.t[k]||0)<60000)return SIM.info[k];
+  try{const {data,error}=await sb.rpc("simulado_info",{p_trilha:k});if(error)throw error;SIM.info[k]=data;SIM.missing=false}
+  catch(e){const m=String(e&&(e.message||e.code)||"");if(m.includes("Could not find")||m.includes("PGRST202")||m.includes("does not exist"))SIM.missing=true;SIM.info[k]=null}
+  SIM.t[k]=Date.now();return SIM.info[k];
+}
+function renderSimBox(){
+  const box=$("simBox");if(!box)return;
+  if(!sb||SIM.missing){box.hidden=true;return}
+  const k=track,d=SIM.info[k];
+  if(d===undefined||Date.now()-(SIM.t[k]||0)>60000){if(d===undefined)box.hidden=true;simLoad(true).then(()=>{if(track===k)renderSimBoxNow()});if(d===undefined)return}
+  renderSimBoxNow();
+}
+function renderSimBoxNow(){
+  const box=$("simBox"),d=SIM.info[track];if(!d){box.hidden=true;return}
+  box.hidden=false;const tn=TRACKS[track].n;let h="";
+  const specs=x=>'<div class="specs"><span><b>'+x.n_questoes+'</b> questões</span><span>estilo <b>'+esc(x.estilo)+'</b></span><span><b>'+simDur(x.duracao_min)+'</b> de prova</span><span>ranking da trilha</span></div>';
+  const a=d.atual,pr=d.proximo,u=d.ultimo;
+  if(a){
+    const m=a.meu;h+='<span class="eyebrow">📝 Simulado de Domingo · Trilha '+tn+' · aberto até 23h59</span><h2>'+esc(a.titulo||"Simulado de hoje")+'</h2>'+specs(a);
+    if(!user)h+='<p class="small" style="margin:0">Para fazer o simulado e entrar no ranking, entre na sua conta. É grátis.</p><div class="row"><button class="btn money" type="button" id="simUp">Criar conta grátis</button><button class="btn ghost" type="button" id="simIn">Já tenho conta</button></div>';
+    else if(!m||m.status==="nao_iniciado")h+='<p class="small" style="margin:0">Uma tentativa por pessoa. O relógio começa quando você tocar em começar e a prova fecha às 23h59. Sem ajudas, como na prova de verdade.'+(a.participantes?' <b>'+a.participantes+'</b> já começaram.':'')+'</p><div class="row"><button class="btn money" type="button" id="simGo">Começar o simulado →</button></div>';
+    else if(m.status==="fazendo"){const left=Math.max(0,Date.parse(m.prazo)-Date.now());h+='<p class="small" style="margin:0">Você está fazendo: <b>'+m.respondidas+'/'+a.n_questoes+'</b> respondidas · faltam <b>'+simTempo(left/1000)+'</b>.</p><div class="row"><button class="btn money" type="button" id="simGo">Continuar a prova →</button></div>'}
+    else h+='<p style="margin:0;font-size:1.05rem">Você acertou <b>'+m.acertos+' de '+m.total+'</b> · <b>'+m.posicao+'º</b> de '+m.participantes+' até agora.</p><p class="small" style="margin:0">O ranking fecha às 23h59 e o gabarito comentado sai na segunda, às 0h.</p><div class="row"><button class="btn" type="button" id="simRes1" data-id="'+a.id+'">Ver resultado e ranking</button></div>';
+  }else{
+    if(pr)h+='<span class="eyebrow">📝 Simulado de Domingo · Trilha '+tn+'</span><h2>Próximo: domingo, '+simDia(pr.data)+'</h2>'+specs(pr)+'<p class="small" style="margin:0">Abre às 0h e fica aberto até 23h59. Uma tentativa por pessoa, com ranking da trilha e gabarito comentado na segunda.</p>';
+    else h+='<span class="eyebrow">📝 Simulado de Domingo · em breve</span><h2>Provas no formato de concurso, aos domingos</h2><p class="small" style="margin:0">Questões elaboradas no estilo das bancas, com texto-base, cinco alternativas, tempo de prova de verdade, ranking da trilha e gabarito comentado. Fique de olho!</p>';
+    if(u&&user&&(u.liberado||(u.meu&&u.meu.status==="entregue")))h+='<div class="row"><button class="btn ghost" type="button" id="simRes1" data-id="'+u.id+'">'+(u.meu&&u.meu.status==="entregue"?'Seu resultado de '+simDia(u.data)+' · '+u.meu.acertos+'/'+u.meu.total:'Gabarito do simulado de '+simDia(u.data))+' →</button></div>';
+  }
+  box.innerHTML=h;
+  if($("simUp"))$("simUp").onclick=()=>{sfx.click();openAuth("up")};
+  if($("simIn"))$("simIn").onclick=()=>{sfx.click();openAuth("in")};
+  if($("simGo"))$("simGo").onclick=()=>{sfx.click();simStart(a.id)};
+  if($("simRes1"))$("simRes1").onclick=()=>{sfx.click();simOpenResult(+$("simRes1").dataset.id)};
+}
+// ordem das alternativas embaralhada por pessoa, sempre a mesma para ela
+function simPerm(ordem,sid){let h=2166136261;const s=(user?user.id:"")+"|"+(sid||SIM.cur.id)+"|"+ordem;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}
+  const r=()=>{h=Math.imul(h^(h>>>15),2246822507);h=Math.imul(h^(h>>>13),3266489909);h^=h>>>16;return (h>>>0)/4294967296};const p=[0,1,2,3,4];for(let i=4;i>0;i--){const j=Math.floor(r()*(i+1));[p[i],p[j]]=[p[j],p[i]]}return p}
+const simKey=()=>"gm-sim-"+SIM.cur.id+"-"+(user?user.id:"");
+async function simStart(id){
+  if(!user){openAuth("in");return}
+  const b=$("simGo");if(b)b.disabled=true;
+  try{
+    const {data,error}=await sb.rpc("simulado_iniciar",{p_simulado:id});if(error)throw error;
+    SIM.cur=data;SIM.off=Date.parse(data.agora)-Date.now();SIM.deadline=Date.parse(data.prazo);
+    let loc={};try{loc=JSON.parse(localStorage.getItem(simKey())||"{}")||{}}catch(e){}
+    SIM.ans=Object.assign({},data.respostas||{},loc);SIM.dirty=Object.keys(loc).length>0;
+    const Q=data.questoes;SIM.idx=Math.max(0,Q.findIndex(q=>SIM.ans[q.ordem]==null));if(SIM.idx<0)SIM.idx=0;
+    $("simExam").hidden=false;$("simRes").hidden=true;$("simClock").hidden=false;$("simSend").hidden=false;$("simSendNo").hidden=true;$("simSendMsg").textContent="";
+    $("simTitle").textContent=data.titulo||("Simulado de Domingo · "+TRACKS[data.trilha].n);
+    show("sim");simRender();simTick();SIM.clock=setInterval(simTick,1000);if(SIM.dirty)simSaveSoon(500);
+  }catch(e){
+    const m=String(e&&e.message||"");if(m.includes("JA_ENTREGUE")){simOpenResult(id);return}
+    alert(simErr(e));
+  }
+  if(b)b.disabled=false;
+}
+function simStopClock(){if(SIM.clock){clearInterval(SIM.clock);SIM.clock=null}}
+function simTick(){
+  if(!SIM.cur)return;const left=Math.round((SIM.deadline-(Date.now()+SIM.off))/1000),c=$("simClock");
+  const l=Math.max(0,left),hh=Math.floor(l/3600),mm=Math.floor(l%3600/60),ss=l%60;
+  c.textContent=hh+":"+String(mm).padStart(2,"0")+":"+String(ss).padStart(2,"0");c.classList.toggle("low",l<=600);
+  if(left<=0&&!SIM.sending){simStopClock();simSend(true)}
+}
+function simRender(){
+  const Q=SIM.cur.questoes,q=Q[SIM.idx],n=Q.length,done=Q.filter(x=>SIM.ans[x.ordem]!=null).length;
+  $("simProg").textContent=done+"/"+n+" respondidas";$("simBar").style.width=Math.round(done/n*100)+"%";
+  $("simQn").textContent="Questão "+q.ordem+" de "+n+" · "+(SUBJ[q.materia]||q.materia);
+  const tx=$("simTexto");if(q.texto_base){tx.hidden=false;tx.innerHTML='<b class="tb">Texto</b>';tx.appendChild(document.createTextNode(q.texto_base));tx.scrollTop=0}else tx.hidden=true;
+  $("simEnun").textContent=q.enunciado;
+  const box=$("simOpts");box.innerHTML="";
+  simPerm(q.ordem).forEach((oi,pos)=>{const b=document.createElement("button");b.type="button";b.className="ans"+(SIM.ans[q.ordem]===oi?" sel":"");
+    b.innerHTML='<span class="bub">'+"ABCDE"[pos]+'</span><span class="txt"></span>';b.querySelector(".txt").textContent=q.opcoes[oi];
+    b.setAttribute("aria-pressed",SIM.ans[q.ordem]===oi?"true":"false");
+    b.onclick=()=>{sfx.click();if(SIM.ans[q.ordem]===oi)delete SIM.ans[q.ordem];else SIM.ans[q.ordem]=oi;simChanged();simRender()};box.appendChild(b)});
+  $("simPrev").disabled=SIM.idx===0;$("simNext").textContent=SIM.idx===n-1?"Ir para a entrega ↓":"Próxima →";
+  const g=$("simGrid");g.innerHTML="";Q.forEach((x,i)=>{const b=document.createElement("button");b.type="button";b.textContent=x.ordem;b.className=(SIM.ans[x.ordem]!=null?"ok":"")+(i===SIM.idx?" cur":"");b.setAttribute("aria-label","Questão "+x.ordem+(SIM.ans[x.ordem]!=null?", respondida":", em branco"));b.onclick=()=>{SIM.idx=i;simRender();window.scrollTo(0,0)};g.appendChild(b)});
+}
+function simChanged(){SIM.dirty=true;try{localStorage.setItem(simKey(),JSON.stringify(SIM.ans))}catch(e){}$("simSaved").textContent="Salvando…";simSaveSoon(2500);simResetSend()}
+function simSaveSoon(ms){clearTimeout(SIM.saveT);SIM.saveT=setTimeout(simSave,ms)}
+async function simSave(){
+  if(!SIM.cur||!SIM.dirty||SIM.saving||SIM.sending)return;SIM.saving=true;SIM.dirty=false;
+  try{const {data,error}=await sb.rpc("simulado_salvar",{p_simulado:SIM.cur.id,p_respostas:SIM.ans});if(error)throw error;
+    if(data&&data.encerrado){SIM.saving=false;simStopClock();simOpenResult(SIM.cur.id);return}
+    $("simSaved").textContent="Respostas salvas ✓";}
+  catch(e){SIM.dirty=true;$("simSaved").textContent="Sem conexão: suas respostas estão guardadas neste aparelho.";simSaveSoon(10000)}
+  SIM.saving=false;if(SIM.dirty)simSaveSoon(2500);
+}
+function simResetSend(){$("simSend").textContent="Entregar prova";$("simSend").dataset.ok="";$("simSendNo").hidden=true;$("simSendMsg").textContent=""}
+async function simSend(auto){
+  if(!SIM.cur||SIM.sending)return;
+  const Q=SIM.cur.questoes,branco=Q.filter(x=>SIM.ans[x.ordem]==null).length;
+  if(!auto&&$("simSend").dataset.ok!=="1"){$("simSend").dataset.ok="1";$("simSend").textContent="Confirmar entrega";$("simSendNo").hidden=false;
+    $("simSendMsg").textContent=branco?"Você deixou "+branco+(branco>1?" questões":" questão")+" em branco. Depois de entregar, não dá para mudar.":"Depois de entregar, não dá para mudar as respostas.";return}
+  SIM.sending=true;clearTimeout(SIM.saveT);simStopClock();$("simSend").disabled=true;$("simSendMsg").textContent=auto?"O tempo acabou. Entregando sua prova…":"Entregando…";
+  for(let t=0;t<3;t++){
+    try{const {data,error}=await sb.rpc("simulado_entregar",{p_simulado:SIM.cur.id,p_respostas:SIM.ans});if(error)throw error;
+      try{localStorage.removeItem(simKey())}catch(e){}SIM.sending=false;$("simSend").disabled=false;SIM.info={};simShowResult(data);sfx.win&&sfx.win();return}
+    catch(e){const m=String(e&&e.message||"");if(!(m.includes("fetch")||m.includes("network")))break;await new Promise(r=>setTimeout(r,2000))}
+  }
+  SIM.sending=false;$("simSend").disabled=false;$("simSendMsg").textContent="Não conseguimos entregar agora (sem conexão?). Suas respostas estão salvas neste aparelho. Toque em entregar de novo.";simResetSend();
+}
+async function simOpenResult(id){
+  try{const {data,error}=await sb.rpc("simulado_resultado",{p_simulado:id});if(error)throw error;simShowResult(data)}
+  catch(e){alert(simErr(e))}
+}
+function simShowResult(d){
+  SIM.res=d;SIM.cur=null;simStopClock();$("simExam").hidden=true;$("simClock").hidden=true;const r=$("simRes");r.hidden=false;show("sim");
+  const m=d.meu||{},ok=m.status==="entregue",tn=(TRACKS[d.trilha]||{}).n||"";
+  let h='<div class="sheet panel"><span class="eyebrow">📝 Simulado de Domingo · '+esc(tn)+' · '+simDia(d.data)+'</span><h2 style="margin:0">'+esc(d.titulo||"Simulado")+'</h2>';
+  if(ok){const pct=m.total?Math.round(m.acertos/m.total*100):0;
+    h+='<p class="big">'+m.acertos+' <span style="font-size:1.1rem;color:var(--muted)">de '+m.total+' · '+pct+'%</span></p><p style="margin:0"><b>'+m.posicao+'º lugar</b> de '+m.participantes+' participante'+(m.participantes===1?'':'s')+(d.liberado?'':' até agora')+' · tempo '+simTempo(m.tempo_seg)+'</p><div class="sharebox" id="simShare"></div>'}
+  else h+='<p class="small" style="margin:0">Você não fez este simulado, mas o gabarito comentado está liberado para estudar.</p>';
+  h+='</div>';
+  if(ok&&(d.por_materia||[]).length)h+='<div class="sheet panel"><span class="eyebrow">Desempenho por matéria</span><div class="simmat">'+d.por_materia.map(x=>{const p=x.total?Math.round(x.acertos/x.total*100):0;return'<div class="bar"><span>'+esc(SUBJ[x.materia]||x.materia)+'</span><i><u style="width:'+p+'%"></u></i><span class="mono">'+x.acertos+'/'+x.total+'</span></div>'}).join("")+'</div></div>';
+  if((d.ranking||[]).length)h+='<div class="sheet panel"><span class="eyebrow">Ranking do simulado'+(d.liberado?'':' (parcial, fecha às 23h59)')+'</span><div class="tablewrap" style="max-height:50vh;overflow:auto"><table class="simrk"><thead><tr><th>#</th><th>Nome</th><th class="n">Acertos</th><th class="n">Tempo</th></tr></thead><tbody>'+d.ranking.map(x=>'<tr class="'+(x.eu?'me':'')+'"><td>'+x.pos+'º</td><td>'+esc(x.nome)+(x.eu?' (você)':'')+'</td><td class="n">'+x.acertos+'/'+x.total+'</td><td class="n">'+simTempo(x.tempo_seg)+'</td></tr>').join("")+'</tbody></table></div></div>';
+  if(d.gabarito){
+    const G=d.gabarito,err=G.filter(q=>q.minha!==q.gabarito).length;
+    h+='<div class="sheet panel"><div class="row" style="justify-content:space-between"><span class="eyebrow">Gabarito comentado</span>'+(ok?'<button class="chipbtn" type="button" id="simOnlyErr" aria-pressed="'+SIM.onlyErr+'">Só as que errei ('+err+')</button>':'')+'</div><div class="simgab" id="simGab"></div></div>';
+  }else h+='<div class="sheet panel"><span class="eyebrow">Gabarito comentado</span><p class="small" style="margin:0">Sai na segunda-feira, às 0h, depois que o simulado fecha para todo mundo. Volte aqui para conferir cada questão com a explicação.</p></div>';
+  h+='<div class="row"><button class="btn" type="button" id="simHome">Voltar à capa</button></div>';
+  r.innerHTML=h;
+  if(ok&&$("simShare"))shareUI($("simShare"),"📝 Fiz o Simulado de Domingo da trilha "+tn+": "+m.acertos+"/"+m.total+" acertos, "+m.posicao+"º lugar. Encara? "+SHARE_URL);
+  if(d.gabarito)simRenderGab();
+  if($("simOnlyErr"))$("simOnlyErr").onclick=()=>{SIM.onlyErr=!SIM.onlyErr;$("simOnlyErr").setAttribute("aria-pressed",SIM.onlyErr);simRenderGab()};
+  $("simHome").onclick=()=>{SIM.res=null;renderStart();show("start")};
+  window.scrollTo(0,0);
+}
+function simRenderGab(){
+  const box=$("simGab");if(!box)return;const ok=SIM.res.meu&&SIM.res.meu.status==="entregue";box.innerHTML="";
+  SIM.res.gabarito.filter(q=>!SIM.onlyErr||q.minha!==q.gabarito).forEach(q=>{
+    const d=document.createElement("div"),wrong=ok&&q.minha!==q.gabarito;d.className="gq"+(wrong?" err":"");
+    d.innerHTML='<span class="eyebrow"></span>'+(q.texto_base?'<details><summary class="small">Ver o texto</summary><div class="simtexto" style="margin-top:6px"></div></details>':'')+'<p class="simenun" style="font-size:1rem"></p><ol></ol><p class="small expl" style="margin:0"></p>';
+    d.querySelector(".eyebrow").textContent="Questão "+q.ordem+" · "+(SUBJ[q.materia]||q.materia)+(ok?(q.minha==null?" · em branco":wrong?" · você errou":" · você acertou"):"");
+    if(q.texto_base)d.querySelector(".simtexto").textContent=q.texto_base;
+    d.querySelector(".simenun").textContent=q.enunciado;
+    const ol=d.querySelector("ol");(ok?simPerm(q.ordem,SIM.res.id):[0,1,2,3,4]).forEach((i,pos)=>{const o=q.opcoes[i];const li=document.createElement("li");li.textContent="ABCDE"[pos]+") "+o+(i===q.gabarito?" ✓":"")+(ok&&i===q.minha&&i!==q.gabarito?" (sua resposta)":"");li.className=i===q.gabarito?"ok":(ok&&i===q.minha?"bad":"");ol.appendChild(li)});
+    d.querySelector(".expl").textContent=q.explicacao||"";box.appendChild(d)});
+  if(!box.children.length)box.innerHTML='<p class="small" style="margin:0">Nenhuma questão errada. Parabéns! 🎉</p>';
+}
+$("simPrev").onclick=()=>{if(SIM.idx>0){SIM.idx--;simRender();window.scrollTo(0,0)}};
+$("simNext").onclick=()=>{const n=SIM.cur.questoes.length;if(SIM.idx<n-1){SIM.idx++;simRender();window.scrollTo(0,0)}else $("simSend").scrollIntoView({behavior:"smooth",block:"center"})};
+$("simSend").onclick=()=>simSend(false);
+$("simSendNo").onclick=()=>simResetSend();
+$("simBack").onclick=()=>{if(SIM.cur){simSave();SIM.cur=null}SIM.info={};renderStart();show("start")};
+document.addEventListener("visibilitychange",()=>{if(document.hidden&&SIM.cur&&SIM.dirty)simSave()});
 async function setUser(u){
   user=u||null;perfil=null;if(user)delNotice=false;
   if(user){
@@ -9532,7 +9747,7 @@ async function setUser(u){
     }catch(e){}
   }
   REF.data=null;REF.saque=false;REF.msg="";PL.loaded=false;
-  studyReset();renderAcct();renderStudyBox();renderAnonInfo();if(user)loadStudy(true);plLoad();if(user)refClaim().then(refLoad);
+  studyReset();renderAcct();renderStudyBox();renderAnonInfo();SIM.info={};renderSimBox();if(user)loadStudy(true);plLoad();if(user)refClaim().then(refLoad);
   DL.list=null;DL.t=0;dlLoad(true);RK.list=null;RK.sel=null;RK.rows=null;RK.champs=null;RK.err=null;RK.msg="";RK.inv=false;RK.leave=false;RK.mng=false;RK.del=false;RK.week=0;renderRanking();setTimeout(handleInvite,0);
 }
 function mergeProgress(p){

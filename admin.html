@@ -106,10 +106,10 @@ async function start(){
   shell();load();
 }
 function shell(){
-  const tabs=[["geral","Visão geral"],["retencao","Retenção"],["jogadores","Jogadores"],["conteudo","Conteúdo"],["questoes","Questões"],["rankings","Rankings"],["pagamentos","Pagamentos"],["assinantes","Assinantes"],["indicacoes","Indicações"],["config","Configurações"]];
+  const tabs=[["geral","Visão geral"],["retencao","Retenção"],["jogadores","Jogadores"],["conteudo","Conteúdo"],["questoes","Questões"],["simulados","Simulados"],["rankings","Rankings"],["pagamentos","Pagamentos"],["assinantes","Assinantes"],["indicacoes","Indicações"],["config","Configurações"]];
   $("app").innerHTML='<div class="row" style="justify-content:space-between"><div class="tabs" role="tablist">'+tabs.map(([k,n])=>'<button class="tab" role="tab" data-t="'+k+'" aria-selected="'+(ST.tab===k)+'">'+n+'</button>').join("")+'</div><div class="row"><span class="small" id="upd"></span><button class="btn ghost" id="rel">Atualizar</button></div></div><div id="view" style="display:grid;gap:16px"></div>';
   document.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{ST.tab=b.dataset.t;document.querySelectorAll("[data-t]").forEach(x=>x.setAttribute("aria-selected",x===b));render()});
-  $("rel").onclick=()=>{PAY.pag=PAY.ass=PAY.ind=PAY.cfg=null;load()};
+  $("rel").onclick=()=>{PAY.pag=PAY.ass=PAY.ind=PAY.cfg=null;SM.list=null;load()};
 }
 async function load(){
   $("view").innerHTML='<div class="panel"><p class="small">Carregando os dados…</p></div>';
@@ -120,7 +120,7 @@ async function load(){
     $("upd").textContent="Atualizado às "+new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});render();
   }catch(e){$("view").innerHTML='<div class="panel"><p class="flash" role="alert">'+esc(errMsg(e))+'</p></div>'}
 }
-function render(){const v=$("view");if(!ST.data.tot)return;({geral:vGeral,retencao:vRet,jogadores:vJog,conteudo:vCont,rankings:vRk,questoes:vQue,pagamentos:vPag,assinantes:vAss,indicacoes:vInd,config:vCfg})[ST.tab](v)}
+function render(){const v=$("view");if(!ST.data.tot)return;({geral:vGeral,retencao:vRet,jogadores:vJog,conteudo:vCont,rankings:vRk,questoes:vQue,simulados:vSim,pagamentos:vPag,assinantes:vAss,indicacoes:vInd,config:vCfg})[ST.tab](v)}
 
 /* gráfico de barras empilhadas em SVG */
 function bars(rows,series,opts){
@@ -325,6 +325,59 @@ async function vCfg(v){
   $("af").onsubmit=async e=>{e.preventDefault();try{await rpc("admin_adicionar_admin",{p_email:$("aEmail").value.trim()});PAY.msg="Administrador adicionado.";await payLoad("cfg",true);vCfg(v)}catch(err){alert(payErr(err))}};
   v.querySelectorAll("[data-ra]").forEach(b=>b.onclick=async()=>{const a=A.find(x=>x.user_id===b.dataset.ra);if(!confirm("Tirar o acesso de "+a.email+" à administração?"))return;
     try{await rpc("admin_remover_admin",{p_user:a.user_id});PAY.msg="Administrador removido.";await payLoad("cfg",true);vCfg(v)}catch(e){alert(payErr(e))}});
+}
+
+/* ===== simulados de domingo ===== */
+const SM={list:null,err:null,msg:"",edit:null,open:null,qs:null};
+const LET="ABCDE";
+function smNextSunday(){const d=new Date(Date.now()-3*36e5);d.setUTCDate(d.getUTCDate()+((7-d.getUTCDay())%7||7));return d.toISOString().slice(0,10)}
+function smErr(e){const m=String(e&&(e.message||e.details)||"");
+  if(m.includes("Could not find")||m.includes("does not exist"))return"Rode o arquivo 73-simulado-domingo.sql no Supabase para ativar os simulados.";
+  const T={NAO_DOMINGO:"A data precisa ser um domingo.",SEM_QUESTOES:"Carregue as questões antes de publicar.",JA_INICIADO:"Alguém já começou este simulado: não dá para trocar as questões, a data ou a trilha, nem excluir.",QUESTAO_INVALIDA:"Alguma questão está incompleta: cada uma precisa de materia, enunciado, 5 opções e gabarito (A a E).",LISTA_VAZIA:"A lista de questões está vazia.",NAO_ENCONTRADO:"Simulado não encontrado.",duplicate:"Já existe um simulado dessa trilha nesse domingo."};
+  for(const k in T)if(m.includes(k))return T[k];return errMsg(e)}
+async function smLoad(){try{SM.list=await rpc("admin_simulados");SM.err=null}catch(e){SM.list=[];SM.err=smErr(e)}}
+async function vSim(v){
+  if(!SM.list){v.innerHTML='<div class="panel"><p class="small">Carregando…</p></div>';await smLoad();if(ST.tab!=="simulados")return}
+  if(SM.err){v.innerHTML='<div class="panel"><p class="flash" role="alert">'+esc(SM.err)+'</p></div>';return}
+  const L=SM.list,E=SM.edit&&SM.edit!=="new"?L.find(x=>x.id===SM.edit):null;
+  const trOpts=sel=>Object.entries(TRACKS).map(([k,t])=>'<option value="'+k+'"'+(k===sel?' selected':'')+'>'+esc(t.n)+'</option>').join("");
+  let h=(SM.msg?'<p class="flash ok" role="status">'+esc(SM.msg)+'</p>':'');SM.msg="";
+  h+='<div class="panel"><h2>'+(E?'Editar simulado':'Novo simulado de domingo')+'</h2><p class="small">Cada trilha pode ter um simulado por domingo. Ele só aparece para os jogadores depois de publicado e só abre no domingo marcado, das 0h às 23h59.</p>'
+   +'<form class="grid2" id="smf"><label class="small">Trilha<select id="smTr">'+trOpts(E?E.trilha:"policial")+'</select></label><label class="small">Domingo<input type="date" id="smData" required value="'+(E?E.data:smNextSunday())+'"></label>'
+   +'<label class="small">Título<input type="text" id="smTit" maxlength="120" value="'+esc(E?E.titulo:"")+'" placeholder="Simulado 1 · Policial"></label><label class="small">Estilo da banca<input type="text" id="smEst" maxlength="40" value="'+esc(E?E.estilo:"FGV/FCC")+'"></label>'
+   +'<label class="small">Tempo de prova (minutos)<input type="number" id="smDur" min="10" max="600" value="'+(E?E.duracao_min:240)+'"></label>'
+   +'<div class="row"><button class="btn" type="submit">'+(E?'Salvar alterações':'Criar simulado')+'</button>'+(E?'<button class="btn ghost" type="button" id="smCancel">Cancelar</button>':'')+'</div></form></div>';
+  h+='<div class="panel"><h2>Simulados</h2><div class="tablewrap"><table><thead><tr><th>Domingo</th><th>Trilha</th><th>Título</th><th class="n">Questões</th><th>Situação</th><th class="n">Começaram</th><th class="n">Entregaram</th><th class="n">Média</th><th>Ações</th></tr></thead><tbody>'
+   +(L.length?L.map(x=>'<tr><td>'+dday(x.data)+'</td><td>'+esc((TRACKS[x.trilha]||{}).n||x.trilha)+'</td><td>'+esc(x.titulo||"–")+'<br><span class="small">'+esc(x.estilo)+' · '+x.duracao_min+' min</span></td><td class="n">'+x.n_questoes+'</td><td>'+(x.publicado?'<span class="pill ok">publicado</span>':'<span class="pill warn">rascunho</span>')+'</td><td class="n">'+x.iniciados+'</td><td class="n">'+x.entregues+'</td><td class="n">'+(x.media==null?"–":String(x.media).replace(".",",")+"/"+x.n_questoes)+'</td><td><div class="row"><button class="btn ghost" data-sq="'+x.id+'">Questões</button><button class="btn'+(x.publicado?' ghost':'')+'" data-sp="'+x.id+'">'+(x.publicado?'Despublicar':'Publicar')+'</button><button class="btn ghost" data-se="'+x.id+'">Editar</button>'+(x.iniciados?'':'<button class="btn ghost" data-sx="'+x.id+'">Excluir</button>')+'</div></td></tr>').join(""):'<tr><td colspan="9" class="small">Nenhum simulado criado ainda.</td></tr>')
+   +'</tbody></table></div></div>';
+  const O=SM.open?L.find(x=>x.id===SM.open):null;
+  if(O){
+    h+='<div class="panel" id="smQ"><h2>Questões · '+esc(O.titulo||((TRACKS[O.trilha]||{}).n+" · "+dday(O.data)))+'</h2>'
+     +(O.iniciados?'<p class="small">Este simulado já foi começado por '+O.iniciados+' pessoa(s): as questões não podem mais ser trocadas.</p>':
+      '<p class="small">Cole a lista de questões em JSON (substitui as atuais). Cada questão: <code>{"materia":"port","texto_base":"(opcional)","enunciado":"…","opcoes":["…","…","…","…","…"],"gabarito":"C","explicacao":"…"}</code>. Questões do mesmo texto repetem o mesmo <code>texto_base</code>. Matérias desta trilha: <code>'+esc(((TRACKS[O.trilha]||{}).s||[]).join(", "))+'</code>.</p><textarea id="smJson" rows="8" placeholder="[ { … }, { … } ]" style="width:100%;font-family:monospace;font-size:.8rem"></textarea><div class="row"><button class="btn" type="button" id="smImp">Carregar questões</button><span class="small" id="smImpMsg"></span></div>')
+     +'<div id="smList" class="grid1" style="margin-top:8px"><p class="small">Carregando questões…</p></div></div>';
+  }
+  v.innerHTML=h;
+  $("smf").onsubmit=async e=>{e.preventDefault();const b=e.target.querySelector("button[type=submit]");b.disabled=true;
+    try{await rpc("admin_simulado_salvar",{p_id:E?E.id:null,p_trilha:$("smTr").value,p_data:$("smData").value,p_titulo:$("smTit").value,p_estilo:$("smEst").value,p_duracao:+$("smDur").value||240,p_publicado:E?E.publicado:false});
+      SM.msg=E?"Simulado atualizado.":"Simulado criado como rascunho. Agora carregue as questões e publique.";SM.edit=null;await smLoad();vSim(v)}catch(err){alert(smErr(err));b.disabled=false}};
+  if($("smCancel"))$("smCancel").onclick=()=>{SM.edit=null;vSim(v)};
+  v.querySelectorAll("[data-se]").forEach(b=>b.onclick=()=>{SM.edit=+b.dataset.se;vSim(v);window.scrollTo(0,0)});
+  v.querySelectorAll("[data-sq]").forEach(b=>b.onclick=()=>{SM.open=+b.dataset.sq;SM.qs=null;vSim(v);setTimeout(()=>{const q=$("smQ");if(q)q.scrollIntoView({behavior:"smooth"})},50)});
+  v.querySelectorAll("[data-sp]").forEach(b=>b.onclick=async()=>{const x=L.find(y=>y.id===+b.dataset.sp);
+    if(!x.publicado&&!confirm("Publicar o simulado de "+dday(x.data)+" ("+(TRACKS[x.trilha]||{}).n+") com "+x.n_questoes+" questões? Ele aparece para os jogadores e abre no domingo."))return;b.disabled=true;
+    try{await rpc("admin_simulado_salvar",{p_id:x.id,p_trilha:x.trilha,p_data:x.data,p_titulo:x.titulo,p_estilo:x.estilo,p_duracao:x.duracao_min,p_publicado:!x.publicado});SM.msg=x.publicado?"Simulado voltou para rascunho.":"Simulado publicado!";await smLoad();vSim(v)}catch(e){alert(smErr(e));b.disabled=false}});
+  v.querySelectorAll("[data-sx]").forEach(b=>b.onclick=async()=>{const x=L.find(y=>y.id===+b.dataset.sx);if(!confirm("Excluir o simulado de "+dday(x.data)+" e todas as suas questões?"))return;
+    try{await rpc("admin_simulado_excluir",{p_id:x.id});if(SM.open===x.id)SM.open=null;SM.msg="Simulado excluído.";await smLoad();vSim(v)}catch(e){alert(smErr(e))}});
+  if(O){
+    if($("smImp"))$("smImp").onclick=async()=>{let arr;try{arr=JSON.parse($("smJson").value)}catch(e){$("smImpMsg").textContent="O texto não é um JSON válido.";return}
+      if(!Array.isArray(arr)||!arr.length){$("smImpMsg").textContent="Cole uma lista [ … ] com as questões.";return}
+      if(!confirm("Carregar "+arr.length+" questões neste simulado? As atuais serão substituídas."))return;
+      try{const n=await rpc("admin_simulado_questoes_importar",{p_id:O.id,p_lista:arr});SM.msg=n+" questões carregadas.";SM.qs=null;await smLoad();vSim(v)}catch(e){alert(smErr(e))}};
+    try{if(!SM.qs)SM.qs=await rpc("admin_simulado_questoes",{p_id:O.id});const box=$("smList");if(!box)return;
+      box.innerHTML=SM.qs.length?SM.qs.map(q=>'<div style="border:1.5px solid var(--line);border-radius:8px;padding:10px 12px;display:grid;gap:4px"><span class="small"><b>'+q.ordem+'.</b> '+esc(q.materia)+' · gabarito <b>'+LET[q.gabarito]+'</b>'+(q.texto_base?' · com texto-base':'')+'</span><span>'+esc(q.enunciado)+'</span><span class="small">'+q.opcoes.map((o,i)=>(i===q.gabarito?'<b>':'')+LET[i]+') '+esc(o)+(i===q.gabarito?'</b>':'')).join(' · ')+'</span></div>').join(""):'<p class="small">Nenhuma questão carregada ainda.</p>'}
+    catch(e){const box=$("smList");if(box)box.innerHTML='<p class="flash">'+esc(smErr(e))+'</p>'}
+  }
 }
 /* ===== lançar e editar questões ===== */
 const QS={all:null,off:null,err:null,loading:false,edit:null,f:{tr:"policial",m:"",n:0},bulk:null,bq:"",bf:{tr:"",m:"",n:"",so:""},msg:""};
