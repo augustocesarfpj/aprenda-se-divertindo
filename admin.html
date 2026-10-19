@@ -106,10 +106,11 @@ async function start(){
   shell();load();
 }
 function shell(){
-  const tabs=[["geral","Visão geral"],["retencao","Retenção"],["jogadores","Jogadores"],["conteudo","Conteúdo"],["questoes","Questões"],["simulados","Simulados"],["rankings","Rankings"],["pagamentos","Pagamentos"],["assinantes","Assinantes"],["indicacoes","Indicações"],["config","Configurações"]];
+  const tabs=[["geral","Visão geral"],["retencao","Retenção"],["jogadores","Jogadores"],["conteudo","Conteúdo"],["questoes","Questões"],["simulados","Simulados"],["erros","Erros reportados"],["rankings","Rankings"],["pagamentos","Pagamentos"],["assinantes","Assinantes"],["indicacoes","Indicações"],["config","Configurações"]];
   $("app").innerHTML='<div class="row" style="justify-content:space-between"><div class="tabs" role="tablist">'+tabs.map(([k,n])=>'<button class="tab" role="tab" data-t="'+k+'" aria-selected="'+(ST.tab===k)+'">'+n+'</button>').join("")+'</div><div class="row"><span class="small" id="upd"></span><button class="btn ghost" id="rel">Atualizar</button></div></div><div id="view" style="display:grid;gap:16px"></div>';
   document.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{ST.tab=b.dataset.t;document.querySelectorAll("[data-t]").forEach(x=>x.setAttribute("aria-selected",x===b));render()});
-  $("rel").onclick=()=>{PAY.pag=PAY.ass=PAY.ind=PAY.cfg=null;SM.list=null;load()};
+  $("rel").onclick=()=>{PAY.pag=PAY.ass=PAY.ind=PAY.cfg=null;SM.list=null;ER.list=null;load();erCount()};
+  erCount();
 }
 async function load(){
   $("view").innerHTML='<div class="panel"><p class="small">Carregando os dados…</p></div>';
@@ -120,7 +121,7 @@ async function load(){
     $("upd").textContent="Atualizado às "+new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});render();
   }catch(e){$("view").innerHTML='<div class="panel"><p class="flash" role="alert">'+esc(errMsg(e))+'</p></div>'}
 }
-function render(){const v=$("view");if(!ST.data.tot)return;({geral:vGeral,retencao:vRet,jogadores:vJog,conteudo:vCont,rankings:vRk,questoes:vQue,simulados:vSim,pagamentos:vPag,assinantes:vAss,indicacoes:vInd,config:vCfg})[ST.tab](v)}
+function render(){const v=$("view");if(!ST.data.tot)return;({geral:vGeral,retencao:vRet,jogadores:vJog,conteudo:vCont,rankings:vRk,questoes:vQue,simulados:vSim,erros:vErr,pagamentos:vPag,assinantes:vAss,indicacoes:vInd,config:vCfg})[ST.tab](v)}
 
 /* gráfico de barras empilhadas em SVG */
 function bars(rows,series,opts){
@@ -327,6 +328,59 @@ async function vCfg(v){
     try{await rpc("admin_remover_admin",{p_user:a.user_id});PAY.msg="Administrador removido.";await payLoad("cfg",true);vCfg(v)}catch(e){alert(payErr(e))}});
 }
 
+
+/* ===== erros reportados ===== */
+const ER={list:null,st:"aberto",err:null,msg:"",edit:null};
+const MOT_N={resposta:"Resposta ou gabarito errado",desatualizada:"Lei ou informação desatualizada",confusa:"Texto confuso ou erro de digitação",outro:"Outro problema"};
+const ORIG_E={questao:"Questão do jogo",cartao:"Cartão de estudo",simulado:"Questão de simulado"};
+async function erCount(){try{const n=await rpc("admin_erros_abertos");const b=document.querySelector('[data-t="erros"]');if(b)b.textContent="Erros reportados"+(n?" ("+n+")":"")}catch(e){}}
+function erErr(e){const m=String(e&&(e.message||e.details)||"");if(m.includes("Could not find")||m.includes("does not exist"))return"Rode o arquivo 75-reportar-erro.sql no Supabase para ativar esta parte.";
+  const T={DADOS_INVALIDOS:"Confira os campos: nada pode ficar em branco.",NAO_ENCONTRADO:"Item não encontrado.",NAO_ENCONTRADA:"Questão não encontrada."};for(const k in T)if(m.includes(k))return T[k];if(m.includes("QUESTAO_"))return"Confira a questão: "+m.replace(/.*QUESTAO_/,"").toLowerCase().replace(/_/g," ")+".";return errMsg(e)}
+async function erLoad(){try{ER.list=await rpc("admin_erros",{p_status:ER.st});ER.err=null}catch(e){ER.list=[];ER.err=erErr(e)}}
+const erKey=g=>g.origem+":"+g.ref_id+":"+(g.ordem==null?"":g.ordem);
+async function vErr(v){
+  if(!ER.list){v.innerHTML='<div class="panel"><p class="small">Carregando…</p></div>';await erLoad();if(ST.tab!=="erros")return}
+  if(ER.err){v.innerHTML='<div class="panel"><p class="flash" role="alert">'+esc(ER.err)+'</p></div>';return}
+  const L=ER.list,LET5="ABCDE";
+  let h=(ER.msg?'<p class="flash ok" role="status">'+esc(ER.msg)+'</p>':'');ER.msg="";
+  h+='<div class="panel"><div class="row" style="justify-content:space-between"><h2>Erros reportados pelos jogadores</h2><div class="row" role="group">'+[["aberto","Abertos"],["resolvido","Resolvidos"],["descartado","Descartados"]].map(([k,n])=>'<button class="chip" data-es="'+k+'" aria-pressed="'+(ER.st===k)+'">'+n+'</button>').join("")+'</div></div><p class="small">Cada bloco junta todos os avisos sobre o mesmo item. Corrija ou desative e marque como resolvido; se o aviso não proceder, descarte.</p></div>';
+  if(!L.length)h+='<div class="panel"><p class="small">Nada por aqui.</p></div>';
+  L.forEach((g,i)=>{const a=g.atual,k=erKey(g),ed=ER.edit===k;
+    let tit=ORIG_E[g.origem]+(g.origem==="simulado"?(a?' · '+esc(a.simulado||"")+' ('+dday(a.data)+') · questão '+g.ordem:' · questão '+g.ordem):' nº '+g.ref_id);
+    let cont='';
+    if(!a)cont='<p class="small">Este item não existe mais. Trecho enviado: “'+esc(g.trecho)+'”</p>';
+    else if(g.origem==="cartao")cont='<div class="small">'+esc(SUBJ_N(a.materia))+' · '+esc(a.assunto)+(a.ativa?'':' · <span class="pill bad">desativado</span>')+'</div><p style="margin:4px 0"><b>Frente:</b> '+esc(a.frente)+'</p><p style="margin:4px 0"><b>Verso:</b> '+esc(a.verso)+'</p><p class="small" style="margin:4px 0">'+esc(a.explicacao)+'</p>';
+    else{const ok=g.origem==="questao"?0:a.gabarito;cont='<div class="small">'+esc(SUBJ_N(a.materia))+(g.origem==="questao"?' · nível '+a.nivel+(a.ativa?'':' · <span class="pill bad">desativada</span>'):'')+'</div>'+(a.texto_base?'<details><summary class="small">Texto-base</summary><p class="small" style="white-space:pre-wrap">'+esc(a.texto_base)+'</p></details>':'')+'<p style="margin:4px 0"><b>'+esc(a.enunciado)+'</b></p><ol style="margin:0;padding-left:20px">'+a.opcoes.map((o,j)=>'<li'+(j===ok?' style="font-weight:700;color:var(--money)"':'')+'>'+esc(o)+(j===ok?' ✓':'')+'</li>').join("")+'</ol><p class="small" style="margin:4px 0">'+esc(a.explicacao)+'</p>'}
+    const av='<ul class="small" style="margin:0;padding-left:18px">'+g.avisos.map(x=>'<li><b>'+esc(MOT_N[x.motivo]||x.motivo)+'</b>'+(x.comentario?': “'+esc(x.comentario)+'”':'')+' <span style="color:var(--muted)">— '+esc(x.quem)+', '+dth(x.criado_em)+'</span></li>').join("")+'</ul>';
+    let form='';
+    if(ed&&a){
+      if(g.origem==="cartao")form='<div class="grid1" data-ef="'+i+'"><label class="small">Frente<textarea rows="2" data-f="frente">'+esc(a.frente)+'</textarea></label><label class="small">Verso<textarea rows="2" data-f="verso">'+esc(a.verso)+'</textarea></label><label class="small">Explicação / base legal<textarea rows="2" data-f="explicacao">'+esc(a.explicacao)+'</textarea></label></div>';
+      else if(g.origem==="questao")form='<div class="grid1" data-ef="'+i+'"><label class="small">Enunciado<textarea rows="2" data-f="enunciado">'+esc(a.enunciado)+'</textarea></label>'+a.opcoes.map((o,j)=>'<label class="small">'+(j===0?'Alternativa CERTA':'Errada '+j)+'<input type="text" data-o="'+j+'" value="'+esc(o)+'"></label>').join("")+'<label class="small">Explicação<textarea rows="2" data-f="explicacao">'+esc(a.explicacao)+'</textarea></label></div>';
+      else form='<div class="grid1" data-ef="'+i+'"><label class="small">Enunciado<textarea rows="3" data-f="enunciado">'+esc(a.enunciado)+'</textarea></label>'+a.opcoes.map((o,j)=>'<label class="small">'+LET5[j]+')<input type="text" data-o="'+j+'" value="'+esc(o)+'"></label>').join("")+'<label class="small">Gabarito<select data-f="gabarito">'+[0,1,2,3,4].map(j=>'<option value="'+j+'"'+(j===a.gabarito?' selected':'')+'>'+LET5[j]+'</option>').join("")+'</select></label><label class="small">Explicação<textarea rows="2" data-f="explicacao">'+esc(a.explicacao)+'</textarea></label><p class="small">Se o gabarito mudar, as notas de quem já entregou são recalculadas.</p></div>';
+      form+='<div class="row"><button class="btn" data-esave="'+i+'">Salvar correção e resolver</button><button class="btn ghost" data-ecancel="1">Cancelar</button></div>';
+    }
+    const acts=ER.st==="aberto"?('<div class="row">'+(a?'<button class="btn ghost" data-eed="'+i+'">'+(ed?'Fechar edição':'Corrigir')+'</button>':'')+(a&&g.origem!=="simulado"?'<button class="btn ghost" data-eat="'+i+'">'+(a.ativa?'Desativar':'Reativar')+'</button>':'')+'<button class="btn" data-ers="'+i+'" data-v="resolvido">Marcar resolvido</button><button class="btn ghost" data-ers="'+i+'" data-v="descartado">Descartar</button></div>'):'<div class="row"><button class="btn ghost" data-ers="'+i+'" data-v="aberto">Reabrir</button></div>';
+    h+='<div class="panel"><div class="row" style="justify-content:space-between"><h2 style="font-size:1rem">'+tit+'</h2><span class="pill warn">'+g.total+' aviso'+(g.total>1?'s':'')+'</span></div>'+av+'<div style="border:1.5px solid var(--line);border-radius:8px;padding:10px 12px">'+cont+'</div>'+form+acts+'</div>';
+  });
+  v.innerHTML=h;
+  v.querySelectorAll("[data-es]").forEach(b=>b.onclick=async()=>{ER.st=b.dataset.es;ER.list=null;ER.edit=null;vErr(v)});
+  v.querySelectorAll("[data-eed]").forEach(b=>b.onclick=()=>{const k=erKey(L[+b.dataset.eed]);ER.edit=ER.edit===k?null:k;vErr(v)});
+  v.querySelectorAll("[data-ecancel]").forEach(b=>b.onclick=()=>{ER.edit=null;vErr(v)});
+  const setSt=async(g,stt,msg)=>{await rpc("admin_erro_status",{p_origem:g.origem,p_ref:g.ref_id,p_ordem:g.ordem,p_status:stt});ER.msg=msg;ER.list=null;ER.edit=null;await erLoad();vErr(v);erCount()};
+  v.querySelectorAll("[data-ers]").forEach(b=>b.onclick=async()=>{const g=L[+b.dataset.ers],st=b.dataset.v;b.disabled=true;
+    try{await setSt(g,st,st==="resolvido"?"Marcado como resolvido.":st==="descartado"?"Aviso descartado.":"Aviso reaberto.")}catch(e){alert(erErr(e));b.disabled=false}});
+  v.querySelectorAll("[data-eat]").forEach(b=>b.onclick=async()=>{const g=L[+b.dataset.eat],a=g.atual;if(!confirm((a.ativa?"Desativar":"Reativar")+" este item? "+(a.ativa?"Ele deixa de aparecer para os jogadores.":"")))return;b.disabled=true;
+    try{if(g.origem==="cartao")await rpc("admin_cartao_ativar",{p_id:g.ref_id,p_ativa:!a.ativa});else await rpc("admin_questao_ativar",{p_id:g.ref_id,p_ativa:!a.ativa});
+      ER.msg=a.ativa?"Item desativado. Marque como resolvido se for o caso.":"Item reativado.";await erLoad();vErr(v)}catch(e){alert(erErr(e));b.disabled=false}});
+  v.querySelectorAll("[data-esave]").forEach(b=>b.onclick=async()=>{const g=L[+b.dataset.esave],a=g.atual,f=v.querySelector('[data-ef="'+b.dataset.esave+'"]');
+    const val=n=>{const x=f.querySelector('[data-f="'+n+'"]');return x?x.value.trim():""},ops=[...f.querySelectorAll("[data-o]")].map(x=>x.value.trim());b.disabled=true;
+    try{let extra="";
+      if(g.origem==="cartao")await rpc("admin_cartao_salvar",{p_id:g.ref_id,p_frente:val("frente"),p_verso:val("verso"),p_explicacao:val("explicacao")});
+      else if(g.origem==="questao")await rpc("admin_questao_salvar",{p_id:g.ref_id,p_materia:a.materia,p_nivel:a.nivel,p_enunciado:val("enunciado"),p_opcoes:ops,p_explicacao:val("explicacao")});
+      else{const n=await rpc("admin_simulado_questao_editar",{p_simulado:g.ref_id,p_ordem:g.ordem,p_enunciado:val("enunciado"),p_opcoes:ops,p_gabarito:+val("gabarito"),p_explicacao:val("explicacao")});if(n)extra=" Notas recalculadas para "+n+" pessoa"+(n>1?"s":"")+"."}
+      await setSt(g,"resolvido","Correção salva e aviso resolvido."+extra)}catch(e){alert(erErr(e));b.disabled=false}});
+}
+const SUBJ_N=k=>(typeof SUBJ!=="undefined"&&SUBJ[k])||k;
 /* ===== simulados de domingo ===== */
 const SM={list:null,err:null,msg:"",edit:null,open:null,qs:null};
 const LET="ABCDE";

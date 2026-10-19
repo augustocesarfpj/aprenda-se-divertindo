@@ -218,7 +218,7 @@ h1 em{font-style:normal;color:var(--money)}
 .form label{display:grid;gap:4px;font-size:.85rem;font-weight:700}
 .form input{font:1rem var(--f-body);padding:11px 12px;border:1.5px solid var(--line);border-radius:6px;background:var(--sheet);color:var(--ink);width:100%}
 .form input:focus{outline:2px solid var(--ink);outline-offset:1px}
-#authMsg.err,#delMsg.err{color:var(--dropout)}
+#authMsg.err,#delMsg.err,#rpMsg.err{color:var(--dropout)}
 /* estudo */
 .studybox{border-color:var(--money)}
 .stmini{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.85rem;color:var(--muted)}
@@ -368,6 +368,14 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
 .simgab li{padding:7px 10px;border-radius:6px;border:1px solid var(--line);font-size:.92rem}
 .simgab li.ok{border-color:var(--money);background:var(--money-soft);font-weight:700}
 .simgab li.bad{border-color:var(--dropout);background:var(--dropout-soft)}
+
+/* reportar erro */
+.rptlink{background:none;border:0;padding:0;font:inherit;font-size:.82rem;color:var(--muted);text-decoration:underline;cursor:pointer;justify-self:start}
+.rptlink:hover{color:var(--ink)}
+#ovReport textarea{width:100%;font:inherit;font-size:.95rem;padding:10px;border:1.5px solid var(--line);border-radius:8px;background:var(--sheet);color:var(--ink);resize:vertical}
+#rpMot{display:grid;gap:8px}
+#rpMot label{display:flex;gap:10px;align-items:center;border:1.5px solid var(--line);border-radius:8px;padding:10px 12px;cursor:pointer}
+#rpMot label:has(input:checked){border-color:var(--ink)}
 </style>
 </head>
 <body>
@@ -593,6 +601,7 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
         <span class="eyebrow">Resposta</span>
         <p class="sright" id="sCorrect"></p>
         <p class="expl" id="sExpl"></p>
+        <button class="rptlink" type="button" id="sReport">⚑ Reportar erro neste cartão</button>
       </div>
       <div id="sGrade" class="sacts" hidden>
         <p class="small" style="margin:0" id="sGradeTip"></p>
@@ -658,10 +667,29 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
     <h3 id="fTitle"></h3>
     <p class="small" style="margin:0" id="fAnswer"></p>
     <p class="expl" id="fExpl"></p>
+    <button class="rptlink" type="button" id="fReport">⚑ Reportar erro nesta questão</button>
     <div class="row"><button class="btn" id="fNext">Próxima questão</button></div>
   </div>
 </div>
 
+
+<!-- reportar erro -->
+<div class="ov" id="ovReport" hidden>
+  <div class="sheet dialog" role="dialog" aria-modal="true" aria-labelledby="rpTitle">
+    <span class="eyebrow">Reportar erro</span>
+    <h3 id="rpTitle" style="margin:0">O que está errado?</h3>
+    <p class="small" id="rpWhat" style="margin:0"></p>
+    <div id="rpMot" role="radiogroup" aria-label="Motivo">
+      <label><input type="radio" name="rpm" value="resposta"> A resposta ou o gabarito está errado</label>
+      <label><input type="radio" name="rpm" value="desatualizada"> A lei ou a informação está desatualizada</label>
+      <label><input type="radio" name="rpm" value="confusa"> O texto está confuso ou com erro de digitação</label>
+      <label><input type="radio" name="rpm" value="outro"> Outro problema</label>
+    </div>
+    <label class="small" style="display:grid;gap:4px">Conte o que viu (opcional)<textarea id="rpTxt" maxlength="500" rows="3" placeholder="Ex.: o art. 306 do CTB foi alterado…"></textarea></label>
+    <p class="small" id="rpMsg" role="status" style="margin:0"></p>
+    <div class="row"><button class="btn" type="button" id="rpGo">Enviar</button><button class="btn ghost" type="button" id="rpNo">Cancelar</button></div>
+  </div>
+</div>
 <!-- escada no celular -->
 <div class="ov" id="ovLadder" hidden>
   <div class="sheet drawer">
@@ -9727,7 +9755,9 @@ function simRenderGab(){
     if(q.texto_base)d.querySelector(".simtexto").textContent=q.texto_base;
     d.querySelector(".simenun").textContent=q.enunciado;
     const ol=d.querySelector("ol");(ok?simPerm(q.ordem,SIM.res.id):[0,1,2,3,4]).forEach((i,pos)=>{const o=q.opcoes[i];const li=document.createElement("li");li.textContent="ABCDE"[pos]+") "+o+(i===q.gabarito?" ✓":"")+(ok&&i===q.minha&&i!==q.gabarito?" (sua resposta)":"");li.className=i===q.gabarito?"ok":(ok&&i===q.minha?"bad":"");ol.appendChild(li)});
-    d.querySelector(".expl").textContent=q.explicacao||"";box.appendChild(d)});
+    d.querySelector(".expl").textContent=q.explicacao||"";
+    const rb=document.createElement("button");rb.type="button";rb.className="rptlink";rb.textContent="⚑ Reportar erro nesta questão";rb.onclick=()=>openReport({origem:"simulado",ref:SIM.res.id,ordem:q.ordem,trecho:q.enunciado,what:"Questão "+q.ordem+" do simulado"});d.appendChild(rb);
+    box.appendChild(d)});
   if(!box.children.length)box.innerHTML='<p class="small" style="margin:0">Nenhuma questão errada. Parabéns! 🎉</p>';
 }
 $("simPrev").onclick=()=>{if(SIM.idx>0){SIM.idx--;simRender();window.scrollTo(0,0)}};
@@ -9736,6 +9766,27 @@ $("simSend").onclick=()=>simSend(false);
 $("simSendNo").onclick=()=>simResetSend();
 $("simBack").onclick=()=>{if(SIM.cur){simSave();SIM.cur=null}SIM.info={};renderStart();show("start")};
 document.addEventListener("visibilitychange",()=>{if(document.hidden&&SIM.cur&&SIM.dirty)simSave()});
+
+/* ===== reportar erro ===== */
+let RP=null;
+function openReport(o){
+  RP=o;$("rpWhat").textContent=(o.what||"")+(o.trecho?(o.what?": ":"")+"“"+String(o.trecho).slice(0,140)+(String(o.trecho).length>140?"…":"")+"”":"");
+  document.querySelectorAll('#rpMot input').forEach(i=>i.checked=false);$("rpTxt").value="";$("rpMsg").textContent="";$("rpMsg").className="small";$("rpGo").disabled=false;
+  $("ovReport").hidden=false;setTimeout(()=>{const f=document.querySelector('#rpMot input');if(f)f.focus()},30);
+}
+$("rpNo").onclick=()=>{$("ovReport").hidden=true};
+document.querySelectorAll("#rpMot input").forEach(i=>i.onchange=()=>{$("rpMsg").textContent="";$("rpMsg").className="small"});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("ovReport").hidden){e.stopPropagation();$("ovReport").hidden=true}},true);
+$("rpGo").onclick=async()=>{
+  const m=document.querySelector('#rpMot input:checked');if(!m){$("rpMsg").textContent="Escolha o motivo.";$("rpMsg").className="small err";return}
+  if(!sb){$("rpMsg").textContent="Sem conexão com o servidor. Tente de novo mais tarde.";$("rpMsg").className="small err";return}
+  $("rpGo").disabled=true;$("rpMsg").textContent="Enviando…";$("rpMsg").className="small";
+  try{const {error}=await sb.rpc("reportar_erro",{p_origem:RP.origem,p_ref:RP.ref,p_ordem:RP.ordem==null?null:RP.ordem,p_motivo:m.value,p_comentario:$("rpTxt").value,p_trecho:RP.trecho||""});if(error)throw error;
+    $("rpMsg").textContent="Obrigado! Vamos conferir e corrigir se for o caso.";setTimeout(()=>{$("ovReport").hidden=true},1400)}
+  catch(e){const t=String(e&&e.message||"");$("rpMsg").textContent=t.includes("LIMITE")?"Você já enviou muitos avisos hoje. Tente amanhã.":t.includes("Could not find")?"O envio de avisos ainda não está disponível.":"Não deu certo agora. Tente de novo.";$("rpMsg").className="small err";$("rpGo").disabled=false}
+};
+$("fReport").onclick=()=>{const q=S&&S.cur&&S.cur.q;if(!q)return;openReport({origem:"questao",ref:q.id,trecho:q.t,what:"Questão do jogo"})};
+$("sReport").onclick=()=>{const q=ST.cur&&ST.cur.q;if(!q)return;openReport({origem:q.card?"cartao":"questao",ref:q.id,trecho:q.t,what:q.card?"Cartão de estudo":"Cartão de estudo"})};
 async function setUser(u){
   user=u||null;perfil=null;if(user)delNotice=false;
   if(user){
@@ -10118,7 +10169,7 @@ $("sBad").onclick=()=>grade(false);
 $("sBack").onclick=()=>{sfx.click();leaveStudy()};
 $("seHome").onclick=()=>{sfx.click();leaveStudy()};
 document.addEventListener("keydown",e=>{
-  if($("study").hidden||$("studyCard").hidden)return;
+  if($("study").hidden||$("studyCard").hidden||!$("ovReport").hidden)return;
   if(ST.phase==="ask"){if(e.key==="1"){e.preventDefault();reveal(true)}else if(e.key==="2"){e.preventDefault();reveal(false)}}
   else if(ST.phase==="grade"){if(e.key==="1"){e.preventDefault();grade(true)}else if(e.key==="2"){e.preventDefault();grade(false)}}
 });
