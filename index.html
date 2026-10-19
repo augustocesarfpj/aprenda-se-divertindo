@@ -752,7 +752,7 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
       <li><b>Veja a resposta e o comentário.</b> Depois, marque com sinceridade se <b>acertou</b> ou <b>errou</b>.</li>
       <li><b>O cartão volta na hora certa.</b> Disse que sabia e acertou? Ele demora cada vez mais para voltar (3, 7, 15, 30 e 60 dias). Acertou sem ter certeza? Fica onde está. Errou? Volta para o começo, aparece de novo ainda hoje e outra vez amanhã.</li>
       <li><b>Cuidado com a falsa certeza.</b> Se disse que sabia e errou, o cartão ganha um alerta e volta logo.</li>
-      <li><b>Todo dia tem revisões e cartões novos.</b> As revisões vêm primeiro. Os novos seguem a sua trilha e a meta que você escolher (10, 20 ou 30 por dia).</li>
+      <li><b>Todo dia tem revisões e cartões novos.</b> As revisões vêm primeiro. Os novos seguem a sua trilha e a meta que você escolher (10, 20, 30 ou 50 por dia).</li>
       <li><b>Depois de 5 vezes seguidas dizendo que sabe e acertando</b>, o cartão fica <b>dominado</b> e só volta a cada 60 dias. Seu progresso fica salvo na conta.</li>
     </ol>
     <p class="small" style="margin:0">Dica: alguns minutos por dia rendem mais do que horas de uma vez só.</p>
@@ -9657,7 +9657,7 @@ $("delYes").onclick=async()=>{
 
 /* ================= ESTUDO · cartões com repetição espaçada (só com conta) ================= */
 const INTERVAL=[0,1,3,7,15,30,60]; // dias por caixa; caixa 6 = dominada
-const META_OPTS={10:"Leve",20:"Moderado",30:"Intenso"};
+const META_OPTS={10:"Leve",20:"Moderado",30:"Intenso",50:"Maratona"};
 const ST={rows:new Map(),loaded:false,loading:false,missing:false,meta:10,error:false,queue:[],cur:null,phase:"ask",conf:null,done:{rev:0,novo:0,falsa:0},plan:{rev:0,novo:0},pending:new Map(),firstPass:new Set()};
 const addDays=(n)=>{const d=new Date();d.setDate(d.getDate()+n);return dayKey(d)};
 function studyReset(){ST.rows=new Map();ST.loaded=false;ST.missing=false;ST.error=false;ST.meta=10}
