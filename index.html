@@ -9911,7 +9911,7 @@ async function deckLoad(){
   }catch(e){}
 }
 const hasDeck=k=>!!(DECK.tr[k]&&DECK.tr[k].length);
-const qById=id=>id>=1000000?DECK.byId.get(id):Q.find(q=>q.id===id);
+const qById=id=>id>=2000000000?DECK.byId.get(id):Q.find(q=>q.id===id);
 /* matérias escolhidas para o estudo, por trilha (fica neste aparelho) */
 const SSK="gm-study-subj";
 function studyAvail(){if(hasDeck(track))return trackSubs().filter(k=>DECK.tr[track].some(c=>c.s===k));return trackSubs().filter(k=>Q.some(q=>q.s===k&&q.d>=1&&q.d<=3))}
