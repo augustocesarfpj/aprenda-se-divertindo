@@ -9991,9 +9991,11 @@ function studyToday(){
 }
 function pickNew(n){
   const subs=studyPicked();
-  if(subs.some(hasDeckSub)){ // matérias com baralho usam os cartões; as demais seguem com as questões do jogo
-    const pool=subs.filter(hasDeckSub).flatMap(k=>DECK.mat[k]).filter(c=>!ST.rows.has(c.id)),w={},out=[],used=new Set();pool.forEach(c=>w[c.s]=(w[c.s]||0)+1);
-    const qs=subs.filter(k=>!hasDeckSub(k));qs.forEach(k=>w[k]=40);pool.push(...Q.filter(q=>qs.includes(q.s)&&q.d>=1&&q.d<=3&&!ST.rows.has(q.id)));
+  // matérias com cartões ainda não vistos usam o baralho; as demais (sem cartões ou com o baralho esgotado) seguem com as questões do jogo
+  const fresh=k=>hasDeckSub(k)&&DECK.mat[k].some(c=>!ST.rows.has(c.id));
+  if(subs.some(fresh)){
+    const pool=subs.filter(fresh).flatMap(k=>DECK.mat[k]).filter(c=>!ST.rows.has(c.id)),w={},out=[],used=new Set();pool.forEach(c=>w[c.s]=(w[c.s]||0)+1);
+    const qs=subs.filter(k=>!fresh(k));qs.forEach(k=>w[k]=40);pool.push(...Q.filter(q=>qs.includes(q.s)&&q.d>=1&&q.d<=3&&!ST.rows.has(q.id)));
     for(let i=0;i<n;i++){const left=pool.filter(c=>!used.has(c.id));if(!left.length)break;const c=evenPick(left,Math.random,w);used.add(c.id);out.push(c)}return out}
   const pool=Q.filter(q=>subs.includes(q.s)&&!ST.rows.has(q.id));
   const W=[0,40,35,25,0],out=[],used=new Set(); // estudo usa intermediária, difícil e muito difícil
