@@ -381,7 +381,7 @@ async function vErr(v){
       await setSt(g,"resolvido","Correção salva e aviso resolvido."+extra)}catch(e){alert(erErr(e));b.disabled=false}});
 }
 const SUBJ_N=k=>(typeof SUBJ!=="undefined"&&SUBJ[k])||k;
-/* ===== simulados de domingo ===== */
+/* ===== simulados do fim de semana (data = domingo; abre no sábado) ===== */
 const SM={list:null,err:null,msg:"",edit:null,open:null,qs:null};
 const LET="ABCDE";
 function smNextSunday(){const d=new Date(Date.now()-3*36e5);d.setUTCDate(d.getUTCDate()+((7-d.getUTCDay())%7||7));return d.toISOString().slice(0,10)}
@@ -396,7 +396,7 @@ async function vSim(v){
   const L=SM.list,E=SM.edit&&SM.edit!=="new"?L.find(x=>x.id===SM.edit):null;
   const trOpts=sel=>Object.entries(TRACKS).map(([k,t])=>'<option value="'+k+'"'+(k===sel?' selected':'')+'>'+esc(t.n)+'</option>').join("");
   let h=(SM.msg?'<p class="flash ok" role="status">'+esc(SM.msg)+'</p>':'');SM.msg="";
-  h+='<div class="panel"><h2>'+(E?'Editar simulado':'Novo simulado de domingo')+'</h2><p class="small">Cada trilha pode ter um simulado por domingo. Ele só aparece para os jogadores depois de publicado e só abre no domingo marcado, das 0h às 23h59.</p>'
+  h+='<div class="panel"><h2>'+(E?'Editar simulado':'Novo simulado de domingo')+'</h2><p class="small">Cada trilha pode ter um simulado por domingo. Ele só aparece para os jogadores depois de publicado e fica aberto no fim de semana: do sábado anterior, às 0h, até o domingo marcado, às 23h59.</p>'
    +'<form class="grid2" id="smf"><label class="small">Trilha<select id="smTr">'+trOpts(E?E.trilha:"policial")+'</select></label><label class="small">Domingo<input type="date" id="smData" required value="'+(E?E.data:smNextSunday())+'"></label>'
    +'<label class="small">Título<input type="text" id="smTit" maxlength="120" value="'+esc(E?E.titulo:"")+'" placeholder="Simulado 1 · Policial"></label><label class="small">Estilo da banca<input type="text" id="smEst" maxlength="40" value="'+esc(E?E.estilo:"FGV/FCC")+'"></label>'
    +'<label class="small">Tempo de prova (minutos)<input type="number" id="smDur" min="10" max="600" value="'+(E?E.duracao_min:240)+'"></label>'
@@ -419,7 +419,7 @@ async function vSim(v){
   v.querySelectorAll("[data-se]").forEach(b=>b.onclick=()=>{SM.edit=+b.dataset.se;vSim(v);window.scrollTo(0,0)});
   v.querySelectorAll("[data-sq]").forEach(b=>b.onclick=()=>{SM.open=+b.dataset.sq;SM.qs=null;vSim(v);setTimeout(()=>{const q=$("smQ");if(q)q.scrollIntoView({behavior:"smooth"})},50)});
   v.querySelectorAll("[data-sp]").forEach(b=>b.onclick=async()=>{const x=L.find(y=>y.id===+b.dataset.sp);
-    if(!x.publicado&&!confirm("Publicar o simulado de "+dday(x.data)+" ("+(TRACKS[x.trilha]||{}).n+") com "+x.n_questoes+" questões? Ele aparece para os jogadores e abre no domingo."))return;b.disabled=true;
+    if(!x.publicado&&!confirm("Publicar o simulado de "+dday(x.data)+" ("+(TRACKS[x.trilha]||{}).n+") com "+x.n_questoes+" questões? Ele aparece para os jogadores e abre no sábado anterior ao domingo marcado."))return;b.disabled=true;
     try{await rpc("admin_simulado_salvar",{p_id:x.id,p_trilha:x.trilha,p_data:x.data,p_titulo:x.titulo,p_estilo:x.estilo,p_duracao:x.duracao_min,p_publicado:!x.publicado});SM.msg=x.publicado?"Simulado voltou para rascunho.":"Simulado publicado!";await smLoad();vSim(v)}catch(e){alert(smErr(e));b.disabled=false}});
   v.querySelectorAll("[data-sx]").forEach(b=>b.onclick=async()=>{const x=L.find(y=>y.id===+b.dataset.sx);if(!confirm("Excluir o simulado de "+dday(x.data)+" e todas as suas questões?"))return;
     try{await rpc("admin_simulado_excluir",{p_id:x.id});if(SM.open===x.id)SM.open=null;SM.msg="Simulado excluído.";await smLoad();vSim(v)}catch(e){alert(smErr(e))}});
