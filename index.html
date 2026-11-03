@@ -146,6 +146,13 @@ h1 em{font-style:normal;color:var(--money)}
 .ans .txt{min-width:0;overflow-wrap:anywhere}
 .ans.sel{border-color:var(--ink)}
 .ans.sel .bub{background:var(--ink);color:var(--sheet)}
+.simopt{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:center}
+.cutbtn{width:40px;height:40px;border-radius:8px;border:1.5px solid var(--line);background:var(--sheet);color:var(--muted);display:grid;place-items:center;cursor:pointer;transition:border-color .15s,background .15s,color .15s}
+.cutbtn:hover{border-color:var(--ink);color:var(--ink)}
+.cutbtn svg{width:20px;height:20px}
+.cutbtn[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--sheet)}
+.ans.cut .txt{text-decoration:line-through;opacity:.45}
+.ans.cut .bub{opacity:.45}
 .ans.pending{animation:pulse .5s ease-in-out infinite alternate}
 .ans.right{border-color:var(--money);background:var(--money-soft)}
 .ans.right .bub{background:var(--money);border-color:var(--money);color:var(--sheet)}
@@ -12910,13 +12917,23 @@ function simRender(){
   const tx=$("simTexto");if(q.texto_base){tx.hidden=false;tx.innerHTML='<b class="tb">Texto</b>';tx.appendChild(document.createTextNode(q.texto_base));tx.scrollTop=0}else tx.hidden=true;
   $("simEnun").textContent=q.enunciado;
   const box=$("simOpts");box.innerHTML="";
-  simPerm(q.ordem).forEach((oi,pos)=>{const b=document.createElement("button");b.type="button";b.className="ans"+(SIM.ans[q.ordem]===oi?" sel":"");
-    b.innerHTML='<span class="bub">'+"ABCDE"[pos]+'</span><span class="txt"></span>';b.querySelector(".txt").textContent=q.opcoes[oi];
+  const cut=simCut(q.ordem);
+  simPerm(q.ordem).forEach((oi,pos)=>{const L="ABCDE"[pos],isCut=cut.includes(oi),row=document.createElement("div");row.className="simopt";
+    const c=document.createElement("button");c.type="button";c.className="cutbtn";c.innerHTML=SCISSORS;
+    c.setAttribute("aria-pressed",isCut?"true":"false");c.setAttribute("aria-label",(isCut?"Desfazer o descarte da alternativa ":"Descartar a alternativa ")+L);c.title=isCut?"Desfazer descarte":"Descartar alternativa";
+    c.onclick=()=>{sfx.click();const k=cut.indexOf(oi);if(k>=0)cut.splice(k,1);else{cut.push(oi);if(SIM.ans[q.ordem]===oi){delete SIM.ans[q.ordem];simChanged()}}simCutSave();simRender()};
+    const b=document.createElement("button");b.type="button";b.className="ans"+(SIM.ans[q.ordem]===oi?" sel":"")+(isCut?" cut":"");
+    b.innerHTML='<span class="bub">'+L+'</span><span class="txt"></span>';b.querySelector(".txt").textContent=q.opcoes[oi];
     b.setAttribute("aria-pressed",SIM.ans[q.ordem]===oi?"true":"false");
-    b.onclick=()=>{sfx.click();if(SIM.ans[q.ordem]===oi)delete SIM.ans[q.ordem];else SIM.ans[q.ordem]=oi;simChanged();simRender()};box.appendChild(b)});
+    b.onclick=()=>{sfx.click();if(SIM.ans[q.ordem]===oi)delete SIM.ans[q.ordem];else{SIM.ans[q.ordem]=oi;const k=cut.indexOf(oi);if(k>=0){cut.splice(k,1);simCutSave()}}simChanged();simRender()};
+    row.appendChild(c);row.appendChild(b);box.appendChild(row)});
   $("simPrev").disabled=SIM.idx===0;$("simNext").textContent=SIM.idx===n-1?"Ir para a entrega ↓":"Próxima →";
   const g=$("simGrid");g.innerHTML="";Q.forEach((x,i)=>{const b=document.createElement("button");b.type="button";b.textContent=x.ordem;b.className=(SIM.ans[x.ordem]!=null?"ok":"")+(i===SIM.idx?" cur":"");b.setAttribute("aria-label","Questão "+x.ordem+(SIM.ans[x.ordem]!=null?", respondida":", em branco"));b.onclick=()=>{SIM.idx=i;simRender();window.scrollTo(0,0)};g.appendChild(b)});
 }
+// tesoura: alternativas descartadas pelo usuário (só neste aparelho, não vai para o servidor)
+const SCISSORS='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.12 15.88"/><path d="M14.47 14.48 20 20"/><path d="M8.12 8.12 12 12"/></svg>';
+function simCut(ordem){if(!SIM.cut||SIM.cutId!==SIM.cur.id){SIM.cutId=SIM.cur.id;SIM.cut={};try{SIM.cut=JSON.parse(localStorage.getItem(simKey()+"-cut")||"{}")||{}}catch(e){}}return SIM.cut[ordem]||(SIM.cut[ordem]=[])}
+function simCutSave(){try{localStorage.setItem(simKey()+"-cut",JSON.stringify(SIM.cut))}catch(e){}}
 function simChanged(){SIM.dirty=true;try{localStorage.setItem(simKey(),JSON.stringify(SIM.ans))}catch(e){}$("simSaved").textContent="Salvando…";simSaveSoon(2500);simResetSend()}
 function simSaveSoon(ms){clearTimeout(SIM.saveT);SIM.saveT=setTimeout(simSave,ms)}
 async function simSave(){
@@ -12936,7 +12953,7 @@ async function simSend(auto){
   SIM.sending=true;clearTimeout(SIM.saveT);simStopClock();$("simSend").disabled=true;$("simSendMsg").textContent=auto?"O tempo acabou. Entregando sua prova…":"Entregando…";
   for(let t=0;t<3;t++){
     try{const {data,error}=await sb.rpc("simulado_entregar",{p_simulado:SIM.cur.id,p_respostas:SIM.ans});if(error)throw error;
-      try{localStorage.removeItem(simKey())}catch(e){}SIM.sending=false;$("simSend").disabled=false;SIM.info={};simShowResult(data);sfx.win&&sfx.win();return}
+      try{localStorage.removeItem(simKey());localStorage.removeItem(simKey()+"-cut")}catch(e){}SIM.cut=null;SIM.sending=false;$("simSend").disabled=false;SIM.info={};simShowResult(data);sfx.win&&sfx.win();return}
     catch(e){const m=String(e&&e.message||"");if(!(m.includes("fetch")||m.includes("network")))break;await new Promise(r=>setTimeout(r,2000))}
   }
   SIM.sending=false;$("simSend").disabled=false;$("simSendMsg").textContent="Não conseguimos entregar agora (sem conexão?). Suas respostas estão salvas neste aparelho. Toque em entregar de novo.";simResetSend();
