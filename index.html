@@ -368,6 +368,12 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
 .simmat .bar{display:grid;grid-template-columns:minmax(0,1fr) 110px 64px;gap:10px;align-items:center;font-size:.88rem}
 .simmat .bar i{height:8px;background:var(--line);border-radius:99px;overflow:hidden}.simmat .bar u{display:block;height:100%;background:var(--money)}
 .simrk{width:100%;border-collapse:collapse;font-size:.88rem}.simrk td,.simrk th{padding:7px 6px;border-bottom:1px solid var(--line);text-align:left}.simrk tr.me td{background:var(--money-soft);font-weight:700}.simrk .n{text-align:right;font-family:var(--f-mono)}
+.simrep{display:grid;gap:10px}
+.simrep .rp{border:1.5px solid var(--line);border-left-width:5px;border-radius:8px;padding:10px 12px;display:grid;gap:4px}
+.simrep .rp.hi{border-left-color:var(--dropout)}.simrep .rp.md{border-left-color:var(--gold,#E9B23B)}.simrep .rp.ok{border-left-color:var(--money)}
+.simrep .rp b{font-size:.98rem}.simrep .rp .small{margin:0}
+.simrep .lv{font-family:var(--f-mono);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase}
+.simrep .rp.hi .lv{color:var(--dropout)}.simrep .rp.ok .lv{color:var(--money)}
 .simgab{display:grid;gap:12px}
 .simgab .gq{border:1.5px solid var(--line);border-radius:8px;padding:14px;display:grid;gap:8px}
 .simgab .gq.err{border-color:var(--dropout)}
@@ -12962,6 +12968,34 @@ async function simOpenResult(id){
   try{const {data,error}=await sb.rpc("simulado_resultado",{p_simulado:id});if(error)throw error;simShowResult(data)}
   catch(e){alert(simErr(e))}
 }
+// relatório "onde estudar mais", montado com os acertos por matéria (e, quando liberado, com o gabarito)
+function simLaws(txts){const c={};const re=/(Lei(?: Complementar| nº)? ?\d[\d.]*\/\d{4}|LC \d+\/\d{4}|Súmula(?: Vinculante)? \d+(?: do (?:STF|STJ))?|Código (?:Penal|Civil|de Processo Penal|de Processo Civil|Tributário Nacional|de Trânsito Brasileiro)|\b(?:CPP|CPC|CTN|CTB|ECA|LEP|LRF|LGPD|LBI|CF|CP)\b)/g;
+  txts.forEach(t=>{const seen=new Set();(String(t||"").match(re)||[]).forEach(m=>{m=m.replace(/\bCF\b/,"Constituição").replace(/\bCP\b/,"Código Penal");if(!seen.has(m)){seen.add(m);c[m]=(c[m]||0)+1}})});
+  return Object.entries(c).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0])}
+function simReportHtml(d){
+  const M=(d.por_materia||[]).filter(x=>x.total>0).map(x=>{const p=Math.round(x.acertos/x.total*100);return{k:x.materia,a:x.acertos,t:x.total,p,perd:x.total-x.acertos,lv:p<50?"hi":p<70?"md":"ok"}});
+  if(!M.length)return"";
+  const G=d.gabarito||null,okStudy=d.trilha===track;
+  const fracas=M.filter(x=>x.lv!=="ok").sort((a,b)=>b.perd-a.perd||a.p-b.p),fortes=M.filter(x=>x.lv==="ok").sort((a,b)=>b.p-a.p);
+  const top=fracas.slice(0,3),ganho=top.reduce((s,x)=>s+x.perd,0);
+  let h='<div class="sheet panel"><span class="eyebrow">📌 Onde estudar mais</span>';
+  if(!fracas.length)h+='<p style="margin:0">Você foi bem em todas as matérias, com 70% ou mais em cada uma. Continue revisando para manter o nível.</p>';
+  else h+='<p style="margin:0">Você perdeu mais pontos em <b>'+top.map(x=>esc(SUBJ[x.k]||x.k)).join("</b>, <b>")+'</b>. Melhorar nelas vale até <b>'+ganho+' quest'+(ganho===1?'ão':'ões')+'</b> a mais na próxima prova.</p>';
+  h+='<div class="simrep">';
+  fracas.forEach(x=>{
+    const nome=esc(SUBJ[x.k]||x.k);let det="";
+    if(G){const er=G.filter(q=>q.materia===x.k&&q.minha!==q.gabarito);const ords=er.map(q=>q.ordem);const leis=simLaws(er.map(q=>q.explicacao));
+      if(ords.length)det+='<p class="small">Questões que você errou ou deixou em branco: '+ords.join(", ")+'.</p>';
+      if(leis.length)det+='<p class="small">Revise: '+leis.map(esc).join(" · ")+'.</p>';
+      if(ords.length)det+='<div class="row"><button class="chipbtn" type="button" data-repmat="'+esc(x.k)+'">Ver essas questões comentadas →</button></div>'}
+    h+='<div class="rp '+x.lv+'"><span class="lv">'+(x.lv==="hi"?"Prioridade alta":"Atenção")+'</span><b>'+nome+' · '+x.a+' de '+x.t+' ('+x.p+'%)</b><p class="small">Você perdeu '+x.perd+' quest'+(x.perd===1?'ão':'ões')+(x.t>=8?', numa matéria de peso na prova.':'.')+'</p>'+det+'</div>'});
+  if(fortes.length)h+='<div class="rp ok"><span class="lv">Seus pontos fortes</span><p class="small">'+fortes.map(x=>esc(SUBJ[x.k]||x.k)+' ('+x.p+'%)').join(" · ")+'</p></div>';
+  h+='</div>';
+  if(!G&&fracas.length)h+='<p class="small" style="margin:0">Quando o gabarito sair, este quadro mostra também quais questões você errou em cada matéria e os temas para revisar.</p>';
+  const mats=fracas.map(x=>x.k).filter(k=>SUBJ[k]);
+  if(okStudy&&mats.length&&user)h+='<div class="row"><button class="btn" type="button" id="simRepStudy" data-mats=\''+esc(JSON.stringify(mats))+'\'>Estudar essas matérias nos cartões →</button></div>';
+  return h+'</div>';
+}
 function simShowResult(d){
   SIM.res=d;SIM.cur=null;simStopClock();$("simExam").hidden=true;$("simClock").hidden=true;const r=$("simRes");r.hidden=false;show("sim");
   const m=d.meu||{},ok=m.status==="entregue",tn=(TRACKS[d.trilha]||{}).n||"";
@@ -12970,6 +13004,7 @@ function simShowResult(d){
     h+='<p class="big">'+m.acertos+' <span style="font-size:1.1rem;color:var(--muted)">de '+m.total+' · '+pct+'%</span></p><p style="margin:0"><b>'+m.posicao+'º lugar</b>'+(d.liberado?'':' até agora')+' · tempo '+simTempo(m.tempo_seg)+'</p><div class="sharebox" id="simShare"></div>'}
   else h+='<p class="small" style="margin:0">Você não fez este simulado, mas o gabarito comentado está liberado para estudar.</p>';
   h+='</div>';
+  if(ok&&(d.por_materia||[]).length)h+=simReportHtml(d);
   if(ok&&(d.por_materia||[]).length)h+='<div class="sheet panel"><span class="eyebrow">Desempenho por matéria</span><div class="simmat">'+d.por_materia.map(x=>{const p=x.total?Math.round(x.acertos/x.total*100):0;return'<div class="bar"><span>'+esc(SUBJ[x.materia]||x.materia)+'</span><i><u style="width:'+p+'%"></u></i><span class="mono">'+x.acertos+'/'+x.total+'</span></div>'}).join("")+'</div></div>';
   if(d.gabarito){
     const G=d.gabarito,err=G.filter(q=>q.minha!==q.gabarito).length;
@@ -12978,14 +13013,16 @@ function simShowResult(d){
   h+='<div class="row"><button class="btn" type="button" id="simHome">Voltar à capa</button></div>';
   r.innerHTML=h;
   if(ok&&$("simShare"))shareUI($("simShare"),"📝 Fiz o Simulado do Fim de Semana da trilha "+tn+": "+m.acertos+"/"+m.total+" acertos, "+m.posicao+"º lugar. Encara? "+SHARE_URL);
-  if(d.gabarito)simRenderGab();
+  SIM.gabMat=null;if(d.gabarito)simRenderGab();
+  r.querySelectorAll("[data-repmat]").forEach(b=>b.onclick=()=>{sfx.click();SIM.gabMat=b.dataset.repmat;SIM.onlyErr=true;if($("simOnlyErr"))$("simOnlyErr").setAttribute("aria-pressed","true");simRenderGab();$("simGab").scrollIntoView({behavior:"smooth",block:"start"})});
+  if($("simRepStudy"))$("simRepStudy").onclick=()=>{sfx.click();const av=studyAvail(),sel=JSON.parse($("simRepStudy").dataset.mats).filter(k=>av.includes(k));if(sel.length)setStudyPicked(sel);SIM.res=null;renderStart();show("start");window.scrollTo(0,0);if(ST.loaded)openStudySubj()};
   if($("simOnlyErr"))$("simOnlyErr").onclick=()=>{SIM.onlyErr=!SIM.onlyErr;$("simOnlyErr").setAttribute("aria-pressed",SIM.onlyErr);simRenderGab()};
   $("simHome").onclick=()=>{SIM.res=null;renderStart();show("start")};
   window.scrollTo(0,0);
 }
 function simRenderGab(){
   const box=$("simGab");if(!box)return;const ok=SIM.res.meu&&SIM.res.meu.status==="entregue";box.innerHTML="";
-  SIM.res.gabarito.filter(q=>!SIM.onlyErr||q.minha!==q.gabarito).forEach(q=>{
+  SIM.res.gabarito.filter(q=>(!SIM.onlyErr||q.minha!==q.gabarito)&&(!SIM.gabMat||q.materia===SIM.gabMat)).forEach(q=>{
     const d=document.createElement("div"),wrong=ok&&q.minha!==q.gabarito;d.className="gq"+(wrong?" err":"");
     d.innerHTML='<span class="eyebrow"></span>'+(q.texto_base?'<details><summary class="small">Ver o texto</summary><div class="simtexto" style="margin-top:6px"></div></details>':'')+'<p class="simenun" style="font-size:1rem"></p><ol></ol><p class="small expl" style="margin:0"></p>';
     d.querySelector(".eyebrow").textContent="Questão "+q.ordem+" · "+(SUBJ[q.materia]||q.materia)+(ok?(q.minha==null?" · em branco":wrong?" · você errou":" · você acertou"):"");
@@ -12996,6 +13033,7 @@ function simRenderGab(){
     const rb=document.createElement("button");rb.type="button";rb.className="rptlink";rb.textContent="⚑ Reportar erro nesta questão";rb.onclick=()=>openReport({origem:"simulado",ref:SIM.res.id,ordem:q.ordem,trecho:q.enunciado,what:"Questão "+q.ordem+" do simulado"});d.appendChild(rb);
     box.appendChild(d)});
   if(!box.children.length)box.innerHTML='<p class="small" style="margin:0">Nenhuma questão errada. Parabéns! 🎉</p>';
+  if(SIM.gabMat){const t=document.createElement("div");t.className="row";t.innerHTML='<span class="small">Mostrando só <b></b>.</span><button class="chipbtn" type="button">Ver todas as matérias</button>';t.querySelector("b").textContent=SUBJ[SIM.gabMat]||SIM.gabMat;t.querySelector("button").onclick=()=>{SIM.gabMat=null;simRenderGab()};box.prepend(t)}
 }
 $("simPrev").onclick=()=>{if(SIM.idx>0){SIM.idx--;simRender();window.scrollTo(0,0)}};
 $("simNext").onclick=()=>{const n=SIM.cur.questoes.length;if(SIM.idx<n-1){SIM.idx++;simRender();window.scrollTo(0,0)}else $("simSend").scrollIntoView({behavior:"smooth",block:"center"})};
