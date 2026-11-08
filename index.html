@@ -12744,7 +12744,7 @@ function openPremium(why){
   $("pmWhy").textContent=PL.premium?"Seu Premium vale até "+fmtDate(PL.ate)+". Se renovar agora, os meses novos são somados ao que falta.":(why||"No plano grátis são "+LIM.provas+" provas e "+LIM.cartoes+" cartões de estudo por dia. Com o Premium, tudo fica liberado.");
   renderPmBody();$("ovPremium").hidden=false;($("ovPremium").querySelector("#pmBody .btn")||$("pmClose")).focus();
   // confere de novo se o Pix automático foi ligado/desligado depois que a página abriu
-  if(sb)sb.rpc("plano_info").then(({data})=>{if(data&&(data.pagbank===true)!==!!PREMIUM.pagbank){PREMIUM.pagbank=data.pagbank===true;if(!$("ovPremium").hidden&&!$("pbCpf")&&!$("pbQr")&&!$("pmCode"))renderPmBody()}},()=>{});
+  if(sb)sb.rpc("plano_info").then(({data})=>{if(data&&(data.pagbank===true)!==!!PREMIUM.pagbank){PREMIUM.pagbank=data.pagbank===true;if(!$("ovPremium").hidden&&!PL.pendente&&!$("pbCpf"))renderPmBody()}},()=>{});
 }
 function renderPmBody(){
   const box=$("pmBody");
