@@ -7,18 +7,18 @@ button{font:inherit;font-weight:700;padding:14px 18px;border:0;border-radius:8px
 #st{font-weight:700;min-height:1.4em}
 pre{white-space:pre-wrap;word-break:break-all;font-size:11px;background:#fff;border:1px solid #ccc;border-radius:6px;padding:8px;max-height:45vh;overflow:auto}
 </style></head><body>
-<h1 style="font-size:1.2rem">Copiar SQL para o Supabase</h1>
+<h1 style="font-size:1.2rem">Copiar para o Supabase</h1>
 <p>Arquivo: <b id="nome"></b> · <span id="tam"></span></p>
 <button id="cp" disabled>Carregando…</button>
 <p id="st" role="status"></p>
-<p>Depois: no Supabase, abra o SQL Editor, apague tudo, cole e clique em Run.</p>
+<p>Depois cole no Supabase (SQL Editor ou editor da Edge Function), apagando o que estiver lá.</p>
 <pre id="txt"></pre>
 <script>
-const f=(new URLSearchParams(location.search).get("f")||"").replace(/[^\w.-]/g,"");
+const f=(new URLSearchParams(location.search).get("f")||"").replace(/[^\w.\/-]/g,"").replace(/\.\.+/g,".");
 const $=id=>document.getElementById(id);$("nome").textContent=f||"(nenhum)";
 let sql="";
 fetch("supabase/"+f,{cache:"no-store"}).then(r=>{if(!r.ok)throw 0;return r.text()}).then(t=>{sql=t;$("txt").textContent=t;
-  $("tam").textContent=t.split("\n").length+" linhas";$("cp").disabled=false;$("cp").textContent="Copiar SQL completo"})
+  $("tam").textContent=t.split("\n").length+" linhas";$("cp").disabled=false;$("cp").textContent="Copiar tudo"})
 .catch(()=>{$("cp").textContent="Arquivo não encontrado"});
 $("cp").onclick=async()=>{try{await navigator.clipboard.writeText(sql);$("st").textContent="✅ Copiado! "+sql.split("\n").length+" linhas. Agora cole no SQL Editor."}
   catch(e){const r=document.createRange();r.selectNodeContents($("txt"));const s=getSelection();s.removeAllRanges();s.addRange(r);
