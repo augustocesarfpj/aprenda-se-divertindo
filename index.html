@@ -12707,7 +12707,7 @@ async function loadPlanoInfo(){
   try{const {data,error}=await sb.rpc("plano_info");if(error)throw error;const d=data||{};
     PREMIUM.cobranca=!!d.cobranca;if(d.precos)PREMIUM.precos=Object.fromEntries(Object.entries(d.precos).map(([k,v])=>[k,+v]));
     if(d.pix)PREMIUM.pix=Object.assign({chave:"",nome:"",cidade:"",whats:""},d.pix);
-    if(Array.isArray(d.emails)&&d.emails.length)PREMIUM.emails=d.emails;
+    if(Array.isArray(d.emails)&&d.emails.length)PREMIUM.emails=d.emails;PREMIUM.pagbank=d.pagbank===true;
     if(d.indicacao)PREMIUM.ind={ativa:!!d.indicacao.ativa,fim:d.indicacao.fim||null,valor:+d.indicacao.valor||0,minimo:+d.indicacao.minimo||50};
     if(d.limites)LIM={provas:+d.limites.provas||5,cartoes:+d.limites.cartoes||5};
     PREMIUM.loaded=true;
@@ -12720,7 +12720,7 @@ async function plLoad(){
   try{const {data,error}=await sb.rpc("meu_plano");if(error)throw error;const r=data||{};
     PL.premium=!!r.premium;PL.ate=r.ate;PL.origem=r.origem;PL.plano=r.plano;PL.pendente=r.pendente||null;PL.recusado=r.ultimo_recusado||null;
     PL.srv={provas:r.provas_hoje||0,cartoes:r.cartoes_hoje||0};if(r.limites)LIM={provas:+r.limites.provas||5,cartoes:+r.limites.cartoes||5};
-    if(typeof r.cobranca==="boolean")PREMIUM.cobranca=r.cobranca;PL.loaded=true}
+    if(typeof r.cobranca==="boolean")PREMIUM.cobranca=r.cobranca;PL.loaded=true;if(PL.pendente&&PL.pendente.gateway==="pagbank"&&!PB.checked){PB.checked=true;pbCheck()}}
   catch(e){}
   renderPlan();if(typeof renderSimBoxNow==="function"&&SIM.info[track])renderSimBoxNow();
 }
@@ -12749,6 +12749,7 @@ function renderPmBody(){
   if(!user){box.innerHTML='<p class="small" style="margin:0">Primeiro crie sua conta grátis: o Premium fica ligado a ela.</p><div class="row"><button class="btn money" type="button" id="pmUp">Criar conta grátis</button><button class="btn ghost" type="button" id="pmIn">Já tenho conta</button></div>';
     $("pmUp").onclick=()=>{$("ovPremium").hidden=true;openAuth("up")};$("pmIn").onclick=()=>{$("ovPremium").hidden=true;openAuth("in")};return}
   const p=PL.pendente;
+  if(p&&p.gateway==="pagbank"&&p.pix_copia){renderPbPend(box,p);return}
   if(p){
     const code=pixCode(p.valor,"P"+String(p.id).slice(0,8)),L=pmProofLinks(p);
     box.innerHTML='<div class="plan pro"><b>Pedido aguardando confirmação</b><span class="usage">Plano '+esc(planName(p.plano))+' · '+fmtBRL(p.valor)+' · feito em '+fmtDate(p.criado_em)+'</span><span class="usage">Assim que o pagamento for confirmado, o Premium é liberado na sua conta, normalmente em poucas horas.</span></div>'
@@ -12770,6 +12771,7 @@ function renderPmBody(){
     if(code){el.innerHTML='<textarea class="pixcode" id="pmCode" rows="3" readonly></textarea><div class="row"><button class="btn" type="button" id="pmCopy">Copiar código Pix ('+fmtBRL(v)+')</button></div><p class="small" id="pmCopied" role="status" style="margin:0"></p><span class="small">Ou use a chave Pix: <b id="pmKey"></b></span>';
       $("pmCode").value=code;$("pmKey").textContent=PREMIUM.pix.chave;$("pmCopy").onclick=()=>pmCopy(code)}
     else el.innerHTML='<p class="small" style="margin:0">Toque em “Já paguei” para registrar o pedido de '+fmtBRL(v)+' e mandar uma mensagem: respondemos com os dados do Pix.</p>'};
+  if(PREMIUM.pagbank){renderPbForm(box);return}
   box.querySelectorAll("input[name=pmPlan]").forEach(r=>r.onchange=()=>{PL.escolha=r.value;drawPix()});
   if(!PREMIUM.precos[PL.escolha])PL.escolha=(PLANOS.find(([k])=>PREMIUM.precos[k]>0)||["mensal"])[0];
   drawPix();
@@ -12777,6 +12779,60 @@ function renderPmBody(){
     try{const {data,error}=await sb.rpc("solicitar_assinatura",{p_plano:PL.escolha});if(error)throw error;PL.pendente=data;renderPmBody();renderPlan();
       const a=$("pmMail");if(a){a.classList.remove("ghost");a.classList.add("money");a.focus()}}
     catch(e){pmErr(e);b.disabled=false}};
+}
+/* Pix automático pelo PagBank: o Premium é liberado sozinho quando o pagamento cai */
+const PB={timer:null,until:0,checked:false,busy:false};
+async function pbCall(body){const {data,error}=await sb.functions.invoke("pagbank-pix",{body});
+  if(error){let d=null;try{d=await error.context.json()}catch(e){}const er=new Error((d&&d.erro)||error.message||"ERRO");er.detalhe=d&&d.detalhe;throw er}return data}
+function pbStop(){if(PB.timer){clearInterval(PB.timer);PB.timer=null}}
+async function pbCheck(){if(PB.busy||!user)return;PB.busy=true;
+  try{const r=await pbCall({acao:"verificar"});if(r&&r.status==="confirmado"){pbStop();await plLoad();
+      if(!$("ovPremium").hidden){$("pmTitle").textContent="Pagamento confirmado! 💎";$("pmWhy").textContent="Seu Premium já está liberado até "+fmtDate(PL.ate)+". Bons estudos!";
+        $("pmBody").innerHTML='<div class="plan pro"><b>Tudo certo!</b><span class="usage">Provas e estudo sem limite a partir de agora.</span></div><div class="row"><button class="btn money" type="button" id="pmOk">Bora estudar</button></div>';$("pmOk").onclick=()=>{$("ovPremium").hidden=true};$("pmOk").focus()}}}
+  catch(e){}PB.busy=false}
+function pbStart(){pbStop();PB.until=Date.now()+20*60e3;PB.timer=setInterval(()=>{if($("ovPremium").hidden||Date.now()>PB.until){pbStop();return}pbCheck()},6000)}
+function cpfMask(v){v=String(v).replace(/\D/g,"").slice(0,11);return v.replace(/^(\d{3})(\d)/,"$1.$2").replace(/^(\d{3})\.(\d{3})(\d)/,"$1.$2.$3").replace(/\.(\d{3})(\d{1,2})$/,".$1-$2")}
+function cpfValid(c){c=String(c).replace(/\D/g,"");if(!/^\d{11}$/.test(c)||/^(\d)\1{10}$/.test(c))return false;
+  for(const n of[9,10]){let s=0;for(let i=0;i<n;i++)s+=+c[i]*(n+1-i);if(s*10%11%10!==+c[n])return false}return true}
+function renderPbForm(box){
+  const nm=(perfil&&perfil.nome)||"";
+  // troca os passos 2 e 3 do Pix manual pelo formulário do Pix automático
+  const html=box.innerHTML,cut=html.indexOf('<span class="eyebrow">2.');
+  box.innerHTML=html.slice(0,cut)+'<span class="eyebrow">2. Seus dados para o Pix</span>'
+    +'<div class="form"><label>Nome completo<input type="text" id="pbNome" autocomplete="name" maxlength="120" value="'+esc(nm)+'"></label>'
+    +'<label>CPF<input type="text" id="pbCpf" inputmode="numeric" autocomplete="off" maxlength="14" placeholder="000.000.000-00"></label></div>'
+    +'<p class="small" style="margin:0">O CPF é pedido pelo PagBank para gerar o Pix. Ele vai só para o PagBank: não fica guardado no jogo.</p>'
+    +'<span class="eyebrow">3. Pague e pronto</span><div class="row"><button class="btn money" type="button" id="pbGo">Gerar Pix</button></div>'
+    +'<p class="small" style="margin:0">O Premium é liberado sozinho assim que o Pix cair, em poucos segundos. Pagamento único, sem renovação automática: para renovar, é só pagar de novo e os meses são somados.</p><p class="small err" id="pmErr" role="alert" style="margin:0" hidden></p>';
+  const btnTxt=()=>{const v=PREMIUM.precos[PL.escolha];$("pbGo").textContent="Gerar Pix de "+fmtBRL(v)};
+  if(!PREMIUM.precos[PL.escolha])PL.escolha=(PLANOS.find(([k])=>PREMIUM.precos[k]>0)||["mensal"])[0];
+  box.querySelectorAll("input[name=pmPlan]").forEach(r=>{r.checked=r.value===PL.escolha;r.onchange=()=>{PL.escolha=r.value;btnTxt()}});btnTxt();
+  $("pbCpf").oninput=e=>{e.target.value=cpfMask(e.target.value)};
+  $("pbGo").onclick=async()=>{const b=$("pbGo"),cpf=$("pbCpf").value.replace(/\D/g,""),nome=$("pbNome").value.trim();
+    const el=$("pmErr");el.hidden=true;
+    if(nome.split(/\s+/).length<2){el.hidden=false;el.textContent="Escreva seu nome completo (nome e sobrenome).";$("pbNome").focus();return}
+    if(!cpfValid(cpf)){el.hidden=false;el.textContent="Confira o CPF: esse número não é válido.";$("pbCpf").focus();return}
+    b.disabled=true;b.textContent="Gerando Pix…";
+    try{const d=await pbCall({acao:"criar",plano:PL.escolha,cpf,nome});PL.pendente=d;renderPmBody();renderPlan()}
+    catch(e){console.warn("pagbank",e);pbErr(e);b.disabled=false;btnTxt()}};
+}
+function pbErr(e){const el=$("pmErr");if(!el)return;const m=String(e&&e.message||"");el.hidden=false;
+  el.textContent=m.includes("fetch")||m.includes("Failed to send")?"Sem conexão. Tente de novo.":m==="CPF"?"Confira o CPF: esse número não é válido.":m==="PLANO_INVALIDO"?"Esse plano não está disponível agora.":m==="PAGBANK_DESLIGADO"?"O Pix automático está em manutenção. Tente de novo mais tarde.":"Não conseguimos gerar o Pix agora. Tente de novo em instantes."+(e&&e.detalhe?" ("+e.detalhe+")":"")}
+function renderPbPend(box,p){
+  const exp=p.pix_expira?new Date(p.pix_expira):null,vencido=exp&&exp<new Date();
+  box.innerHTML='<div class="plan pro"><b>'+(vencido?"Esse Pix venceu":"Pix gerado · aguardando pagamento")+'</b><span class="usage">Plano '+esc(planName(p.plano))+' · '+fmtBRL(p.valor)+(exp&&!vencido?' · vale até '+exp.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}):'')+'</span>'
+    +'<span class="usage">'+(vencido?"Se você já pagou, espere alguns segundos: o Premium aparece sozinho. Se não pagou, gere um Pix novo.":"Pague no app do seu banco. O Premium é liberado sozinho assim que o Pix cair, pode deixar esta janela aberta.")+'</span></div>'
+    +(vencido?'':(p.pix_qr?'<img id="pbQr" alt="QR Code do Pix" width="220" height="220" style="justify-self:center;background:#fff;border-radius:8px;padding:6px">':'')
+      +'<span class="eyebrow">Pix copia e cola</span><textarea class="pixcode" id="pmCode" rows="3" readonly></textarea><div class="row"><button class="btn money" type="button" id="pmCopy">Copiar código Pix</button></div><p class="small" id="pmCopied" role="status" style="margin:0"></p>')
+    +'<p class="small" id="pbSt" role="status" style="margin:0">'+(vencido?"":"⏳ Esperando o pagamento…")+'</p>'
+    +'<div class="row"><button class="btn ghost" type="button" id="pbCheck">Já paguei, conferir agora</button><button class="linkbtn" type="button" id="pmSwap">'+(vencido?"Gerar Pix novo":"Trocar de plano")+'</button><button class="linkbtn" type="button" id="pmCancel">Cancelar pedido</button></div><p class="small err" id="pmErr" role="alert" style="margin:0" hidden></p>';
+  if(!vencido){$("pmCode").value=p.pix_copia;$("pmCopy").onclick=()=>pmCopy(p.pix_copia);
+    if(p.pix_qr){const im=$("pbQr");im.onerror=()=>im.remove();im.src=p.pix_qr}}
+  $("pbCheck").onclick=async()=>{const b=$("pbCheck");b.disabled=true;$("pbSt").textContent="Conferindo com o PagBank…";await pbCheck();
+    if(PL.pendente){$("pbSt").textContent="Ainda não chegou. Pix costuma cair em segundos; conferimos de novo sozinhos.";b.disabled=false}};
+  $("pmSwap").onclick=()=>{pbStop();PL.pendente=null;PL.escolha=p.plano;renderPmBody()};
+  $("pmCancel").onclick=async()=>{pbStop();try{const {error}=await sb.rpc("cancelar_pedido");if(error)throw error;PL.pendente=null;renderPmBody();renderPlan()}catch(e){pmErr(e)}};
+  pbStart();
 }
 function pmErr(e){const el=$("pmErr");if(!el)return;const m=String(e&&e.message||"");el.hidden=false;el.textContent=m.includes("fetch")?"Sem conexão. Tente de novo.":m.includes("PLANO_INVALIDO")?"Esse plano não está disponível agora.":"Não deu certo agora. Tente de novo em instantes."}
 function pmCopy(code){const ok=()=>{$("pmCopied").textContent="Código copiado! No app do seu banco, escolha Pix copia e cola e cole."};
