@@ -12819,7 +12819,9 @@ function renderPbForm(box){
     catch(e){console.warn("pagbank",e);pbErr(e);b.disabled=false;btnTxt()}};
 }
 function pbErr(e){const el=$("pmErr");if(!el)return;const m=String(e&&e.message||"");el.hidden=false;
-  el.textContent=m.includes("fetch")||m.includes("Failed to send")?"Sem conexão. Tente de novo.":m==="CPF"?"Confira o CPF: esse número não é válido.":m==="PLANO_INVALIDO"?"Esse plano não está disponível agora.":m==="PAGBANK_DESLIGADO"?"O Pix automático está em manutenção. Tente de novo mais tarde.":"Não conseguimos gerar o Pix agora. Tente de novo em instantes."+(e&&e.detalhe?" ("+e.detalhe+")":"")}
+  el.textContent=m.includes("fetch")||m.includes("Failed to send")?"Sem conexão. Tente de novo.":m==="CPF"?"Confira o CPF: esse número não é válido.":m==="PLANO_INVALIDO"?"Esse plano não está disponível agora.":m==="PAGBANK_DESLIGADO"?"O Pix automático está em manutenção. Tente de novo mais tarde.":"Não conseguimos gerar o Pix automático agora."+(e&&e.detalhe?" ("+e.detalhe+")":"");
+  if(m==="PAGBANK"||m==="SEM_TOKEN"){const b=document.createElement("button");b.type="button";b.className="btn ghost";b.textContent="Pagar pelo Pix comum";b.style.marginTop="8px";
+    b.onclick=()=>{PREMIUM.pagbank=false;renderPmBody()};el.append(document.createElement("br"),b)}}
 function renderPbPend(box,p){
   const exp=p.pix_expira?new Date(p.pix_expira):null,vencido=exp&&exp<new Date();
   box.innerHTML='<div class="plan pro"><b>'+(vencido?"Esse Pix venceu":"Pix gerado · aguardando pagamento")+'</b><span class="usage">Plano '+esc(planName(p.plano))+' · '+fmtBRL(p.valor)+(exp&&!vencido?' · vale até '+exp.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}):'')+'</span>'
