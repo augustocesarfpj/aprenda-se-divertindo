@@ -11913,6 +11913,8 @@ async function rkLoad(){
   RK.busy=false;renderRanking();
 }
 async function rkLoadTable(){
+  if(RK.week==="s"){const {data,error}=await sb.rpc("tabela_simulado",{p_id:RK.sel,p_data:RK.simData||null});
+    if(error){RK.sim=null;RK.rows=[];RK.err=rkErr(error);return}RK.sim=data;RK.simData=data&&data.data;RK.rows=[];RK.feed=null;RK.sq=null;return}
   const [t,c]=await Promise.all([(RK.week==="m"?sb.rpc("tabela_mes",{p_id:RK.sel}):sb.rpc("tabela_semana",{p_id:RK.sel,p_semana:RK.week})),RK.champs?Promise.resolve({data:RK.champs}):sb.rpc("campeoes_ranking",{p_id:RK.sel})]);
   if(t.error){RK.rows=null;RK.err=rkErr(t.error);if(rkErr(t.error).includes("não participa")){RK.list=null}return}
   RK.rows=t.data||[];RK.champs=c.error?[]:(c.data||[]);
@@ -11924,6 +11926,18 @@ function ago(iso){const m=Math.max(0,Math.round((Date.now()-new Date(iso))/6e4))
 async function rkAct(fn,args,okMsg){
   RK.err=null;try{const {data,error}=await sb.rpc(fn,args);if(error)throw error;RK.msg=okMsg;return data===null?true:data}catch(e){RK.err=rkErr(e);RK.msg="";renderRanking();return false}
 }
+function rkSimHtml(){
+  const S=RK.sim;if(!S)return'<p class="small" style="margin:0">Carregando…</p>';
+  const dd=d=>{const [y,m,a]=String(d).split("-");return a+"/"+m},fim=d=>{const t=new Date(d+"T12:00:00");t.setDate(t.getDate()-1);return String(t.getDate()).padStart(2,"0")+"–"+dd(d)};
+  const tm=s=>s==null?"":" · "+Math.floor(s/3600)+"h"+String(Math.floor(s%3600/60)).padStart(2,"0");
+  let h='';
+  if(S.datas&&S.datas.length>1)h+='<label class="small" style="display:flex;gap:8px;align-items:center">Fim de semana <select id="rkSimData">'+S.datas.map(d=>'<option value="'+d+'"'+(d===S.data?' selected':'')+'>'+fim(d)+'</option>').join("")+'</select></label>';
+  else if(S.data)h+='<p class="small" style="margin:0">Simulado do fim de semana '+fim(S.data)+'</p>';
+  const L=S.linhas||[];
+  h+=L.length?'<ol class="rklist rksim" aria-label="Classificação do simulado">'+L.map((x,i)=>'<li class="'+(x.sou_eu?'me':'')+'"><span class="pos">'+(x.pos<=3?["🥇","🥈","🥉"][x.pos-1]:x.pos+"º")+'</span><span class="who"><b data-sn="'+i+'"></b><span>'+esc((TRACKS[x.trilha]||{}).n||x.trilha)+' · '+x.acertos+'/'+x.total+tm(x.tempo_seg)+'</span></span><span class="pr">'+String(x.pct).replace(".",",")+'%</span></li>').join("")+'</ol>'
+    :'<p class="small" style="margin:0">'+(S.aberto?'Ninguém do grupo entregou o simulado deste fim de semana ainda. Seja o primeiro!':'Ninguém do grupo entregou simulado ainda. Ele abre no sábado 0h e vai até domingo 23h59.')+'</p>';
+  h+='<p class="small" style="margin:0">Compara a % de acertos de quem <b>entregou</b> o simulado do fim de semana, cada um na sua trilha. Empate: quem terminou em menos tempo. Não soma pontos no ranking da semana.</p>';
+  return h}
 function renderRanking(){
   const box=$("rkBox");if(!box)return;
   if(!sb){box.innerHTML='<div class="sheet panel"><p class="small" style="margin:0">O ranking está indisponível no momento. Tente de novo mais tarde.</p></div>';return}
@@ -11943,13 +11957,14 @@ function renderRanking(){
   if(cur){
     const role=RK_ROLE[cur.papel]||RK_ROLE.membro,g=rkGestor(cur);
     h+='<div class="sheet panel"><div class="rkhead"><div style="display:grid;gap:2px"><h3 style="margin:0" id="rkName"></h3><span class="small">'+cur.membros+' participante'+(cur.membros===1?'':'s')+(cur.codigo?' · código <span class="rkcode">'+cur.codigo+'</span>':'')+'</span></div><span class="rkrole" title="Seu cargo">'+(role[0]?role[0]+' ':'')+'Você: '+role[1]+'</span></div>';
-    h+='<div class="rkhead"><div class="rkchips" role="group" aria-label="Período">'+[[0,"Semana"],[1,"Semana passada"],["m","Mensal"]].map(([v,n])=>'<button type="button" class="chipbtn" data-wk="'+v+'" aria-pressed="'+(RK.week===v)+'">'+n+'</button>').join("")+'</div>'+(RK.week===0?'<span class="rkleft">Zera em '+rkWeekLeft()+'</span>':RK.week==="m"?'<span class="rkleft">Zera em '+rkMonthLeft()+'</span>':'')+'</div>';
+    h+='<div class="rkhead"><div class="rkchips" role="group" aria-label="Período">'+[[0,"Semana"],[1,"Semana passada"],["m","Mensal"],["s","📝 Simulado"]].map(([v,n])=>'<button type="button" class="chipbtn" data-wk="'+v+'" aria-pressed="'+(RK.week===v)+'">'+n+'</button>').join("")+'</div>'+(RK.week===0?'<span class="rkleft">Zera em '+rkWeekLeft()+'</span>':RK.week==="m"?'<span class="rkleft">Zera em '+rkMonthLeft()+'</span>':'')+'</div>';
     const SQ=cur.saque&&RK.week===0?RK.sq:null,sqT={};
     if(SQ&&SQ.aberto)(SQ.alvos||[]).forEach(a=>{if(!a.motivo)sqT[a.membro]=a});
     if(SQ&&(SQ.aberto||SQ.sabado))h+='<div class="sqbanner">'+(SQ.aberto?'<b>💰 Hoje é Sábado do Saque!</b><span>'+(Object.keys(sqT).length?'Você pode saquear quem está até 3 posições acima de você. Toque em 💰 ao lado do alvo. Vale até as 21h.':SQ.minha_pos===1?'Você está em 1º: não há ninguém acima para saquear. Defenda sua posição!':'Ninguém disponível para saquear agora: cada dupla só se enfrenta uma vez no sábado e cada pessoa recebe no máximo 3 saques.')+'</span><span class="small">Seu escudo 🛡️: '+(SQ.escudo?'disponível (1 recusa grátis hoje)':'já usado hoje')+'</span>'
       :SQ.sabado?'<b>💰 Sábado do Saque</b><span>Os saques de hoje foram encerrados às 21h. Os que já foram lançados podem ser respondidos até as 23h59.</span>'
       :'')+'</div>';
-    if(!RK.rows)h+='<p class="small" style="margin:0">Carregando…</p>';
+    if(RK.week==="s")h+=rkSimHtml();
+    else if(!RK.rows)h+='<p class="small" style="margin:0">Carregando…</p>';
     else{
       const any=RK.rows.some(x=>x.pontos>0);
       h+='<ol class="rklist" aria-label="Classificação">'+RK.rows.map((x,i)=>{const pct=x.respondidas?Math.round(x.acertos/x.respondidas*100):0;const pos=x.pontos?(i<3?["🥇","🥈","🥉"][i]:(i+1)+"º"):"–";
@@ -11982,10 +11997,10 @@ function renderRanking(){
   }
   h+='<div class="sheet panel"><span class="eyebrow">Novo ranking</span>'+(full?'<p class="small" style="margin:0">Você já participa de '+RK_MAX+' rankings, o máximo permitido. Saia de um para criar ou entrar em outro.</p>':'<form class="rkform" id="rkNewF"><label class="sr" for="rkNew">Nome do ranking</label><input id="rkNew" maxlength="40" placeholder="Ex.: Turma da PC-BA" autocomplete="off"><button class="btn" type="submit">Criar</button></form><span class="eyebrow" style="margin-top:6px">Entrar com código</span><form class="rkform" id="rkJoinF"><label class="sr" for="rkCode">Código do convite</label><input id="rkCode" maxlength="8" placeholder="Ex.: K7Q2XB" autocomplete="off" style="text-transform:uppercase"><button class="btn ghost" type="submit">Entrar</button></form>')+'</div>';
   box.innerHTML=h;
-  box.querySelectorAll("[data-rk]").forEach(b=>{const r=L.find(x=>x.id===b.dataset.rk);b.textContent=r.nome;b.onclick=async()=>{sfx.click();RK.sel=r.id;RK.rows=null;RK.champs=null;RK.feed=null;RK.inv=false;RK.leave=false;RK.mng=false;RK.msg="";renderRanking();await rkLoadTable();renderRanking()}});
+  box.querySelectorAll("[data-rk]").forEach(b=>{const r=L.find(x=>x.id===b.dataset.rk);b.textContent=r.nome;b.onclick=async()=>{sfx.click();RK.sel=r.id;RK.simData=null;RK.rows=null;RK.champs=null;RK.feed=null;RK.inv=false;RK.leave=false;RK.mng=false;RK.msg="";renderRanking();await rkLoadTable();renderRanking()}});
   if(cur){
     $("rkName").textContent=cur.nome;
-    if(RK.rows){const sqTop=Math.max(0,...RK.rows.map(x=>x.saque||0));box.querySelectorAll(".rklist .who b").forEach((b,i)=>{const x=RK.rows[i],r=RK_ROLE[x.papel]||RK_ROLE.membro,sqr=sqTop>0&&x.saque===sqTop;b.textContent=(x.campeao?"🏆 ":"")+(sqr?"💰 ":"")+x.nome+(r[0]?" "+r[0]:"")+(x.sou_eu?" (você)":"");b.title=r[1]+(x.campeao?" · campeão da semana passada":"")+(sqr?" · Saqueador do Sábado":"")})}
+    if(RK.rows){const sqTop=Math.max(0,...RK.rows.map(x=>x.saque||0));box.querySelectorAll(".rklist:not(.rksim) .who b").forEach((b,i)=>{const x=RK.rows[i],r=RK_ROLE[x.papel]||RK_ROLE.membro,sqr=sqTop>0&&x.saque===sqTop;b.textContent=(x.campeao?"🏆 ":"")+(sqr?"💰 ":"")+x.nome+(r[0]?" "+r[0]:"")+(x.sou_eu?" (você)":"");b.title=r[1]+(x.campeao?" · campeão da semana passada":"")+(sqr?" · Saqueador do Sábado":"")})}
     box.querySelectorAll("[data-sq]").forEach(b=>{const x=RK.rows[+b.dataset.sq],a=(RK.sq&&RK.sq.alvos||[]).find(y=>y.membro===x.membro);b.setAttribute("aria-label","Saquear "+x.nome);b.title="Saquear "+x.nome+(a?" (vale "+a.valor+" pontos)":"");b.onclick=()=>{sfx.click();openSaque(cur,x,a)}});
     box.querySelectorAll("[data-dl]").forEach(b=>{const x=RK.rows[+b.dataset.dl];b.setAttribute("aria-label","Desafiar "+x.nome);b.title="Desafiar "+x.nome;b.onclick=()=>{sfx.click();openDuel(cur,x)}});
     if(RK.feed)box.querySelectorAll("#rkFeed li").forEach(li=>{const f=RK.feed[+li.dataset.fi],A=f.nome_desafiante,B=f.nome_desafiado,tr=TRACKS[f.trilha]?TRACKS[f.trilha].n:f.trilha;
@@ -12018,7 +12033,9 @@ function renderRanking(){
     });
     box.querySelectorAll("[data-rv]").forEach(b=>{const f=RK.feed[+b.dataset.rv],eu=f.desafiante===user.id;b.onclick=()=>{sfx.click();openDuel(cur,{membro:eu?f.desafiado:f.desafiante,nome:eu?f.nome_desafiado:f.nome_desafiante})}});
     const ch=$("rkChamps");if(ch)ch.querySelectorAll("li").forEach((li,i)=>{const c=RK.champs[i],d=String(c.semana).split("-");li.textContent="Semana de "+d[2]+"/"+d[1]+": "+c.nome+" · "+c.pontos+" pts"});
-    box.querySelectorAll("[data-wk]").forEach(b=>b.onclick=async()=>{sfx.click();RK.week=b.dataset.wk==="m"?"m":+b.dataset.wk;RK.rows=null;renderRanking();await rkLoadTable();renderRanking()});
+    box.querySelectorAll("[data-wk]").forEach(b=>b.onclick=async()=>{sfx.click();RK.week=b.dataset.wk==="m"||b.dataset.wk==="s"?b.dataset.wk:+b.dataset.wk;RK.rows=null;RK.sim=null;renderRanking();await rkLoadTable();renderRanking()});
+    if(RK.week==="s"&&RK.sim){box.querySelectorAll("[data-sn]").forEach(e=>{const x=RK.sim.linhas[+e.dataset.sn],r=RK_ROLE[x.papel]||RK_ROLE.membro;e.textContent=(r[0]?r[0]+" ":"")+x.nome+(x.sou_eu?" (você)":"")});
+      const sd=$("rkSimData");if(sd)sd.onchange=async()=>{RK.simData=sd.value;RK.sim=null;renderRanking();await rkLoadTable();renderRanking()}}
     if($("rkInvBtn"))$("rkInvBtn").onclick=()=>{sfx.click();RK.inv=!RK.inv;RK.leave=false;RK.mng=false;renderRanking()};
     $("rkLeave").onclick=()=>{sfx.click();RK.leave=!RK.leave;RK.inv=false;RK.mng=false;renderRanking()};
     if($("rkMngBtn"))$("rkMngBtn").onclick=()=>{sfx.click();RK.mng=!RK.mng;RK.inv=false;RK.leave=false;RK.del=false;renderRanking()};
