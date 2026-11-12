@@ -1,6 +1,8 @@
 -- Aprenda se Divertindo · 113 · Campeonatos: pontos corridos e copa mata-mata
 -- Rode depois do 112-campeonatos.sql. Cole tudo no SQL Editor e clique em Run. Pode rodar de novo sem problema.
 --
+-- RODADA ÚNICA (pode ter link de convite e/ou membros do ranking): uma prova só, com prazo de 1, 3 ou 7 dias. Vence o maior
+--   prêmio; empate: acertos e depois tempo.
 -- PONTOS CORRIDOS (pode ter link de convite e/ou membros do ranking): 1, 3, 5 ou 7 rodadas, uma por dia (24 h cada).
 --   Em cada rodada todos jogam as mesmas questões. Pontos por rodada: 1º 10, 2º 8, 3º 6, 4º 5, 5º 4, 6º 3, 7º 2,
 --   e 1 ponto para todos os outros que jogaram. Quem não joga a rodada fica com 0. Desempate: acertos e depois tempo.
@@ -147,9 +149,11 @@ end $$;
 
 -- criar (substitui a versão do 112)
 drop function if exists public.criar_campeonato(text, text, text[], integer[], integer, uuid, uuid[], boolean);
+drop function if exists public.criar_campeonato(text, text, text[], integer[], text, integer, uuid, uuid[], boolean);
 create or replace function public.criar_campeonato(p_nome text, p_trilha text, p_materias text[], p_questoes integer[],
                                                    p_formato text, p_rodadas integer, p_ranking uuid default null,
-                                                   p_convidados uuid[] default null, p_link boolean default true)
+                                                   p_convidados uuid[] default null, p_link boolean default true,
+                                                   p_dias integer default 1)
 returns json language plpgsql security definer set search_path = '' as $$
 declare uid uuid := auth.uid(); v_id uuid; v_cod text; jog uuid[]; n int; tam int := 4; fases int := 2; dur int; pares jsonb := '[]'::jsonb;
         byes int; i int; lista uuid[];
@@ -173,6 +177,10 @@ begin
     if p_rodadas not in (1, 3, 5, 7) then raise exception 'RODADAS_INVALIDAS'; end if;
     if not coalesce(p_link, false) and n < 2 then raise exception 'SEM_PARTICIPANTES'; end if;
     fases := p_rodadas; dur := 24;
+    if p_rodadas = 1 then
+      if p_dias not in (1, 3, 7) then raise exception 'PRAZO_INVALIDO'; end if;
+      dur := p_dias * 24;   -- rodada única: prazo de 1, 3 ou 7 dias
+    end if;
   else
     if p_ranking is null then raise exception 'SEM_RANKING'; end if;
     if n < 4 then raise exception 'POUCOS_JOGADORES'; end if;
@@ -329,9 +337,9 @@ end $$;
 
 revoke all on function public.camp_chave(uuid) from public, anon, authenticated;
 revoke all on function public.camp_minha_vez(public.campeonatos, uuid) from public, anon, authenticated;
-revoke all on function public.criar_campeonato(text, text, text[], integer[], text, integer, uuid, uuid[], boolean) from public, anon;
+revoke all on function public.criar_campeonato(text, text, text[], integer[], text, integer, uuid, uuid[], boolean, integer) from public, anon;
 revoke all on function public.enviar_campeonato(uuid, integer, integer, integer, integer, integer, integer) from public, anon;
-grant execute on function public.criar_campeonato(text, text, text[], integer[], text, integer, uuid, uuid[], boolean) to authenticated;
+grant execute on function public.criar_campeonato(text, text, text[], integer[], text, integer, uuid, uuid[], boolean, integer) to authenticated;
 grant execute on function public.enviar_campeonato(uuid, integer, integer, integer, integer, integer, integer) to authenticated;
 grant execute on function public.ver_campeonato(text) to anon, authenticated;
 grant execute on function public.entrar_campeonato(text) to authenticated;

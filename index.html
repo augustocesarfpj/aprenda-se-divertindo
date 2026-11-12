@@ -12263,6 +12263,7 @@ function campPlanAll(trilha,mats,n){const ev=new Set(),all=[];for(let r=0;r<n;r+
 const FASES=["Final","Semifinal","Quartas de final","Oitavas de final","16 avos de final","32 avos de final"];
 const faseNome=(r,total)=>FASES[total-r-1]||("Fase "+(r+1));
 const campRod=c=>c.formato==="mata"?faseNome(c.rodada||0,c.rodadas):(c.rodadas>1?"Rodada "+((c.rodada||0)+1)+" de "+c.rodadas:"Rodada única");
+const campFmt=c=>c.formato==="mata"?"⚔️ Copa mata-mata":c.rodadas>1?"📊 Pontos corridos · "+c.rodadas+" rodadas":"🎯 Rodada única";
 async function campLoad(force){
   if(!sb||!user){CP.list=null;renderCamps();return}
   if(CP.busy||(!force&&CP.list&&Date.now()-CP.t<20000)){renderCamps();return}
@@ -12283,7 +12284,7 @@ function renderCamps(){
   if(!L.length)h+='<p class="small" style="margin:0">Crie um campeonato com as matérias que quiser: <b>pontos corridos</b> (com link para quem quiser) ou <b>copa mata-mata</b> com a turma do ranking.</p>';
   h+=L.map((c,i)=>{
     const tr=TRACKS[c.trilha]?TRACKS[c.trilha].n:c.trilha,ab=c.status==="aberto",mata=c.formato==="mata",v=c.minha_vez;
-    const fmtTxt=mata?"⚔️ Copa mata-mata":"📊 Pontos corridos"+(c.rodadas>1?" · "+c.rodadas+" rodadas":"");
+    const fmtTxt=campFmt(c);
     const info='<p class="small">'+fmtTxt+' · Trilha '+tr+' · '+esc(campMats(c))+' · '+c.participantes+' participante'+(c.participantes==1?'':'s')+(c.ranking?' · Ranking <b data-f="rk"></b>':'')+'</p>';
     let st;
     if(!ab)st=mata?(c.campeao?'Encerrada · 🏆 Campeão: <b data-f="cp"></b>':'Encerrada'):'Encerrado';
@@ -12304,7 +12305,7 @@ function renderCamps(){
   box.querySelectorAll("[data-inv]").forEach(b=>b.onclick=()=>{sfx.click();openCampShare(L[+b.dataset.inv])});
 }
 async function openCampNew(){
-  let tr=track,rods=3,rk=null,link=true,fmt="pontos";const conv=new Set();let mats=new Set(selectedSubjects().filter(k=>TRACKS[tr].s.includes(k)));
+  let tr=track,rods=3,dias=3,rk=null,link=true,fmt="unica";const conv=new Set();let mats=new Set(selectedSubjects().filter(k=>TRACKS[tr].s.includes(k)));
   dlDialog("🏆 Novo campeonato","Criar campeonato","Todos jogam o Show do Milhão com as mesmas questões, só das matérias escolhidas.");
   const o=$("dlOpts");
   o.innerHTML='<div class="form"><label>Nome do campeonato<input type="text" id="cpNome" maxlength="50" placeholder="Ex.: Copa de Penal da turma"></label></div>'
@@ -12312,6 +12313,7 @@ async function openCampNew(){
     +'<span class="eyebrow">Trilha</span><div class="rkchips" id="cpTr" role="group" aria-label="Trilha"></div>'
     +'<span class="eyebrow">Matérias</span><div class="chips" id="cpMat"></div><p class="small" id="cpMatInfo" style="margin:0"></p>'
     +'<div id="cpRodBox" style="display:grid;gap:8px"><span class="eyebrow">Rodadas (uma por dia, 24 h cada)</span><div class="rkchips" id="cpRod" role="group" aria-label="Rodadas"></div></div>'
+    +'<div id="cpDiasBox" style="display:grid;gap:8px"><span class="eyebrow">Prazo para jogar</span><div class="rkchips" id="cpDias" role="group" aria-label="Prazo"></div></div>'
     +'<span class="eyebrow">Quem participa</span><label class="small" id="cpLinkL"><input type="checkbox" id="cpLink" checked> Qualquer pessoa com o link de convite</label>'
     +'<div id="cpRkBox" style="display:grid;gap:8px"></div><p class="small" id="cpMataInfo" style="margin:0"></p>';
   const chipsRow=(box,items,get,set)=>{box.innerHTML="";items.forEach(([v,n])=>{const b=document.createElement("button");b.type="button";b.className="chipbtn";b.textContent=n;b.setAttribute("aria-pressed",get()===v);b.onclick=()=>{sfx.click();set(v);box.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b))};box.appendChild(b)})};
@@ -12325,12 +12327,13 @@ async function openCampNew(){
     if(n>64){el.textContent="Máximo de 64 jogadores. Desmarque "+(n-64)+".";return}
     let t=4,f=2;while(t<n){t*=2;f++}const d=Math.max(12,Math.ceil(48/f)),by=t-n;
     el.innerHTML='<b>'+n+' jogadores</b> · chave de '+t+(by?' · '+by+' passa'+(by==1?'':'m')+' direto na 1ª fase (folga, por sorteio)':'')+' · '+f+' fases de '+d+' h · termina em '+(f*d>=48?Math.round(f*d/24*10)/10+' dias':f*d+' h')+'.'};
-  const fmtDraw=()=>{const m=fmt==="mata";$("cpRodBox").hidden=m;$("cpLinkL").hidden=m;
-    $("cpFmtInfo").textContent=m?"Só membros do ranking. O sistema sorteia a chave; quem vence cada confronto avança até a final. Cada fase tem 12 h (a copa dura no mínimo 48 h). Quem não joga no prazo perde por W.O.":
+  const fmtDraw=()=>{const m=fmt==="mata";$("cpRodBox").hidden=fmt!=="pontos";$("cpDiasBox").hidden=fmt!=="unica";$("cpLinkL").hidden=m;
+    $("cpFmtInfo").textContent=fmt==="unica"?"Uma prova só, dentro do prazo. Vence quem levar o maior prêmio; empate vai para acertos e depois para o menor tempo. Pode chamar pelo link e/ou pelo ranking.":m?"Só membros do ranking. O sistema sorteia a chave; quem vence cada confronto avança até a final. Cada fase tem 12 h (a copa dura no mínimo 48 h). Quem não joga no prazo perde por W.O.":
       "Cada rodada vale pontos: 1º 10, 2º 8, 3º 6, 4º 5, 5º 4, 6º 3, 7º 2 e 1 ponto para quem mais jogar. Pode chamar pelo link e/ou pelo ranking.";mataInfo()};
-  chipsRow($("cpFmt"),[["pontos","📊 Pontos corridos"],["mata","⚔️ Copa mata-mata"]],()=>fmt,v=>{fmt=v;fmtDraw()});
+  chipsRow($("cpFmt"),[["unica","🎯 Rodada única"],["pontos","📊 Pontos corridos"],["mata","⚔️ Copa mata-mata"]],()=>fmt,v=>{fmt=v;fmtDraw()});
   chipsRow($("cpTr"),Object.entries(TRACKS).map(([k,t])=>[k,t.n]),()=>tr,v=>{tr=v;mats=new Set();drawMats()});
-  chipsRow($("cpRod"),[[1,"1"],[3,"3"],[5,"5"],[7,"7"]],()=>rods,v=>rods=v);
+  chipsRow($("cpRod"),[[3,"3"],[5,"5"],[7,"7"]],()=>rods,v=>rods=v);
+  chipsRow($("cpDias"),[[1,"1 dia"],[3,"3 dias"],[7,"7 dias"]],()=>dias,v=>dias=v);
   drawMats();fmtDraw();$("cpLink").onchange=e=>{link=e.target.checked};
   const rbox=$("cpRkBox");
   if(!RK.list){try{const {data}=await sb.rpc("meus_rankings");RK.list=data||[]}catch(e){}}
@@ -12351,15 +12354,15 @@ async function openCampNew(){
   const go=dlBtn("Criar campeonato","money",async()=>{$("dlErr").hidden=true;
     const nome=$("cpNome").value.trim(),M=TRACKS[tr].s.filter(k=>mats.has(k));
     if(nome.length<3){err("Dê um nome ao campeonato (de 3 a 50 letras).");$("cpNome").focus();return}
-    let nRod=rods;
+    let nRod=fmt==="unica"?1:rods;
     if(fmt==="mata"){const n=conv.size+1;if(!rk||n<4){err("A copa precisa de um ranking e de pelo menos 4 jogadores, contando você.");return}if(n>64){err("A copa aceita no máximo 64 jogadores.");return}
       let t=4;nRod=2;while(t<n){t*=2;nRod++}}
     else if(!link&&!conv.size){err(campErr({message:"SEM_PARTICIPANTES"}));return}
     const q=M.length?campPlanAll(tr,M,nRod):null;
     if(!q){err("Poucas questões nessas matérias. Marque mais alguma matéria.");return}
     go.disabled=true;
-    try{const {data,error}=await sb.rpc("criar_campeonato",{p_nome:nome,p_trilha:tr,p_materias:M,p_questoes:q,p_formato:fmt,p_rodadas:nRod,p_ranking:rk,p_convidados:[...conv],p_link:fmt==="pontos"&&link});if(error)throw error;
-      CP.t=0;await campLoad(true);const c=(CP.list||[]).find(x=>x.id===data.id)||{id:data.id,codigo:data.codigo,nome,link_aberto:fmt==="pontos"&&link,formato:fmt,trilha:tr,materias:M};
+    try{const {data,error}=await sb.rpc("criar_campeonato",{p_nome:nome,p_trilha:tr,p_materias:M,p_questoes:q,p_formato:fmt==="mata"?"mata":"pontos",p_rodadas:nRod,p_ranking:rk,p_convidados:[...conv],p_link:fmt!=="mata"&&link,p_dias:dias});if(error)throw error;
+      CP.t=0;await campLoad(true);const c=(CP.list||[]).find(x=>x.id===data.id)||{id:data.id,codigo:data.codigo,nome,link_aberto:fmt!=="mata"&&link,formato:fmt==="mata"?"mata":"pontos",rodadas:nRod,trilha:tr,materias:M};
       openCampShare(c,true)}
     catch(e){err(campErr(e));go.disabled=false}});
   dlBtn("Cancelar","ghost",()=>{$("ovDuel").hidden=true});$("cpNome").focus();
@@ -12377,7 +12380,7 @@ function openCampShare(c,novo){
 }
 function openCampPlay(c){
   const mata=c.formato==="mata",rod=campRod(c);
-  dlDialog("🏆 "+(mata?"Copa mata-mata":"Pontos corridos")+" · "+rod,"\""+c.nome+"\"",(mata?"Seu adversário joga as mesmas questões. Vence quem levar o maior prêmio (empate: acertos, depois tempo) e avança de fase.":"Todos jogam as mesmas questões nesta rodada, que vale pontos na tabela.")+" Só de "+campMats(c)+". Atenção: você joga esta "+(mata?"fase":"rodada")+" uma vez só. Se sair no meio, fica com R$ 0.");
+  dlDialog("🏆 "+campFmt(c).replace(/^\S+ /,"")+(c.rodadas>1||mata?" · "+rod:""),"\""+c.nome+"\"",(mata?"Seu adversário joga as mesmas questões. Vence quem levar o maior prêmio (empate: acertos, depois tempo) e avança de fase.":c.rodadas>1?"Todos jogam as mesmas questões nesta rodada, que vale pontos na tabela.":"Todos jogam as mesmas questões. Vence o maior prêmio (empate: acertos, depois tempo).")+" Só de "+campMats(c)+". Atenção: você joga esta "+(mata?"fase":"rodada")+" uma vez só. Se sair no meio, fica com R$ 0.");
   const go=dlBtn("Começar agora","money",async()=>{go.disabled=true;$("dlErr").hidden=true;
     try{const {data,error}=await sb.rpc("iniciar_campeonato",{p_id:c.id});if(error)throw error;$("ovDuel").hidden=true;CP.t=0;startCamp(data)}
     catch(e){$("dlErr").textContent=campErr(e);$("dlErr").hidden=false;go.disabled=false;CP.t=0}});
@@ -12421,14 +12424,14 @@ async function openCampCls(id){
   try{const {data:c,error}=await sb.rpc("classificacao_campeonato",{p_id:id});if(error)throw error;
     const mata=c.formato==="mata",ab=c.status==="aberto";
     $("dlTitle").textContent="\""+c.nome+"\"";
-    $("dlMsg").textContent=(mata?"⚔️ Copa mata-mata":"📊 Pontos corridos")+" · Trilha "+(TRACKS[c.trilha]?TRACKS[c.trilha].n:c.trilha)+" · "+campMats(c)+" · "+(ab?campRod(c)+" · termina em "+campLeft(c.fim):"encerrado");
+    $("dlMsg").textContent=campFmt(c)+" · Trilha "+(TRACKS[c.trilha]?TRACKS[c.trilha].n:c.trilha)+" · "+campMats(c)+" · "+(ab?campRod(c)+" · termina em "+campLeft(c.fim):"encerrado");
     const tm=s=>s==null?"":" · "+Math.floor(s/60)+"min"+String(s%60).padStart(2,"0");
     const o=$("dlOpts");
     if(!mata){
       const T=c.tabela||[];
-      o.innerHTML=T.length?'<ol class="rklist" aria-label="Tabela de pontos">'+T.map((x,i)=>'<li class="'+(x.sou_eu?'me':'')+'"><span class="pos">'+(x.pontos>0&&x.pos<=3?["🥇","🥈","🥉"][x.pos-1]:x.pos+"º")+'</span><span class="who"><b data-i="'+i+'"></b><span>'+x.jogadas+' rodada'+(x.jogadas==1?'':'s')+' jogada'+(x.jogadas==1?'':'s')+(x.jogadas?' · '+x.acertos+' acertos'+tm(x.tempo):'')+(ab&&c.rodadas>1?(x.rodada_atual==="jogou"?' · ✅ rodada atual':x.rodada_atual==="jogando"?' · jogando agora':' · ⏳ falta a rodada atual'):'')+'</span></span><span class="pr">'+x.pontos+' pt'+(x.pontos==1?'':'s')+'</span></li>').join("")+'</ol>':'<p class="small" style="margin:0">Ninguém jogou ainda.</p>';
+      o.innerHTML=T.length?'<ol class="rklist" aria-label="Tabela de pontos">'+T.map((x,i)=>'<li class="'+(x.sou_eu?'me':'')+'"><span class="pos">'+(x.pontos>0&&x.pos<=3?["🥇","🥈","🥉"][x.pos-1]:x.pos+"º")+'</span><span class="who"><b data-i="'+i+'"></b><span>'+x.jogadas+' rodada'+(x.jogadas==1?'':'s')+' jogada'+(x.jogadas==1?'':'s')+(x.jogadas?' · '+x.acertos+' acertos'+tm(x.tempo):'')+(ab&&c.rodadas>1?(x.rodada_atual==="jogou"?' · ✅ rodada atual':x.rodada_atual==="jogando"?' · jogando agora':' · ⏳ falta a rodada atual'):'')+'</span></span><span class="pr">'+(c.rodadas>1?x.pontos+' pt'+(x.pontos==1?'':'s'):x.jogadas?fmt(x.melhor||0):'—')+'</span></li>').join("")+'</ol>':'<p class="small" style="margin:0">Ninguém jogou ainda.</p>';
       o.querySelectorAll("[data-i]").forEach(b=>{const x=T[+b.dataset.i];b.textContent=x.nome+(x.sou_eu?" (você)":"")});
-      o.insertAdjacentHTML("beforeend",'<p class="small" style="margin:0">Pontos por rodada: 1º 10, 2º 8, 3º 6, 4º 5, 5º 4, 6º 3, 7º 2, demais 1. Desempate: acertos e depois tempo.</p>');
+      if(c.rodadas>1)o.insertAdjacentHTML("beforeend",'<p class="small" style="margin:0">Pontos por rodada: 1º 10, 2º 8, 3º 6, 4º 5, 5º 4, 6º 3, 7º 2, demais 1. Desempate: acertos e depois tempo.</p>');
     }else{
       const K=c.chave||{fases:[]};
       let h=K.campeao?'<p class="champ" style="margin:0;font-weight:800">🏆 Campeão: <span id="cpChamp"></span></p>':'';
@@ -12461,7 +12464,7 @@ async function handleCampInvite(){
   if(c===undefined){$("dlTitle").textContent="Não foi possível abrir o convite";$("dlMsg").textContent="Verifique sua conexão e tente de novo pelo link.";dlBtn("Fechar","ghost",()=>{$("ovDuel").hidden=true;clear()});return}
   if(!c){$("dlTitle").textContent="Campeonato não encontrado";$("dlMsg").textContent="Ele pode ter sido excluído ou o link está incompleto.";dlBtn("Fechar","ghost",()=>{$("ovDuel").hidden=true;clear()});return}
   $("dlTitle").textContent="\""+c.nome+"\"";
-  const base=(c.formato==="mata"?"Copa mata-mata":"Pontos corridos"+(c.rodadas>1?" ("+c.rodadas+" rodadas)":""))+" · criado por "+c.criador+" · Trilha "+(TRACKS[c.trilha]?TRACKS[c.trilha].n:c.trilha)+" · "+campMats(c)+" · "+c.participantes+" participante"+(c.participantes==1?"":"s")+". ";
+  const base=campFmt(c).replace(/^\S+ /,"")+" · criado por "+c.criador+" · Trilha "+(TRACKS[c.trilha]?TRACKS[c.trilha].n:c.trilha)+" · "+campMats(c)+" · "+c.participantes+" participante"+(c.participantes==1?"":"s")+". ";
   if(c.status!=="aberto"){$("dlMsg").textContent=base+"Este campeonato já terminou.";dlBtn("Fechar","ghost",()=>{$("ovDuel").hidden=true;clear()});return}
   if(!user){$("dlMsg").textContent=base+"Termina em "+campLeft(c.fim)+". Para participar, crie sua conta grátis ou entre na sua conta.";
     dlBtn("Criar conta grátis","money",()=>{$("ovDuel").hidden=true;openAuth("up")});dlBtn("Já tenho conta","ghost",()=>{$("ovDuel").hidden=true;openAuth("in")});dlBtn("Agora não","ghost",()=>{$("ovDuel").hidden=true;clear()});return}
