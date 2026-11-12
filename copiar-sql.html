@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<title>Copiar SQL</title>
+<style>
+body{font:16px system-ui,sans-serif;margin:0;padding:16px;background:#f6f4ee;color:#1d2433}
+button{font:inherit;font-weight:700;padding:14px 18px;border:0;border-radius:8px;background:#1f7a4d;color:#fff;width:100%;margin:8px 0}
+#st{font-weight:700;min-height:1.4em}
+pre{white-space:pre-wrap;word-break:break-all;font-size:11px;background:#fff;border:1px solid #ccc;border-radius:6px;padding:8px;max-height:45vh;overflow:auto}
+</style></head><body>
+<h1 style="font-size:1.2rem">Copiar para o Supabase</h1>
+<p>Arquivo: <b id="nome"></b> · <span id="tam"></span></p>
+<button id="cp" disabled>Carregando…</button>
+<p id="st" role="status"></p>
+<p>Depois cole no Supabase (SQL Editor ou editor da Edge Function), apagando o que estiver lá.</p>
+<pre id="txt"></pre>
+<script>
+const f=(new URLSearchParams(location.search).get("f")||"").replace(/[^\w.\/-]/g,"").replace(/\.\.+/g,".");
+const $=id=>document.getElementById(id);$("nome").textContent=f||"(nenhum)";
+let sql="";
+fetch("supabase/"+f,{cache:"no-store"}).then(r=>{if(!r.ok)throw 0;return r.text()}).then(t=>{sql=t;$("txt").textContent=t;
+  $("tam").textContent=t.split("\n").length+" linhas";$("cp").disabled=false;$("cp").textContent="Copiar tudo"})
+.catch(()=>{$("cp").textContent="Arquivo não encontrado"});
+$("cp").onclick=async()=>{try{await navigator.clipboard.writeText(sql);$("st").textContent="✅ Copiado! "+sql.split("\n").length+" linhas. Agora cole no SQL Editor."}
+  catch(e){const r=document.createRange();r.selectNodeContents($("txt"));const s=getSelection();s.removeAllRanges();s.addRange(r);
+    $("st").textContent="Texto selecionado: toque em Copiar no menu do celular."}};
+</script></body></html>

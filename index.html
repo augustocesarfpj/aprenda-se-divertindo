@@ -277,6 +277,7 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
 .rkmng .mrow b{flex:1 1 140px;min-width:0;overflow-wrap:anywhere}
 .rkmng select{font:inherit;padding:8px;border:1.5px solid var(--line);border-radius:6px;background:var(--sheet);color:var(--ink)}
 .duelbox{display:grid;gap:8px;margin-top:4px}
+.camphead{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.camphead .btn{padding:7px 12px;font-size:.88rem}
 .instbox{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:4px;padding:12px 14px;border:1.5px solid var(--line);border-radius:8px;background:var(--sheet)}
 .instbox img{width:44px;height:44px;border-radius:10px;flex:none}
 .instbox div{flex:1 1 180px;display:grid;gap:2px}
@@ -411,8 +412,10 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
         <button class="btn money" id="btnStart">Iniciar prova →</button>
         <button class="btn ghost" id="btnSound" aria-pressed="true">Som: ligado</button>
       </div>
+      <p class="small" id="subjSum" style="margin:0" hidden></p>
       <p class="small anoninfo" id="anonInfo" hidden></p>
       <div class="duelbox" id="duelBox" hidden></div>
+      <div class="duelbox campbox" id="campBox" hidden></div>
       <div class="instbox" id="instBox" hidden>
         <img src="icones/icone-192.png" alt="">
         <div><b>Instale o app no celular</b><span class="small">Grátis, abre direto da tela inicial, sem loja.</span></div>
@@ -12212,6 +12215,214 @@ function openAccept(d){
     catch(e){dlShowErr(e);go.disabled=false;DL.t=0}});
   dlBtn("Agora não","ghost",()=>{$("ovDuel").hidden=true});go.focus();
 }
+
+/* ===== campeonatos (Show do Milhão com as mesmas questões para todos os participantes) ===== */
+const CP={list:null,t:0,busy:false},CP_PK="gm-camp-pend";
+let PENDING_CAMP=null;
+try{const u=new URL(location.href),c=u.searchParams.get("camp");if(c){PENDING_CAMP=c.trim().toUpperCase().replace(/[^A-Z0-9]/g,"");sessionStorage.setItem("gm-camp",PENDING_CAMP);u.searchParams.delete("camp");history.replaceState(null,"",u.pathname+(u.search||"")+u.hash)}else PENDING_CAMP=sessionStorage.getItem("gm-camp")}catch(e){}
+const campLink=c=>SHARE_URL+"?camp="+c;
+function campErr(e){
+  const m=(e&&(e.message||e.details)||"")+"";
+  if(m.includes("LIMITE_CAMPEONATOS"))return"Você já tem 3 campeonatos em andamento. Espere algum terminar para criar outro.";
+  if(m.includes("NOME_INVALIDO"))return"Dê um nome ao campeonato (de 3 a 50 letras).";
+  if(m.includes("SEM_PARTICIPANTES"))return"Escolha pelo menos um participante do ranking ou deixe o link de convite liberado.";
+  if(m.includes("NAO_MEMBRO"))return"Alguém escolhido não participa mais desse ranking. Atualize e tente de novo.";
+  if(m.includes("SO_CONVIDADOS"))return"Este campeonato é só para convidados.";
+  if(m.includes("CAMP_ENCERRADO"))return"Este campeonato já terminou.";
+  if(m.includes("CAMP_LOTADO"))return"Este campeonato já está lotado.";
+  if(m.includes("JA_JOGOU"))return"Você já jogou este campeonato. Cada participante joga uma vez só.";
+  if(m.includes("CAMP_FECHADO"))return"O prazo para enviar o resultado deste campeonato acabou.";
+  if(m.includes("NAO_ENCONTRADO"))return"Campeonato não encontrado. Confira o link.";
+  if(m.includes("Could not find")||m.includes("does not exist"))return"Os campeonatos ainda não foram ativados no servidor.";
+  return rkErr(e);
+}
+/* sorteia as questões só das matérias escolhidas: 1 principal + reservas (para os pulos) em cada degrau */
+function campPlan(trilha,mats){
+  const ok=x=>mats.includes(x.s),total=Q.filter(ok).length;
+  if(total<PRIZES.length+3)return null;
+  const used=new Set(),main=[];
+  for(let l=0;l<PRIZES.length;l++){const tier=tierOf(l);let q=null;
+    for(const t of [tier,tier+1,tier-1,tier+2,tier-2,tier+3,tier-3,tier+4,tier-4]){const pool=Q.filter(x=>x.d===t&&ok(x)&&!used.has(x.id));if(pool.length){q=evenPick(pool,Math.random,TRACKS[trilha].w);break}}
+    used.add(q.id);main.push(q.id)}
+  const ids=[];
+  for(let l=0;l<PRIZES.length;l++){ids.push(main[l]);const tier=tierOf(l);
+    for(let k=1;k<DL_PER;k++){let q=null;
+      for(const t of [tier,tier+1,tier-1,tier+2,tier-2]){const pool=Q.filter(x=>x.d===t&&ok(x)&&!used.has(x.id));if(pool.length){q=evenPick(pool,Math.random,TRACKS[trilha].w);break}}
+      if(q){used.add(q.id);ids.push(q.id)}else ids.push(main[l])}}
+  return ids;
+}
+async function campLoad(force){
+  if(!sb||!user){CP.list=null;renderCamps();return}
+  if(CP.busy||(!force&&CP.list&&Date.now()-CP.t<20000)){renderCamps();return}
+  CP.busy=true;await campFlush();
+  try{const {data,error}=await sb.rpc("meus_campeonatos");CP.list=error?null:(data||[]);CP.off=!!error}catch(e){CP.list=null}
+  CP.t=Date.now();CP.busy=false;renderCamps();
+}
+async function campFlush(){let a=null;try{a=JSON.parse(localStorage.getItem(CP_PK))}catch(e){}if(!a||!sb||!user)return;
+  try{const {error}=await sb.rpc("enviar_campeonato",a);const m=String(error&&error.message||"");if(!error||m.includes("CAMP_FECHADO")||m.includes("SEM_ACESSO"))localStorage.removeItem(CP_PK)}catch(e){}}
+function campLeft(iso){const m=Math.max(0,Math.round((new Date(iso)-Date.now())/6e4));return m>=1440?Math.floor(m/1440)+"d"+(Math.floor(m%1440/60)?" "+Math.floor(m%1440/60)+"h":""):m>=60?Math.floor(m/60)+"h"+String(m%60).padStart(2,"0"):m+"min"}
+function campMats(c){const n=(c.materias||[]).length,all=TRACKS[c.trilha]?TRACKS[c.trilha].s.length:n;return n>=all?"todas as matérias":n<=3?c.materias.map(k=>SUBJ[k]||k).join(", "):n+" matérias"}
+function renderCamps(){
+  const box=$("campBox");if(!box)return;
+  if(!user||CP.off){box.hidden=true;box.innerHTML="";return}
+  box.hidden=false;
+  const L=CP.list||[];
+  let h='<div class="camphead"><span class="eyebrow">🏆 Campeonatos</span><button class="btn ghost" type="button" id="cpNew">+ Criar campeonato</button></div>';
+  if(!L.length)h+='<p class="small" style="margin:0">Crie um campeonato com as matérias que quiser e chame a turma do ranking ou mande o link. Todos jogam as mesmas questões.</p>';
+  h+=L.map((c,i)=>{
+    const tr=TRACKS[c.trilha]?TRACKS[c.trilha].n:c.trilha,ab=c.status==="aberto";
+    const info='<p class="small">Trilha '+tr+' · '+esc(campMats(c))+' · '+c.participantes+' participante'+(c.participantes==1?'':'s')+' ('+c.jogaram+(c.jogaram==1?' já jogou)':' já jogaram)')+(c.ranking?' · Ranking <b data-f="rk"></b>':'')+'</p>';
+    const st=!ab?'Encerrado'+(c.terminei?' · você fez '+fmt(c.meu_premio||0):''):c.terminei?'Você fez '+fmt(c.meu_premio||0)+' · termina em '+campLeft(c.fim):c.comecei?'Você começou e não terminou · conta R$ 0':'Termina em <b>'+campLeft(c.fim)+'</b>';
+    const acts=(ab&&!c.comecei?'<button class="btn money" type="button" data-play="'+i+'">Jogar agora</button>':'')
+      +'<button class="btn ghost" type="button" data-cls="'+i+'">Classificação</button>'
+      +(ab&&c.link_aberto?'<button class="btn ghost" type="button" data-inv="'+i+'">Convidar</button>':'');
+    return '<div class="duel'+(ab&&!c.comecei?'':' muted')+'"><b class="t">🏆 <span data-f="n"></span></b>'+info+'<p class="small">'+st+'</p><div class="row">'+acts+'</div></div>';
+  }).join("");
+  box.innerHTML=h;
+  box.querySelectorAll(".duel").forEach((el,i)=>{const c=L[i];el.querySelector('[data-f="n"]').textContent=c.nome;const r=el.querySelector('[data-f="rk"]');if(r)r.textContent=c.ranking});
+  $("cpNew").onclick=()=>{sfx.click();openCampNew()};
+  box.querySelectorAll("[data-play]").forEach(b=>b.onclick=()=>{sfx.click();openCampPlay(L[+b.dataset.play])});
+  box.querySelectorAll("[data-cls]").forEach(b=>b.onclick=()=>{sfx.click();openCampCls(L[+b.dataset.cls].id)});
+  box.querySelectorAll("[data-inv]").forEach(b=>b.onclick=()=>{sfx.click();openCampShare(L[+b.dataset.inv])});
+}
+async function openCampNew(){
+  let tr=track,dias=3,rk=null,link=true;const conv=new Set();let mats=new Set(selectedSubjects().filter(k=>TRACKS[tr].s.includes(k)));
+  dlDialog("🏆 Novo campeonato","Criar campeonato","Show do Milhão com as mesmas questões para todos. Cada participante joga uma vez, dentro do prazo. Vence quem levar o maior prêmio; empate vai para acertos e depois para o menor tempo.");
+  const o=$("dlOpts");
+  o.innerHTML='<div class="form"><label>Nome do campeonato<input type="text" id="cpNome" maxlength="50" placeholder="Ex.: Copa de Penal da turma"></label></div>'
+    +'<span class="eyebrow">Trilha</span><div class="rkchips" id="cpTr" role="group" aria-label="Trilha"></div>'
+    +'<span class="eyebrow">Matérias</span><div class="chips" id="cpMat"></div><p class="small" id="cpMatInfo" style="margin:0"></p>'
+    +'<span class="eyebrow">Prazo para jogar</span><div class="rkchips" id="cpDias" role="group" aria-label="Prazo"></div>'
+    +'<span class="eyebrow">Quem participa</span><label class="small"><input type="checkbox" id="cpLink" checked> Qualquer pessoa com o link de convite</label>'
+    +'<div id="cpRkBox" style="display:grid;gap:8px"></div>';
+  const chipsRow=(box,items,get,set)=>{box.innerHTML="";items.forEach(([v,n])=>{const b=document.createElement("button");b.type="button";b.className="chipbtn";b.textContent=n;b.setAttribute("aria-pressed",get()===v);b.onclick=()=>{sfx.click();set(v);box.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b))};box.appendChild(b)})};
+  const drawMats=()=>{const box=$("cpMat");box.innerHTML="";const subs=TRACKS[tr].s;if(!mats.size)subs.forEach(k=>mats.add(k));
+    subs.forEach(k=>{const l=document.createElement("label");l.className="chip";l.innerHTML='<input type="checkbox"><span class="dot"></span><span></span>';l.lastChild.textContent=SUBJ[k];
+      const i=l.querySelector("input");i.checked=mats.has(k);i.onchange=()=>{i.checked?mats.add(k):mats.delete(k);matInfo()};box.appendChild(l)});matInfo()};
+  const matInfo=()=>{const n=Q.filter(x=>mats.has(x.s)).length;$("cpMatInfo").textContent=!mats.size?"Escolha pelo menos uma matéria.":n<PRIZES.length+3?"Poucas questões nessas matérias ("+n+"). Marque mais alguma.":n+" questões disponíveis nessas matérias."};
+  chipsRow($("cpTr"),Object.entries(TRACKS).map(([k,t])=>[k,t.n]),()=>tr,v=>{tr=v;mats=new Set();drawMats()});
+  chipsRow($("cpDias"),[[1,"1 dia"],[3,"3 dias"],[7,"7 dias"]],()=>dias,v=>dias=v);
+  drawMats();$("cpLink").onchange=e=>{link=e.target.checked};
+  // membros do ranking
+  const rbox=$("cpRkBox");
+  if(!RK.list){try{const {data}=await sb.rpc("meus_rankings");RK.list=data||[]}catch(e){}}
+  const rks=RK.list||[];
+  if(rks.length){
+    rbox.innerHTML='<label class="small">Convidar membros do ranking:</label><div class="rkchips" id="cpRk"></div><div class="chips" id="cpMem"></div>';
+    const drawMem=async()=>{const mb=$("cpMem");conv.clear();if(!rk){mb.innerHTML="";return}mb.innerHTML='<span class="small">Carregando membros…</span>';
+      try{const {data,error}=await sb.rpc("tabela_semana",{p_id:rk,p_semana:0});if(error)throw error;
+        const L=(data||[]).filter(x=>x.membro!==user.id);mb.innerHTML=L.length?"":'<span class="small">Só você está nesse ranking.</span>';
+        if(L.length){const all=document.createElement("button");all.type="button";all.className="linkbtn";all.textContent="Marcar todos";mb.appendChild(all);
+          const ins=[];L.forEach(x=>{const l=document.createElement("label");l.className="chip";l.innerHTML='<input type="checkbox"><span class="dot"></span><span></span>';l.lastChild.textContent=x.nome||"Jogador";
+            const i=l.querySelector("input");i.onchange=()=>{i.checked?conv.add(x.membro):conv.delete(x.membro)};ins.push(i);mb.appendChild(l)});
+          all.onclick=()=>{ins.forEach(i=>{i.checked=true;i.onchange()})}}}
+      catch(e){mb.innerHTML='<span class="small">Não foi possível carregar os membros.</span>'}};
+    chipsRow($("cpRk"),[[null,"Nenhum"]].concat(rks.map(r=>[r.id,r.nome])),()=>rk,v=>{rk=v;drawMem()});
+  }
+  const go=dlBtn("Criar campeonato","money",async()=>{$("dlErr").hidden=true;
+    const nome=$("cpNome").value.trim(),M=TRACKS[tr].s.filter(k=>mats.has(k));
+    if(nome.length<3){$("dlErr").textContent="Dê um nome ao campeonato (de 3 a 50 letras).";$("dlErr").hidden=false;$("cpNome").focus();return}
+    const q=M.length?campPlan(tr,M):null;
+    if(!q){$("dlErr").textContent="Poucas questões nessas matérias. Marque mais alguma matéria.";$("dlErr").hidden=false;return}
+    if(!link&&!conv.size){$("dlErr").textContent=campErr({message:"SEM_PARTICIPANTES"});$("dlErr").hidden=false;return}
+    go.disabled=true;
+    try{const {data,error}=await sb.rpc("criar_campeonato",{p_nome:nome,p_trilha:tr,p_materias:M,p_questoes:q,p_dias:dias,p_ranking:rk,p_convidados:[...conv],p_link:link});if(error)throw error;
+      CP.t=0;await campLoad(true);const c=(CP.list||[]).find(x=>x.id===data.id)||{id:data.id,codigo:data.codigo,nome,link_aberto:link,trilha:tr,materias:M};
+      openCampShare(c,true)}
+    catch(e){$("dlErr").textContent=campErr(e);$("dlErr").hidden=false;go.disabled=false}});
+  dlBtn("Cancelar","ghost",()=>{$("ovDuel").hidden=true});$("cpNome").focus();
+}
+function openCampShare(c,novo){
+  const url=campLink(c.codigo),txt="🏆 Campeonato \""+c.nome+"\" no Aprenda se Divertindo: Show do Milhão com as mesmas questões para todo mundo. Topa? "+url;
+  dlDialog("🏆 Campeonato","\""+c.nome+"\""+(novo?" criado!":""),c.link_aberto?"Mande o link para quem você quer chamar. Quem abrir entra no campeonato (se ainda não tiver conta, cria uma grátis).":"Só os membros do ranking que você escolheu participam. Eles já veem o campeonato na tela inicial do jogo.");
+  if(c.link_aberto){const o=$("dlOpts");o.innerHTML='<textarea class="sharetxt" rows="3" readonly></textarea><p class="small" role="status" id="cpCopied" style="margin:0"></p>';o.querySelector("textarea").value=url;
+    dlBtn("Copiar link","money",()=>{const ta=o.querySelector("textarea");try{navigator.clipboard.writeText(url).then(()=>{$("cpCopied").textContent="Link copiado."},()=>{ta.select()})}catch(e){ta.select()}});
+    const a=document.createElement("a");a.className="btn ghost";a.target="_blank";a.rel="noopener";a.href="https://wa.me/?text="+encodeURIComponent(txt);a.textContent="Enviar no WhatsApp";$("dlActs").appendChild(a)}
+  const me=(CP.list||[]).find(x=>x.id===c.id);
+  if(me&&me.status==="aberto"&&!me.comecei)dlBtn("Jogar agora","ghost",()=>openCampPlay(me));
+  dlBtn("Fechar","ghost",()=>{$("ovDuel").hidden=true});
+}
+function openCampPlay(c){
+  dlDialog("🏆 Campeonato · Trilha "+(TRACKS[c.trilha]?TRACKS[c.trilha].n:c.trilha),"\""+c.nome+"\"","Show do Milhão com as mesmas questões dos outros participantes, só de "+campMats(c)+". Atenção: você joga uma vez só. Se sair no meio, fica com R$ 0. O placar dos outros você vê na classificação.");
+  const go=dlBtn("Começar agora","money",async()=>{go.disabled=true;$("dlErr").hidden=true;
+    try{const {data,error}=await sb.rpc("iniciar_campeonato",{p_id:c.id});if(error)throw error;$("ovDuel").hidden=true;CP.t=0;startCamp(data)}
+    catch(e){$("dlErr").textContent=campErr(e);$("dlErr").hidden=false;go.disabled=false;CP.t=0}});
+  dlBtn("Agora não","ghost",()=>{$("ovDuel").hidden=true});go.focus();
+}
+function startCamp(c){
+  S={level:0,mode:"duel",trilha:c.trilha,duel:{camp:true,id:c.id,nome:c.nome,trilha:c.trilha,q:c.questoes,lv:-1,k:0,expira:c.fim},used:new Set(),subjects:c.materias,help:{skip:3,elim:1,poll:1,prof:1,risk:1},riskArmed:false,hist:[],cur:null,sel:null,locked:false,left:TIME,paused:false};
+  gameStart=Date.now();show("game");loadQuestion();
+}
+async function finishCamp(how){
+  const D=S.duel,prize=how==="win"?1000000:how==="stop"?acc():errVal(),hits=S.hist.filter(h=>h.ok).length;
+  stats.games++;stats.best=Math.max(stats.best||0,prize);saveStats();bumpStreak();
+  $("endEyebrow").textContent="🏆 Campeonato · "+D.nome;
+  $("endPrize").textContent=fmt(prize);
+  $("dailyGrid").hidden=true;$("btnAgain").textContent="Fazer nova prova";$("endStreak").textContent=streakLine();$("endPts").hidden=true;
+  $("endMsg").textContent="Enviando seu resultado…";$("shareBox").innerHTML="";
+  renderReview();show("end");
+  if(how==="win"){sfx.win();confetti()}
+  const args={p_id:D.id,p_premio:prize,p_nivel:Math.min(30,S.level+1),p_acertos:Math.min(30,hits),p_respondidas:Math.min(30,S.hist.length),p_tempo:Math.round((Date.now()-gameStart)/1000)};
+  try{localStorage.setItem(CP_PK,JSON.stringify(args))}catch(e){}
+  const act=$("endDuelAct");
+  const show2=async()=>{let pos="";
+    try{const {data}=await sb.rpc("classificacao_campeonato",{p_id:D.id});const L=(data&&data.linhas||[]).filter(x=>x.situacao==="terminou");const me=L.find(x=>x.sou_eu);
+      if(me)pos="Você está em "+me.pos+"º lugar entre "+L.length+" que já jogaram."}catch(e){}
+    $("endMsg").textContent="Resultado enviado. "+(pos||"Acompanhe a classificação até o fim do campeonato.");
+    act.innerHTML="";const b=document.createElement("button");b.type="button";b.className="btn money";b.textContent="Ver classificação";b.onclick=()=>openCampCls(D.id);act.appendChild(b);act.hidden=false;
+    shareUI($("shareBox"),"🏆 Fiz "+fmt(prize)+" no campeonato \""+D.nome+"\" do Aprenda se Divertindo. Bora ver quem leva? "+SHARE_URL)};
+  const send=async()=>{try{const {error}=await sb.rpc("enviar_campeonato",args);if(error)throw error;try{localStorage.removeItem(CP_PK)}catch(e){}return true}
+    catch(e){const m=(e&&(e.message||"")+"");if(m.includes("CAMP_FECHADO")){try{localStorage.removeItem(CP_PK)}catch(x){}}
+      $("endMsg").textContent="Não foi possível enviar o resultado: "+campErr(e)+(m.includes("CAMP_FECHADO")?"":" Ele fica guardado neste aparelho e é enviado sozinho quando a conexão voltar.");
+      act.innerHTML="";const b=document.createElement("button");b.type="button";b.className="btn money";b.textContent="Tentar enviar de novo";b.onclick=async()=>{b.disabled=true;if(await send())show2();else b.disabled=false};act.appendChild(b);act.hidden=false;return false}};
+  if(await send())show2();
+  CP.t=0;
+}
+async function openCampCls(id){
+  dlDialog("🏆 Campeonato","Classificação","Carregando…");
+  dlBtn("Fechar","ghost",()=>{$("ovDuel").hidden=true});
+  try{const {data:c,error}=await sb.rpc("classificacao_campeonato",{p_id:id});if(error)throw error;
+    $("dlTitle").textContent="\""+c.nome+"\"";
+    $("dlMsg").textContent="Trilha "+(TRACKS[c.trilha]?TRACKS[c.trilha].n:c.trilha)+" · "+campMats(c)+" · "+(c.status==="aberto"?"termina em "+campLeft(c.fim):"encerrado");
+    const tm=s=>s==null?"":" · "+Math.floor(s/60)+"min"+String(s%60).padStart(2,"0");
+    const L=c.linhas||[],fe=L.filter(x=>x.pos!=null),pend=L.filter(x=>x.pos==null);
+    const o=$("dlOpts");
+    o.innerHTML=(fe.length?'<ol class="rklist" aria-label="Classificação">'+fe.map((x,i)=>'<li class="'+(x.sou_eu?'me':'')+'"><span class="pos">'+(x.pos<=3?["🥇","🥈","🥉"][x.pos-1]:x.pos+"º")+'</span><span class="who"><b data-i="'+i+'"></b><span>'+(x.situacao==="abandonou"?"abandonou":(x.acertos||0)+" acertos"+tm(x.tempo))+'</span></span><span class="pr">'+fmt(x.premio||0)+'</span></li>').join("")+'</ol>':'<p class="small" style="margin:0">Ninguém terminou ainda.</p>')
+      +(pend.length?'<p class="small" style="margin:0"><b>Ainda não jogaram:</b> <span id="cpPend"></span></p>':'');
+    o.querySelectorAll("[data-i]").forEach(b=>{const x=fe[+b.dataset.i];b.textContent=x.nome+(x.sou_eu?" (você)":"")});
+    if(pend.length)$("cpPend").textContent=pend.map(x=>x.nome+(x.situacao==="jogando"?" (jogando agora)":"")+(x.sou_eu?" (você)":"")).join(", ");
+    const acts=$("dlActs");acts.innerHTML="";
+    if(c.status==="aberto"&&c.link_aberto)dlBtn("Convidar","ghost",()=>openCampShare(c));
+    const meI=L.find(x=>x.sou_eu);
+    if(c.status==="aberto"&&meI&&meI.situacao==="pendente")dlBtn("Jogar agora","money",()=>openCampPlay(c));
+    if(c.sou_criador){const del=dlBtn("Excluir campeonato","ghost",async()=>{if(del.dataset.ok!=="1"){del.dataset.ok="1";del.textContent="Confirmar exclusão";return}
+      del.disabled=true;try{const {error}=await sb.rpc("excluir_campeonato",{p_id:c.id});if(error)throw error;$("ovDuel").hidden=true;CP.t=0;campLoad(true)}catch(e){$("dlErr").textContent=campErr(e);$("dlErr").hidden=false;del.disabled=false}})}
+    else if(meI&&meI.situacao==="pendente"){const s2=dlBtn("Sair do campeonato","ghost",async()=>{if(s2.dataset.ok!=="1"){s2.dataset.ok="1";s2.textContent="Confirmar saída";return}
+      s2.disabled=true;try{const {error}=await sb.rpc("sair_campeonato",{p_id:c.id});if(error)throw error;$("ovDuel").hidden=true;CP.t=0;campLoad(true)}catch(e){$("dlErr").textContent=campErr(e);$("dlErr").hidden=false;s2.disabled=false}})}
+    dlBtn("Fechar","ghost",()=>{$("ovDuel").hidden=true});
+  }catch(e){$("dlMsg").textContent=campErr(e)}
+}
+async function handleCampInvite(){
+  if(!PENDING_CAMP||!sb||!$("ovDuel").hidden||!$("ovInvite").hidden)return;
+  const code=PENDING_CAMP,clear=()=>{PENDING_CAMP=null;try{sessionStorage.removeItem("gm-camp")}catch(e){}};
+  let c=null;try{const {data,error}=await sb.rpc("ver_campeonato",{p_codigo:code});if(error)throw error;c=data}catch(e){c=undefined}
+  dlDialog("🏆 Convite para campeonato","","");
+  if(c===undefined){$("dlTitle").textContent="Não foi possível abrir o convite";$("dlMsg").textContent="Verifique sua conexão e tente de novo pelo link.";dlBtn("Fechar","ghost",()=>{$("ovDuel").hidden=true;clear()});return}
+  if(!c){$("dlTitle").textContent="Campeonato não encontrado";$("dlMsg").textContent="Ele pode ter sido excluído ou o link está incompleto.";dlBtn("Fechar","ghost",()=>{$("ovDuel").hidden=true;clear()});return}
+  $("dlTitle").textContent="\""+c.nome+"\"";
+  const base="Criado por "+c.criador+" · Trilha "+(TRACKS[c.trilha]?TRACKS[c.trilha].n:c.trilha)+" · "+campMats(c)+" · "+c.participantes+" participante"+(c.participantes==1?"":"s")+". ";
+  if(c.status!=="aberto"){$("dlMsg").textContent=base+"Este campeonato já terminou.";dlBtn("Fechar","ghost",()=>{$("ovDuel").hidden=true;clear()});return}
+  if(!user){$("dlMsg").textContent=base+"Termina em "+campLeft(c.fim)+". Para participar, crie sua conta grátis ou entre na sua conta.";
+    dlBtn("Criar conta grátis","money",()=>{$("ovDuel").hidden=true;openAuth("up")});dlBtn("Já tenho conta","ghost",()=>{$("ovDuel").hidden=true;openAuth("in")});dlBtn("Agora não","ghost",()=>{$("ovDuel").hidden=true;clear()});return}
+  if(!c.sou_membro&&!c.link_aberto){$("dlMsg").textContent=base+"Este campeonato é só para convidados.";dlBtn("Fechar","ghost",()=>{$("ovDuel").hidden=true;clear()});return}
+  $("dlMsg").textContent=base+"Termina em "+campLeft(c.fim)+". Todo mundo joga as mesmas questões, uma vez só.";
+  const go=dlBtn(c.sou_membro?"Ver campeonato":"Entrar no campeonato","money",async()=>{go.disabled=true;
+    try{const {error}=await sb.rpc("entrar_campeonato",{p_codigo:code});if(error)throw error;clear();CP.t=0;await campLoad(true);
+      const me=(CP.list||[]).find(x=>x.id===c.id);if(me&&!me.comecei)openCampPlay(me);else openCampCls(c.id)}
+    catch(e){$("dlErr").textContent=campErr(e);$("dlErr").hidden=false;go.disabled=false}});
+  dlBtn("Agora não","ghost",()=>{$("ovDuel").hidden=true;clear()});go.focus();
+}
+
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("ovDuel").hidden)$("ovDuel").hidden=true});
 async function finishDuel(how){
   const D=S.duel,prize=how==="win"?1000000:how==="stop"?acc():errVal(),hits=S.hist.filter(h=>h.ok).length;
@@ -12490,7 +12701,7 @@ $("ovLadder").onclick=e=>{if(e.target.id==="ovLadder"){$("ovLadder").hidden=true
 /* fim */
 function finish(how){
   clearInterval(timerId);$("endDuelAct").hidden=true;
-  if(S.mode==="duel"){finishDuel(how);return}
+  if(S.mode==="duel"){if(S.duel&&S.duel.camp)finishCamp(how);else finishDuel(how);return}
   let prize=how==="win"?1000000:how==="stop"?acc():errVal();
   stats.games++;stats.best=Math.max(stats.best||0,prize);saveStats();bumpStreak();
   $("endEyebrow").textContent=how==="win"?"Aprovado em primeiro lugar":how==="stop"?"Você parou na questão "+(S.level+1):"Fim de prova na questão "+(S.level+1);
@@ -12564,23 +12775,37 @@ function renderStart(){
   renderStudyBox();
   renderSimBox();
   dlLoad();
+  campLoad();
 }
-function updatePool(){
-  const sel=selectedSubjects();
+const SUBJ_K="gm-subj-v1";
+function subjStore(){try{const o=JSON.parse(localStorage.getItem(SUBJ_K));if(o&&typeof o==="object")return o}catch(e){}return{}}
+function saveSubjSel(){try{const o=subjStore(),subs=trackSubs(),sel=selectedSubjects();o[track]=sel.length===subs.length&&subs.every(k=>sel.includes(k))?null:sel;localStorage.setItem(SUBJ_K,JSON.stringify(o))}catch(e){}}
+function updatePool(save){
+  const sel=selectedSubjects(),subs=trackSubs();
+  if(save)saveSubjSel();
   $("subjWarn").textContent=sel.length?"":"Escolha pelo menos uma matéria.";
   $("btnStart").disabled=!sel.length;
+  const sum=$("subjSum");
+  if(sum){const parcial=sel.length&&sel.length<subs.length;
+    sum.hidden=!parcial;
+    if(parcial){sum.innerHTML='Prova só com <b></b> ('+sel.length+' de '+subs.length+' matérias). <button class="linkbtn" type="button">Alterar</button>';
+      sum.querySelector("b").textContent=sel.map(k=>SUBJ[k]).join(", ");
+      sum.querySelector("button").onclick=()=>{const c=$("chips");if(c)c.scrollIntoView({behavior:"smooth",block:"center"})}}}
 }
 const chips=$("chips");
 Object.entries(SUBJ).forEach(([k,v])=>{
   const l=document.createElement("label");l.className="chip";
   l.innerHTML='<input type="checkbox" id="sub-'+k+'" value="'+k+'" checked><span class="dot"></span><span></span>';
-  l.lastChild.textContent=v;l.querySelector("input").onchange=updatePool;chips.appendChild(l);
+  l.lastChild.textContent=v;l.querySelector("input").onchange=()=>updatePool(true);chips.appendChild(l);
 });
-$("allSubj").onclick=()=>{document.querySelectorAll("#chips input").forEach(i=>i.checked=!i.parentElement.hidden);updatePool()};
+$("allSubj").onclick=()=>{document.querySelectorAll("#chips input").forEach(i=>i.checked=!i.parentElement.hidden);updatePool(true)};
 function applyTrack(k){
   track=k;try{localStorage.setItem("gm-track",k)}catch(e){}
   const subs=trackSubs();
-  document.querySelectorAll("#chips input").forEach(i=>{i.checked=subs.includes(i.value);i.parentElement.hidden=!subs.includes(i.value)&&(k!=="geral"||ENEM_S.includes(i.value)||SAUDE_S.includes(i.value))});
+  // volta a seleção de matérias que a pessoa deixou nesta trilha (antes, recarregar a página marcava todas de novo)
+  let saved=subjStore()[k];if(Array.isArray(saved)){saved=saved.filter(x=>subs.includes(x));if(!saved.length)saved=null}else saved=null;
+  const on=saved||subs;
+  document.querySelectorAll("#chips input").forEach(i=>{i.checked=on.includes(i.value);i.parentElement.hidden=!subs.includes(i.value)&&(k!=="geral"||ENEM_S.includes(i.value)||SAUDE_S.includes(i.value))});
   document.querySelectorAll("#tracks .track").forEach(b=>b.setAttribute("aria-pressed",b.dataset.k===k?"true":"false"));
   renderStTracks();
   $("subjTitle").textContent=k==="geral"?"Matérias da prova":"Matérias da trilha "+TRACKS[k].n;
@@ -13153,7 +13378,7 @@ async function setUser(u){
   }
   REF.data=null;REF.saque=false;REF.msg="";PL.loaded=false;
   studyReset();renderAcct();renderStudyBox();renderAnonInfo();SIM.info={};renderSimBox();if(user)loadStudy(true);plLoad();if(user)refClaim().then(refLoad);
-  DL.list=null;DL.t=0;dlLoad(true);RK.list=null;RK.sel=null;RK.rows=null;RK.champs=null;RK.err=null;RK.msg="";RK.inv=false;RK.leave=false;RK.mng=false;RK.del=false;RK.week=0;renderRanking();setTimeout(handleInvite,0);
+  DL.list=null;DL.t=0;dlLoad(true);CP.list=null;CP.t=0;CP.off=false;campLoad(true);RK.list=null;RK.sel=null;RK.rows=null;RK.champs=null;RK.err=null;RK.msg="";RK.inv=false;RK.leave=false;RK.mng=false;RK.del=false;RK.week=0;renderRanking();setTimeout(handleInvite,0);setTimeout(handleCampInvite,400);
 }
 function mergeProgress(p){
   if(!p||typeof p!=="object")return false;let ch=false;
