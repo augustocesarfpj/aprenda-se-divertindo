@@ -277,6 +277,7 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
 .rkmng .mrow b{flex:1 1 140px;min-width:0;overflow-wrap:anywhere}
 .rkmng select{font:inherit;padding:8px;border:1.5px solid var(--line);border-radius:6px;background:var(--sheet);color:var(--ink)}
 .duelbox{display:grid;gap:8px;margin-top:4px}
+.fase{display:grid;gap:6px}.cfr{display:grid;grid-template-columns:1fr auto 1fr;gap:4px 8px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:.92rem}.cfr .vs{color:var(--muted);font-weight:800}.cfr .p2{text-align:right}.cfr .st{grid-column:1/-1;margin:0}.cfr.me{border-color:var(--money);background:var(--money-soft,rgba(46,160,90,.08))}
 .camphead{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.camphead .btn{padding:7px 12px;font-size:.88rem}
 .instbox{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:4px;padding:12px 14px;border:1.5px solid var(--line);border-radius:8px;background:var(--sheet)}
 .instbox img{width:44px;height:44px;border-radius:10px;flex:none}
@@ -12233,24 +12234,35 @@ function campErr(e){
   if(m.includes("JA_JOGOU"))return"Você já jogou este campeonato. Cada participante joga uma vez só.";
   if(m.includes("CAMP_FECHADO"))return"O prazo para enviar o resultado deste campeonato acabou.";
   if(m.includes("NAO_ENCONTRADO"))return"Campeonato não encontrado. Confira o link.";
+  if(m.includes("ELIMINADO"))return"Você foi eliminado da copa. Acompanhe a chave até a final!";
+  if(m.includes("FOLGA"))return"Você passou direto nesta fase (folga). Aguarde a próxima.";
+  if(m.includes("AGUARDE"))return"Seu adversário desta fase ainda não foi definido. Volte quando a fase anterior terminar.";
+  if(m.includes("POUCOS_JOGADORES"))return"A copa precisa de pelo menos 4 jogadores, contando você.";
+  if(m.includes("MUITOS_JOGADORES"))return"A copa aceita no máximo 64 jogadores.";
+  if(m.includes("SEM_RANKING"))return"Escolha um ranking para convidar os membros.";
+  if(m.includes("POUCAS_QUESTOES"))return"Poucas questões nessas matérias. Marque mais alguma matéria.";
   if(m.includes("Could not find")||m.includes("does not exist"))return"Os campeonatos ainda não foram ativados no servidor.";
   return rkErr(e);
 }
-/* sorteia as questões só das matérias escolhidas: 1 principal + reservas (para os pulos) em cada degrau */
-function campPlan(trilha,mats){
-  const ok=x=>mats.includes(x.s),total=Q.filter(ok).length;
+/* sorteia as questões de uma rodada só das matérias escolhidas: 1 principal + reservas (para os pulos) em cada degrau.
+   "evita" guarda as questões já usadas em outras rodadas, para não repetir enquanto houver questões novas */
+function campPlan(trilha,mats,evita){
+  const ok=x=>mats.includes(x.s),total=Q.filter(ok).length;evita=evita||new Set();
   if(total<PRIZES.length+3)return null;
-  const used=new Set(),main=[];
-  for(let l=0;l<PRIZES.length;l++){const tier=tierOf(l);let q=null;
-    for(const t of [tier,tier+1,tier-1,tier+2,tier-2,tier+3,tier-3,tier+4,tier-4]){const pool=Q.filter(x=>x.d===t&&ok(x)&&!used.has(x.id));if(pool.length){q=evenPick(pool,Math.random,TRACKS[trilha].w);break}}
-    used.add(q.id);main.push(q.id)}
+  const used=new Set(),main=[],livre=x=>!used.has(x.id)&&!evita.has(x.id),w=TRACKS[trilha].w;
+  const pega=(tier,fol)=>{for(const t of [tier,tier+1,tier-1,tier+2,tier-2,tier+3,tier-3,tier+4,tier-4]){let pool=Q.filter(x=>x.d===t&&ok(x)&&livre(x));
+    if(!pool.length&&fol)pool=Q.filter(x=>x.d===t&&ok(x)&&!used.has(x.id));if(pool.length)return evenPick(pool,Math.random,w)}return null};
+  for(let l=0;l<PRIZES.length;l++){const q=pega(tierOf(l),false)||pega(tierOf(l),true);used.add(q.id);main.push(q.id)}
   const ids=[];
-  for(let l=0;l<PRIZES.length;l++){ids.push(main[l]);const tier=tierOf(l);
-    for(let k=1;k<DL_PER;k++){let q=null;
-      for(const t of [tier,tier+1,tier-1,tier+2,tier-2]){const pool=Q.filter(x=>x.d===t&&ok(x)&&!used.has(x.id));if(pool.length){q=evenPick(pool,Math.random,TRACKS[trilha].w);break}}
-      if(q){used.add(q.id);ids.push(q.id)}else ids.push(main[l])}}
+  for(let l=0;l<PRIZES.length;l++){ids.push(main[l]);
+    for(let k=1;k<DL_PER;k++){const q=pega(tierOf(l),false);if(q){used.add(q.id);ids.push(q.id)}else ids.push(main[l])}}
+  ids.forEach(i=>evita.add(i));
   return ids;
 }
+function campPlanAll(trilha,mats,n){const ev=new Set(),all=[];for(let r=0;r<n;r++){const q=campPlan(trilha,mats,ev);if(!q)return null;all.push(...q)}return all}
+const FASES=["Final","Semifinal","Quartas de final","Oitavas de final","16 avos de final","32 avos de final"];
+const faseNome=(r,total)=>FASES[total-r-1]||("Fase "+(r+1));
+const campRod=c=>c.formato==="mata"?faseNome(c.rodada||0,c.rodadas):(c.rodadas>1?"Rodada "+((c.rodada||0)+1)+" de "+c.rodadas:"Rodada única");
 async function campLoad(force){
   if(!sb||!user){CP.list=null;renderCamps();return}
   if(CP.busy||(!force&&CP.list&&Date.now()-CP.t<20000)){renderCamps();return}
@@ -12268,108 +12280,133 @@ function renderCamps(){
   box.hidden=false;
   const L=CP.list||[];
   let h='<div class="camphead"><span class="eyebrow">🏆 Campeonatos</span><button class="btn ghost" type="button" id="cpNew">+ Criar campeonato</button></div>';
-  if(!L.length)h+='<p class="small" style="margin:0">Crie um campeonato com as matérias que quiser e chame a turma do ranking ou mande o link. Todos jogam as mesmas questões.</p>';
+  if(!L.length)h+='<p class="small" style="margin:0">Crie um campeonato com as matérias que quiser: <b>pontos corridos</b> (com link para quem quiser) ou <b>copa mata-mata</b> com a turma do ranking.</p>';
   h+=L.map((c,i)=>{
-    const tr=TRACKS[c.trilha]?TRACKS[c.trilha].n:c.trilha,ab=c.status==="aberto";
-    const info='<p class="small">Trilha '+tr+' · '+esc(campMats(c))+' · '+c.participantes+' participante'+(c.participantes==1?'':'s')+' ('+c.jogaram+(c.jogaram==1?' já jogou)':' já jogaram)')+(c.ranking?' · Ranking <b data-f="rk"></b>':'')+'</p>';
-    const st=!ab?'Encerrado'+(c.terminei?' · você fez '+fmt(c.meu_premio||0):''):c.terminei?'Você fez '+fmt(c.meu_premio||0)+' · termina em '+campLeft(c.fim):c.comecei?'Você começou e não terminou · conta R$ 0':'Termina em <b>'+campLeft(c.fim)+'</b>';
-    const acts=(ab&&!c.comecei?'<button class="btn money" type="button" data-play="'+i+'">Jogar agora</button>':'')
-      +'<button class="btn ghost" type="button" data-cls="'+i+'">Classificação</button>'
-      +(ab&&c.link_aberto?'<button class="btn ghost" type="button" data-inv="'+i+'">Convidar</button>':'');
-    return '<div class="duel'+(ab&&!c.comecei?'':' muted')+'"><b class="t">🏆 <span data-f="n"></span></b>'+info+'<p class="small">'+st+'</p><div class="row">'+acts+'</div></div>';
+    const tr=TRACKS[c.trilha]?TRACKS[c.trilha].n:c.trilha,ab=c.status==="aberto",mata=c.formato==="mata",v=c.minha_vez;
+    const fmtTxt=mata?"⚔️ Copa mata-mata":"📊 Pontos corridos"+(c.rodadas>1?" · "+c.rodadas+" rodadas":"");
+    const info='<p class="small">'+fmtTxt+' · Trilha '+tr+' · '+esc(campMats(c))+' · '+c.participantes+' participante'+(c.participantes==1?'':'s')+(c.ranking?' · Ranking <b data-f="rk"></b>':'')+'</p>';
+    let st;
+    if(!ab)st=mata?(c.campeao?'Encerrada · 🏆 Campeão: <b data-f="cp"></b>':'Encerrada'):'Encerrado';
+    else{const rod=campRod(c),ate=' · termina em '+campLeft(c.fim_rodada);
+      st=v==="sim"?'<b>'+rod+'</b> liberada'+ate:v==="jogou"?rod+': você já jogou'+(c.formato==="pontos"&&c.rodada<c.rodadas-1?' · próxima rodada em '+campLeft(c.fim_rodada):''):
+        v==="abandonou"?rod+': você começou e não terminou (conta 0)':v==="folga"?rod+': você passou direto (folga) 🎟️':v==="aguarde"?rod+': aguardando seu adversário ser definido':
+        v==="eliminado"?'Você foi eliminado · '+rod+' em andamento':rod+ate}
+    const acts=(ab&&v==="sim"?'<button class="btn money" type="button" data-play="'+i+'">'+(mata?"Jogar "+campRod(c).toLowerCase():"Jogar "+(c.rodadas>1?"rodada "+((c.rodada||0)+1):"agora"))+'</button>':'')
+      +'<button class="btn ghost" type="button" data-cls="'+i+'">'+(mata?"Ver chave":"Classificação")+'</button>'
+      +(ab&&c.link_aberto&&!mata?'<button class="btn ghost" type="button" data-inv="'+i+'">Convidar</button>':'');
+    return '<div class="duel'+(ab&&v==="sim"?'':' muted')+'"><b class="t">'+(mata?"⚔️":"🏆")+' <span data-f="n"></span></b>'+info+'<p class="small">'+st+'</p><div class="row">'+acts+'</div></div>';
   }).join("");
   box.innerHTML=h;
-  box.querySelectorAll(".duel").forEach((el,i)=>{const c=L[i];el.querySelector('[data-f="n"]').textContent=c.nome;const r=el.querySelector('[data-f="rk"]');if(r)r.textContent=c.ranking});
+  box.querySelectorAll(".duel").forEach((el,i)=>{const c=L[i];el.querySelector('[data-f="n"]').textContent=c.nome;const r=el.querySelector('[data-f="rk"]');if(r)r.textContent=c.ranking;const k=el.querySelector('[data-f="cp"]');if(k)k.textContent=c.campeao});
   $("cpNew").onclick=()=>{sfx.click();openCampNew()};
   box.querySelectorAll("[data-play]").forEach(b=>b.onclick=()=>{sfx.click();openCampPlay(L[+b.dataset.play])});
   box.querySelectorAll("[data-cls]").forEach(b=>b.onclick=()=>{sfx.click();openCampCls(L[+b.dataset.cls].id)});
   box.querySelectorAll("[data-inv]").forEach(b=>b.onclick=()=>{sfx.click();openCampShare(L[+b.dataset.inv])});
 }
 async function openCampNew(){
-  let tr=track,dias=3,rk=null,link=true;const conv=new Set();let mats=new Set(selectedSubjects().filter(k=>TRACKS[tr].s.includes(k)));
-  dlDialog("🏆 Novo campeonato","Criar campeonato","Show do Milhão com as mesmas questões para todos. Cada participante joga uma vez, dentro do prazo. Vence quem levar o maior prêmio; empate vai para acertos e depois para o menor tempo.");
+  let tr=track,rods=3,rk=null,link=true,fmt="pontos";const conv=new Set();let mats=new Set(selectedSubjects().filter(k=>TRACKS[tr].s.includes(k)));
+  dlDialog("🏆 Novo campeonato","Criar campeonato","Todos jogam o Show do Milhão com as mesmas questões, só das matérias escolhidas.");
   const o=$("dlOpts");
   o.innerHTML='<div class="form"><label>Nome do campeonato<input type="text" id="cpNome" maxlength="50" placeholder="Ex.: Copa de Penal da turma"></label></div>'
+    +'<span class="eyebrow">Formato</span><div class="rkchips" id="cpFmt" role="group" aria-label="Formato"></div><p class="small" id="cpFmtInfo" style="margin:0"></p>'
     +'<span class="eyebrow">Trilha</span><div class="rkchips" id="cpTr" role="group" aria-label="Trilha"></div>'
     +'<span class="eyebrow">Matérias</span><div class="chips" id="cpMat"></div><p class="small" id="cpMatInfo" style="margin:0"></p>'
-    +'<span class="eyebrow">Prazo para jogar</span><div class="rkchips" id="cpDias" role="group" aria-label="Prazo"></div>'
-    +'<span class="eyebrow">Quem participa</span><label class="small"><input type="checkbox" id="cpLink" checked> Qualquer pessoa com o link de convite</label>'
-    +'<div id="cpRkBox" style="display:grid;gap:8px"></div>';
+    +'<div id="cpRodBox" style="display:grid;gap:8px"><span class="eyebrow">Rodadas (uma por dia, 24 h cada)</span><div class="rkchips" id="cpRod" role="group" aria-label="Rodadas"></div></div>'
+    +'<span class="eyebrow">Quem participa</span><label class="small" id="cpLinkL"><input type="checkbox" id="cpLink" checked> Qualquer pessoa com o link de convite</label>'
+    +'<div id="cpRkBox" style="display:grid;gap:8px"></div><p class="small" id="cpMataInfo" style="margin:0"></p>';
   const chipsRow=(box,items,get,set)=>{box.innerHTML="";items.forEach(([v,n])=>{const b=document.createElement("button");b.type="button";b.className="chipbtn";b.textContent=n;b.setAttribute("aria-pressed",get()===v);b.onclick=()=>{sfx.click();set(v);box.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b))};box.appendChild(b)})};
   const drawMats=()=>{const box=$("cpMat");box.innerHTML="";const subs=TRACKS[tr].s;if(!mats.size)subs.forEach(k=>mats.add(k));
     subs.forEach(k=>{const l=document.createElement("label");l.className="chip";l.innerHTML='<input type="checkbox"><span class="dot"></span><span></span>';l.lastChild.textContent=SUBJ[k];
       const i=l.querySelector("input");i.checked=mats.has(k);i.onchange=()=>{i.checked?mats.add(k):mats.delete(k);matInfo()};box.appendChild(l)});matInfo()};
   const matInfo=()=>{const n=Q.filter(x=>mats.has(x.s)).length;$("cpMatInfo").textContent=!mats.size?"Escolha pelo menos uma matéria.":n<PRIZES.length+3?"Poucas questões nessas matérias ("+n+"). Marque mais alguma.":n+" questões disponíveis nessas matérias."};
+  const mataInfo=()=>{const el=$("cpMataInfo");if(fmt!=="mata"){el.textContent="";return}
+    const n=conv.size+1;if(!rk){el.textContent="Escolha o ranking e marque quem vai jogar (de 4 a 64 pessoas, contando você).";return}
+    if(n<4){el.textContent="Você + "+conv.size+" marcado"+(conv.size==1?"":"s")+". A copa precisa de pelo menos 4 jogadores.";return}
+    if(n>64){el.textContent="Máximo de 64 jogadores. Desmarque "+(n-64)+".";return}
+    let t=4,f=2;while(t<n){t*=2;f++}const d=Math.max(12,Math.ceil(48/f)),by=t-n;
+    el.innerHTML='<b>'+n+' jogadores</b> · chave de '+t+(by?' · '+by+' passa'+(by==1?'':'m')+' direto na 1ª fase (folga, por sorteio)':'')+' · '+f+' fases de '+d+' h · termina em '+(f*d>=48?Math.round(f*d/24*10)/10+' dias':f*d+' h')+'.'};
+  const fmtDraw=()=>{const m=fmt==="mata";$("cpRodBox").hidden=m;$("cpLinkL").hidden=m;
+    $("cpFmtInfo").textContent=m?"Só membros do ranking. O sistema sorteia a chave; quem vence cada confronto avança até a final. Cada fase tem 12 h (a copa dura no mínimo 48 h). Quem não joga no prazo perde por W.O.":
+      "Cada rodada vale pontos: 1º 10, 2º 8, 3º 6, 4º 5, 5º 4, 6º 3, 7º 2 e 1 ponto para quem mais jogar. Pode chamar pelo link e/ou pelo ranking.";mataInfo()};
+  chipsRow($("cpFmt"),[["pontos","📊 Pontos corridos"],["mata","⚔️ Copa mata-mata"]],()=>fmt,v=>{fmt=v;fmtDraw()});
   chipsRow($("cpTr"),Object.entries(TRACKS).map(([k,t])=>[k,t.n]),()=>tr,v=>{tr=v;mats=new Set();drawMats()});
-  chipsRow($("cpDias"),[[1,"1 dia"],[3,"3 dias"],[7,"7 dias"]],()=>dias,v=>dias=v);
-  drawMats();$("cpLink").onchange=e=>{link=e.target.checked};
-  // membros do ranking
+  chipsRow($("cpRod"),[[1,"1"],[3,"3"],[5,"5"],[7,"7"]],()=>rods,v=>rods=v);
+  drawMats();fmtDraw();$("cpLink").onchange=e=>{link=e.target.checked};
   const rbox=$("cpRkBox");
   if(!RK.list){try{const {data}=await sb.rpc("meus_rankings");RK.list=data||[]}catch(e){}}
   const rks=RK.list||[];
   if(rks.length){
-    rbox.innerHTML='<label class="small">Convidar membros do ranking:</label><div class="rkchips" id="cpRk"></div><div class="chips" id="cpMem"></div>';
-    const drawMem=async()=>{const mb=$("cpMem");conv.clear();if(!rk){mb.innerHTML="";return}mb.innerHTML='<span class="small">Carregando membros…</span>';
+    rbox.innerHTML='<label class="small">Membros do ranking:</label><div class="rkchips" id="cpRk"></div><div class="chips" id="cpMem"></div>';
+    const drawMem=async()=>{const mb=$("cpMem");conv.clear();mataInfo();if(!rk){mb.innerHTML="";return}mb.innerHTML='<span class="small">Carregando membros…</span>';
       try{const {data,error}=await sb.rpc("tabela_semana",{p_id:rk,p_semana:0});if(error)throw error;
         const L=(data||[]).filter(x=>x.membro!==user.id);mb.innerHTML=L.length?"":'<span class="small">Só você está nesse ranking.</span>';
         if(L.length){const all=document.createElement("button");all.type="button";all.className="linkbtn";all.textContent="Marcar todos";mb.appendChild(all);
           const ins=[];L.forEach(x=>{const l=document.createElement("label");l.className="chip";l.innerHTML='<input type="checkbox"><span class="dot"></span><span></span>';l.lastChild.textContent=x.nome||"Jogador";
-            const i=l.querySelector("input");i.onchange=()=>{i.checked?conv.add(x.membro):conv.delete(x.membro)};ins.push(i);mb.appendChild(l)});
+            const i=l.querySelector("input");i.onchange=()=>{i.checked?conv.add(x.membro):conv.delete(x.membro);mataInfo()};ins.push(i);mb.appendChild(l)});
           all.onclick=()=>{ins.forEach(i=>{i.checked=true;i.onchange()})}}}
       catch(e){mb.innerHTML='<span class="small">Não foi possível carregar os membros.</span>'}};
     chipsRow($("cpRk"),[[null,"Nenhum"]].concat(rks.map(r=>[r.id,r.nome])),()=>rk,v=>{rk=v;drawMem()});
-  }
+  }else rbox.innerHTML='<p class="small" style="margin:0">Você ainda não está em nenhum ranking. A copa mata-mata é feita com membros de um ranking.</p>';
+  const err=t=>{$("dlErr").textContent=t;$("dlErr").hidden=false};
   const go=dlBtn("Criar campeonato","money",async()=>{$("dlErr").hidden=true;
     const nome=$("cpNome").value.trim(),M=TRACKS[tr].s.filter(k=>mats.has(k));
-    if(nome.length<3){$("dlErr").textContent="Dê um nome ao campeonato (de 3 a 50 letras).";$("dlErr").hidden=false;$("cpNome").focus();return}
-    const q=M.length?campPlan(tr,M):null;
-    if(!q){$("dlErr").textContent="Poucas questões nessas matérias. Marque mais alguma matéria.";$("dlErr").hidden=false;return}
-    if(!link&&!conv.size){$("dlErr").textContent=campErr({message:"SEM_PARTICIPANTES"});$("dlErr").hidden=false;return}
+    if(nome.length<3){err("Dê um nome ao campeonato (de 3 a 50 letras).");$("cpNome").focus();return}
+    let nRod=rods;
+    if(fmt==="mata"){const n=conv.size+1;if(!rk||n<4){err("A copa precisa de um ranking e de pelo menos 4 jogadores, contando você.");return}if(n>64){err("A copa aceita no máximo 64 jogadores.");return}
+      let t=4;nRod=2;while(t<n){t*=2;nRod++}}
+    else if(!link&&!conv.size){err(campErr({message:"SEM_PARTICIPANTES"}));return}
+    const q=M.length?campPlanAll(tr,M,nRod):null;
+    if(!q){err("Poucas questões nessas matérias. Marque mais alguma matéria.");return}
     go.disabled=true;
-    try{const {data,error}=await sb.rpc("criar_campeonato",{p_nome:nome,p_trilha:tr,p_materias:M,p_questoes:q,p_dias:dias,p_ranking:rk,p_convidados:[...conv],p_link:link});if(error)throw error;
-      CP.t=0;await campLoad(true);const c=(CP.list||[]).find(x=>x.id===data.id)||{id:data.id,codigo:data.codigo,nome,link_aberto:link,trilha:tr,materias:M};
+    try{const {data,error}=await sb.rpc("criar_campeonato",{p_nome:nome,p_trilha:tr,p_materias:M,p_questoes:q,p_formato:fmt,p_rodadas:nRod,p_ranking:rk,p_convidados:[...conv],p_link:fmt==="pontos"&&link});if(error)throw error;
+      CP.t=0;await campLoad(true);const c=(CP.list||[]).find(x=>x.id===data.id)||{id:data.id,codigo:data.codigo,nome,link_aberto:fmt==="pontos"&&link,formato:fmt,trilha:tr,materias:M};
       openCampShare(c,true)}
-    catch(e){$("dlErr").textContent=campErr(e);$("dlErr").hidden=false;go.disabled=false}});
+    catch(e){err(campErr(e));go.disabled=false}});
   dlBtn("Cancelar","ghost",()=>{$("ovDuel").hidden=true});$("cpNome").focus();
 }
 function openCampShare(c,novo){
   const url=campLink(c.codigo),txt="🏆 Campeonato \""+c.nome+"\" no Aprenda se Divertindo: Show do Milhão com as mesmas questões para todo mundo. Topa? "+url;
-  dlDialog("🏆 Campeonato","\""+c.nome+"\""+(novo?" criado!":""),c.link_aberto?"Mande o link para quem você quer chamar. Quem abrir entra no campeonato (se ainda não tiver conta, cria uma grátis).":"Só os membros do ranking que você escolheu participam. Eles já veem o campeonato na tela inicial do jogo.");
-  if(c.link_aberto){const o=$("dlOpts");o.innerHTML='<textarea class="sharetxt" rows="3" readonly></textarea><p class="small" role="status" id="cpCopied" style="margin:0"></p>';o.querySelector("textarea").value=url;
+  dlDialog("🏆 Campeonato","\""+c.nome+"\""+(novo?" criado!":""),c.formato==="mata"?"A chave já foi sorteada. Os jogadores escolhidos veem a copa na tela inicial do jogo, com a fase liberada para jogar.":c.link_aberto?"Mande o link para quem você quer chamar. Quem abrir entra no campeonato (se ainda não tiver conta, cria uma grátis).":"Só os membros do ranking que você escolheu participam. Eles já veem o campeonato na tela inicial do jogo.");
+  if(c.link_aberto&&c.formato!=="mata"){const o=$("dlOpts");o.innerHTML='<textarea class="sharetxt" rows="3" readonly></textarea><p class="small" role="status" id="cpCopied" style="margin:0"></p>';o.querySelector("textarea").value=url;
     dlBtn("Copiar link","money",()=>{const ta=o.querySelector("textarea");try{navigator.clipboard.writeText(url).then(()=>{$("cpCopied").textContent="Link copiado."},()=>{ta.select()})}catch(e){ta.select()}});
     const a=document.createElement("a");a.className="btn ghost";a.target="_blank";a.rel="noopener";a.href="https://wa.me/?text="+encodeURIComponent(txt);a.textContent="Enviar no WhatsApp";$("dlActs").appendChild(a)}
   const me=(CP.list||[]).find(x=>x.id===c.id);
-  if(me&&me.status==="aberto"&&!me.comecei)dlBtn("Jogar agora","ghost",()=>openCampPlay(me));
+  if(me&&me.status==="aberto"&&me.minha_vez==="sim")dlBtn("Jogar agora","ghost",()=>openCampPlay(me));
+  if(c.formato==="mata")dlBtn("Ver chave","ghost",()=>openCampCls(c.id));
   dlBtn("Fechar","ghost",()=>{$("ovDuel").hidden=true});
 }
 function openCampPlay(c){
-  dlDialog("🏆 Campeonato · Trilha "+(TRACKS[c.trilha]?TRACKS[c.trilha].n:c.trilha),"\""+c.nome+"\"","Show do Milhão com as mesmas questões dos outros participantes, só de "+campMats(c)+". Atenção: você joga uma vez só. Se sair no meio, fica com R$ 0. O placar dos outros você vê na classificação.");
+  const mata=c.formato==="mata",rod=campRod(c);
+  dlDialog("🏆 "+(mata?"Copa mata-mata":"Pontos corridos")+" · "+rod,"\""+c.nome+"\"",(mata?"Seu adversário joga as mesmas questões. Vence quem levar o maior prêmio (empate: acertos, depois tempo) e avança de fase.":"Todos jogam as mesmas questões nesta rodada, que vale pontos na tabela.")+" Só de "+campMats(c)+". Atenção: você joga esta "+(mata?"fase":"rodada")+" uma vez só. Se sair no meio, fica com R$ 0.");
   const go=dlBtn("Começar agora","money",async()=>{go.disabled=true;$("dlErr").hidden=true;
     try{const {data,error}=await sb.rpc("iniciar_campeonato",{p_id:c.id});if(error)throw error;$("ovDuel").hidden=true;CP.t=0;startCamp(data)}
     catch(e){$("dlErr").textContent=campErr(e);$("dlErr").hidden=false;go.disabled=false;CP.t=0}});
   dlBtn("Agora não","ghost",()=>{$("ovDuel").hidden=true});go.focus();
 }
 function startCamp(c){
-  S={level:0,mode:"duel",trilha:c.trilha,duel:{camp:true,id:c.id,nome:c.nome,trilha:c.trilha,q:c.questoes,lv:-1,k:0,expira:c.fim},used:new Set(),subjects:c.materias,help:{skip:3,elim:1,poll:1,prof:1,risk:1},riskArmed:false,hist:[],cur:null,sel:null,locked:false,left:TIME,paused:false};
+  S={level:0,mode:"duel",trilha:c.trilha,duel:{camp:true,id:c.id,nome:c.nome,trilha:c.trilha,q:c.questoes,lv:-1,k:0,expira:c.fim,rodada:c.rodada||0,rodadas:c.rodadas||1,formato:c.formato||"pontos"},used:new Set(),subjects:c.materias,help:{skip:3,elim:1,poll:1,prof:1,risk:1},riskArmed:false,hist:[],cur:null,sel:null,locked:false,left:TIME,paused:false};
   gameStart=Date.now();show("game");loadQuestion();
 }
 async function finishCamp(how){
   const D=S.duel,prize=how==="win"?1000000:how==="stop"?acc():errVal(),hits=S.hist.filter(h=>h.ok).length;
   stats.games++;stats.best=Math.max(stats.best||0,prize);saveStats();bumpStreak();
-  $("endEyebrow").textContent="🏆 Campeonato · "+D.nome;
+  $("endEyebrow").textContent="🏆 "+D.nome+" · "+campRod({formato:D.formato,rodada:D.rodada,rodadas:D.rodadas});
   $("endPrize").textContent=fmt(prize);
   $("dailyGrid").hidden=true;$("btnAgain").textContent="Fazer nova prova";$("endStreak").textContent=streakLine();$("endPts").hidden=true;
   $("endMsg").textContent="Enviando seu resultado…";$("shareBox").innerHTML="";
   renderReview();show("end");
   if(how==="win"){sfx.win();confetti()}
-  const args={p_id:D.id,p_premio:prize,p_nivel:Math.min(30,S.level+1),p_acertos:Math.min(30,hits),p_respondidas:Math.min(30,S.hist.length),p_tempo:Math.round((Date.now()-gameStart)/1000)};
+  const args={p_id:D.id,p_rodada:D.rodada,p_premio:prize,p_nivel:Math.min(30,S.level+1),p_acertos:Math.min(30,hits),p_respondidas:Math.min(30,S.hist.length),p_tempo:Math.round((Date.now()-gameStart)/1000)};
   try{localStorage.setItem(CP_PK,JSON.stringify(args))}catch(e){}
   const act=$("endDuelAct");
   const show2=async()=>{let pos="";
-    try{const {data}=await sb.rpc("classificacao_campeonato",{p_id:D.id});const L=(data&&data.linhas||[]).filter(x=>x.situacao==="terminou");const me=L.find(x=>x.sou_eu);
-      if(me)pos="Você está em "+me.pos+"º lugar entre "+L.length+" que já jogaram."}catch(e){}
+    try{const {data}=await sb.rpc("classificacao_campeonato",{p_id:D.id});
+      if(data&&data.formato==="mata"){const f=data.chave&&data.chave.fases[D.rodada];const m=f&&f.confrontos.find(x=>x.a===data.eu||x.b===data.eu);
+        if(m){const souA=m.a===data.eu,op=souA?m.nb:m.na,opP=souA?m.pb:m.pa;
+          pos=m.situacao==="decidido"?(m.vencedor===data.eu?"Você venceu "+op+" ("+fmt(opP||0)+") e avançou! 🎉":"Não foi dessa vez: "+op+" fez "+fmt(opP||0)+"."):op+" ainda não jogou. O resultado sai quando os dois jogarem ou no fim do prazo."}}
+      else{const me=data&&(data.tabela||[]).find(x=>x.sou_eu);if(me)pos="Você está em "+me.pos+"º na tabela, com "+me.pontos+" ponto"+(me.pontos==1?"":"s")+"."}}catch(e){}
     $("endMsg").textContent="Resultado enviado. "+(pos||"Acompanhe a classificação até o fim do campeonato.");
-    act.innerHTML="";const b=document.createElement("button");b.type="button";b.className="btn money";b.textContent="Ver classificação";b.onclick=()=>openCampCls(D.id);act.appendChild(b);act.hidden=false;
+    act.innerHTML="";const b=document.createElement("button");b.type="button";b.className="btn money";b.textContent=D.formato==="mata"?"Ver chave":"Ver classificação";b.onclick=()=>openCampCls(D.id);act.appendChild(b);act.hidden=false;
     shareUI($("shareBox"),"🏆 Fiz "+fmt(prize)+" no campeonato \""+D.nome+"\" do Aprenda se Divertindo. Bora ver quem leva? "+SHARE_URL)};
   const send=async()=>{try{const {error}=await sb.rpc("enviar_campeonato",args);if(error)throw error;try{localStorage.removeItem(CP_PK)}catch(e){}return true}
     catch(e){const m=(e&&(e.message||"")+"");if(m.includes("CAMP_FECHADO")){try{localStorage.removeItem(CP_PK)}catch(x){}}
@@ -12382,22 +12419,36 @@ async function openCampCls(id){
   dlDialog("🏆 Campeonato","Classificação","Carregando…");
   dlBtn("Fechar","ghost",()=>{$("ovDuel").hidden=true});
   try{const {data:c,error}=await sb.rpc("classificacao_campeonato",{p_id:id});if(error)throw error;
+    const mata=c.formato==="mata",ab=c.status==="aberto";
     $("dlTitle").textContent="\""+c.nome+"\"";
-    $("dlMsg").textContent="Trilha "+(TRACKS[c.trilha]?TRACKS[c.trilha].n:c.trilha)+" · "+campMats(c)+" · "+(c.status==="aberto"?"termina em "+campLeft(c.fim):"encerrado");
+    $("dlMsg").textContent=(mata?"⚔️ Copa mata-mata":"📊 Pontos corridos")+" · Trilha "+(TRACKS[c.trilha]?TRACKS[c.trilha].n:c.trilha)+" · "+campMats(c)+" · "+(ab?campRod(c)+" · termina em "+campLeft(c.fim):"encerrado");
     const tm=s=>s==null?"":" · "+Math.floor(s/60)+"min"+String(s%60).padStart(2,"0");
-    const L=c.linhas||[],fe=L.filter(x=>x.pos!=null),pend=L.filter(x=>x.pos==null);
     const o=$("dlOpts");
-    o.innerHTML=(fe.length?'<ol class="rklist" aria-label="Classificação">'+fe.map((x,i)=>'<li class="'+(x.sou_eu?'me':'')+'"><span class="pos">'+(x.pos<=3?["🥇","🥈","🥉"][x.pos-1]:x.pos+"º")+'</span><span class="who"><b data-i="'+i+'"></b><span>'+(x.situacao==="abandonou"?"abandonou":(x.acertos||0)+" acertos"+tm(x.tempo))+'</span></span><span class="pr">'+fmt(x.premio||0)+'</span></li>').join("")+'</ol>':'<p class="small" style="margin:0">Ninguém terminou ainda.</p>')
-      +(pend.length?'<p class="small" style="margin:0"><b>Ainda não jogaram:</b> <span id="cpPend"></span></p>':'');
-    o.querySelectorAll("[data-i]").forEach(b=>{const x=fe[+b.dataset.i];b.textContent=x.nome+(x.sou_eu?" (você)":"")});
-    if(pend.length)$("cpPend").textContent=pend.map(x=>x.nome+(x.situacao==="jogando"?" (jogando agora)":"")+(x.sou_eu?" (você)":"")).join(", ");
+    if(!mata){
+      const T=c.tabela||[];
+      o.innerHTML=T.length?'<ol class="rklist" aria-label="Tabela de pontos">'+T.map((x,i)=>'<li class="'+(x.sou_eu?'me':'')+'"><span class="pos">'+(x.pontos>0&&x.pos<=3?["🥇","🥈","🥉"][x.pos-1]:x.pos+"º")+'</span><span class="who"><b data-i="'+i+'"></b><span>'+x.jogadas+' rodada'+(x.jogadas==1?'':'s')+' jogada'+(x.jogadas==1?'':'s')+(x.jogadas?' · '+x.acertos+' acertos'+tm(x.tempo):'')+(ab&&c.rodadas>1?(x.rodada_atual==="jogou"?' · ✅ rodada atual':x.rodada_atual==="jogando"?' · jogando agora':' · ⏳ falta a rodada atual'):'')+'</span></span><span class="pr">'+x.pontos+' pt'+(x.pontos==1?'':'s')+'</span></li>').join("")+'</ol>':'<p class="small" style="margin:0">Ninguém jogou ainda.</p>';
+      o.querySelectorAll("[data-i]").forEach(b=>{const x=T[+b.dataset.i];b.textContent=x.nome+(x.sou_eu?" (você)":"")});
+      o.insertAdjacentHTML("beforeend",'<p class="small" style="margin:0">Pontos por rodada: 1º 10, 2º 8, 3º 6, 4º 5, 5º 4, 6º 3, 7º 2, demais 1. Desempate: acertos e depois tempo.</p>');
+    }else{
+      const K=c.chave||{fases:[]};
+      let h=K.campeao?'<p class="champ" style="margin:0;font-weight:800">🏆 Campeão: <span id="cpChamp"></span></p>':'';
+      h+=K.fases.map((f,fi)=>'<div class="fase"><span class="eyebrow">'+faseNome(fi,c.rodadas)+' · '+new Date(f.inicio).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})+' a '+new Date(f.fim).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})+'</span>'
+        +f.confrontos.map((m,mi)=>'<div class="cfr" data-f="'+fi+'" data-m="'+mi+'"><span class="p1"></span><span class="vs"></span><span class="p2"></span><span class="st small"></span></div>').join("")+'</div>').join("");
+      o.innerHTML=h;
+      if(K.campeao)$("cpChamp").textContent=K.campeao;
+      const lado=(id,nome,pr,ok,jog)=>id==="?"?"a definir":id===""?"—":(ok?"✅ ":"")+nome+(id===c.eu?" (você)":"")+(pr!=null?" · "+fmt(pr):jog?" · jogando":"");
+      o.querySelectorAll(".cfr").forEach(el=>{const m=K.fases[+el.dataset.f].confrontos[+el.dataset.m];
+        const w=m.vencedor;el.querySelector(".p1").textContent=lado(m.a,m.na,m.pa,w===m.a&&w!=="?"&&w!=="",m.ja);el.querySelector(".p2").textContent=lado(m.b,m.nb,m.pb,w===m.b&&w!=="?"&&w!=="",m.jb);
+        el.querySelector(".vs").textContent="×";
+        el.querySelector(".st").textContent={folga:"folga: passou direto",vazio:"",decidido:"",wo:"vitória por W.O.","wo duplo":"nenhum dos dois jogou","em jogo":"em andamento",aguardando:"aguardando a fase","a definir":""}[m.situacao]||"";
+        if(m.a===c.eu||m.b===c.eu)el.classList.add("me")});
+    }
     const acts=$("dlActs");acts.innerHTML="";
-    if(c.status==="aberto"&&c.link_aberto)dlBtn("Convidar","ghost",()=>openCampShare(c));
-    const meI=L.find(x=>x.sou_eu);
-    if(c.status==="aberto"&&meI&&meI.situacao==="pendente")dlBtn("Jogar agora","money",()=>openCampPlay(c));
+    if(ab&&c.link_aberto&&!mata)dlBtn("Convidar","ghost",()=>openCampShare(c));
+    if(ab&&c.minha_vez==="sim")dlBtn("Jogar agora","money",()=>openCampPlay(Object.assign({},c,{rodada:c.rodada})));
     if(c.sou_criador){const del=dlBtn("Excluir campeonato","ghost",async()=>{if(del.dataset.ok!=="1"){del.dataset.ok="1";del.textContent="Confirmar exclusão";return}
       del.disabled=true;try{const {error}=await sb.rpc("excluir_campeonato",{p_id:c.id});if(error)throw error;$("ovDuel").hidden=true;CP.t=0;campLoad(true)}catch(e){$("dlErr").textContent=campErr(e);$("dlErr").hidden=false;del.disabled=false}})}
-    else if(meI&&meI.situacao==="pendente"){const s2=dlBtn("Sair do campeonato","ghost",async()=>{if(s2.dataset.ok!=="1"){s2.dataset.ok="1";s2.textContent="Confirmar saída";return}
+    else if(!mata&&ab&&(c.tabela||[]).some(x=>x.sou_eu&&!x.jogadas&&!x.rodada_atual)){const s2=dlBtn("Sair do campeonato","ghost",async()=>{if(s2.dataset.ok!=="1"){s2.dataset.ok="1";s2.textContent="Confirmar saída";return}
       s2.disabled=true;try{const {error}=await sb.rpc("sair_campeonato",{p_id:c.id});if(error)throw error;$("ovDuel").hidden=true;CP.t=0;campLoad(true)}catch(e){$("dlErr").textContent=campErr(e);$("dlErr").hidden=false;s2.disabled=false}})}
     dlBtn("Fechar","ghost",()=>{$("ovDuel").hidden=true});
   }catch(e){$("dlMsg").textContent=campErr(e)}
@@ -12410,15 +12461,15 @@ async function handleCampInvite(){
   if(c===undefined){$("dlTitle").textContent="Não foi possível abrir o convite";$("dlMsg").textContent="Verifique sua conexão e tente de novo pelo link.";dlBtn("Fechar","ghost",()=>{$("ovDuel").hidden=true;clear()});return}
   if(!c){$("dlTitle").textContent="Campeonato não encontrado";$("dlMsg").textContent="Ele pode ter sido excluído ou o link está incompleto.";dlBtn("Fechar","ghost",()=>{$("ovDuel").hidden=true;clear()});return}
   $("dlTitle").textContent="\""+c.nome+"\"";
-  const base="Criado por "+c.criador+" · Trilha "+(TRACKS[c.trilha]?TRACKS[c.trilha].n:c.trilha)+" · "+campMats(c)+" · "+c.participantes+" participante"+(c.participantes==1?"":"s")+". ";
+  const base=(c.formato==="mata"?"Copa mata-mata":"Pontos corridos"+(c.rodadas>1?" ("+c.rodadas+" rodadas)":""))+" · criado por "+c.criador+" · Trilha "+(TRACKS[c.trilha]?TRACKS[c.trilha].n:c.trilha)+" · "+campMats(c)+" · "+c.participantes+" participante"+(c.participantes==1?"":"s")+". ";
   if(c.status!=="aberto"){$("dlMsg").textContent=base+"Este campeonato já terminou.";dlBtn("Fechar","ghost",()=>{$("ovDuel").hidden=true;clear()});return}
   if(!user){$("dlMsg").textContent=base+"Termina em "+campLeft(c.fim)+". Para participar, crie sua conta grátis ou entre na sua conta.";
     dlBtn("Criar conta grátis","money",()=>{$("ovDuel").hidden=true;openAuth("up")});dlBtn("Já tenho conta","ghost",()=>{$("ovDuel").hidden=true;openAuth("in")});dlBtn("Agora não","ghost",()=>{$("ovDuel").hidden=true;clear()});return}
-  if(!c.sou_membro&&!c.link_aberto){$("dlMsg").textContent=base+"Este campeonato é só para convidados.";dlBtn("Fechar","ghost",()=>{$("ovDuel").hidden=true;clear()});return}
-  $("dlMsg").textContent=base+"Termina em "+campLeft(c.fim)+". Todo mundo joga as mesmas questões, uma vez só.";
+  if(!c.sou_membro&&(!c.link_aberto||c.formato==="mata")){$("dlMsg").textContent=base+"Este campeonato é só para convidados.";dlBtn("Fechar","ghost",()=>{$("ovDuel").hidden=true;clear()});return}
+  $("dlMsg").textContent=base+"Termina em "+campLeft(c.fim)+". Todo mundo joga as mesmas questões.";
   const go=dlBtn(c.sou_membro?"Ver campeonato":"Entrar no campeonato","money",async()=>{go.disabled=true;
     try{const {error}=await sb.rpc("entrar_campeonato",{p_codigo:code});if(error)throw error;clear();CP.t=0;await campLoad(true);
-      const me=(CP.list||[]).find(x=>x.id===c.id);if(me&&!me.comecei)openCampPlay(me);else openCampCls(c.id)}
+      const me=(CP.list||[]).find(x=>x.id===c.id);if(me&&me.minha_vez==="sim")openCampPlay(me);else openCampCls(c.id)}
     catch(e){$("dlErr").textContent=campErr(e);$("dlErr").hidden=false;go.disabled=false}});
   dlBtn("Agora não","ghost",()=>{$("ovDuel").hidden=true;clear()});go.focus();
 }
@@ -12434,7 +12485,7 @@ async function finishDuel(how){
   {const t=ptsLine(how==="win"?30:S.level,hits,"disputa");$("endPts").textContent=t;$("endPts").hidden=!t}
   renderReview();show("end");recordResult("disputa",prize);
   if(how==="win"){sfx.win();confetti()}
-  const args={p_id:D.id,p_premio:prize,p_nivel:Math.min(30,S.level+1),p_acertos:Math.min(30,hits),p_respondidas:Math.min(30,S.hist.length),p_tempo:Math.round((Date.now()-gameStart)/1000)};
+  const args={p_id:D.id,p_rodada:D.rodada,p_premio:prize,p_nivel:Math.min(30,S.level+1),p_acertos:Math.min(30,hits),p_respondidas:Math.min(30,S.hist.length),p_tempo:Math.round((Date.now()-gameStart)/1000)};
   try{localStorage.setItem(DL_PK,JSON.stringify(args))}catch(e){}
   const send=async()=>{try{const {error}=await sb.rpc("enviar_disputa",args);if(error)throw error;try{localStorage.removeItem(DL_PK)}catch(e){}return true}
     catch(e){const m=(e&&(e.message||"")+"");if(m.includes("DISPUTA_FECHADA")){try{localStorage.removeItem(DL_PK)}catch(x){}}
