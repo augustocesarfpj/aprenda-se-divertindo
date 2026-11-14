@@ -12436,7 +12436,8 @@ async function openCampCls(id){
       const K=c.chave||{fases:[]};
       let h=K.campeao?'<p class="champ" style="margin:0;font-weight:800">🏆 Campeão: <span id="cpChamp"></span></p>':'';
       h+=K.fases.map((f,fi)=>'<div class="fase"><span class="eyebrow">'+faseNome(fi,c.rodadas)+' · '+new Date(f.inicio).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})+' a '+new Date(f.fim).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})+'</span>'
-        +f.confrontos.map((m,mi)=>'<div class="cfr" data-f="'+fi+'" data-m="'+mi+'"><span class="p1"></span><span class="vs"></span><span class="p2"></span><span class="st small"></span></div>').join("")+'</div>').join("");
+        +f.confrontos.map((m,mi)=>m.situacao==="folga"||m.situacao==="vazio"?'':'<div class="cfr" data-f="'+fi+'" data-m="'+mi+'"><span class="p1"></span><span class="vs"></span><span class="p2"></span><span class="st small"></span></div>').join("")
+        +(f.confrontos.some(m=>m.situacao==="folga")?'<p class="small folgas" data-f="'+fi+'" style="margin:0"></p>':'')+'</div>').join("");
       o.innerHTML=h;
       if(K.campeao)$("cpChamp").textContent=K.campeao;
       const lado=(id,nome,pr,ok,jog)=>id==="?"?"a definir":id===""?"—":(ok?"✅ ":"")+nome+(id===c.eu?" (você)":"")+(pr!=null?" · "+fmt(pr):jog?" · jogando":"");
@@ -12445,6 +12446,9 @@ async function openCampCls(id){
         el.querySelector(".vs").textContent="×";
         el.querySelector(".st").textContent={folga:"folga: passou direto",vazio:"",decidido:"",wo:"vitória por W.O.","wo duplo":"nenhum dos dois jogou","em jogo":"em andamento",aguardando:"aguardando a fase","a definir":""}[m.situacao]||"";
         if(m.a===c.eu||m.b===c.eu)el.classList.add("me")});
+      // folgas aparecem numa linha só, em vez de um confronto por jogador
+      o.querySelectorAll(".folgas").forEach(el=>{const F=K.fases[+el.dataset.f].confrontos.filter(m=>m.situacao==="folga");
+        el.textContent="🎟️ Passaram direto (folga): "+F.map(m=>{const id=m.a||m.b,n=m.a?m.na:m.nb;return n+(id===c.eu?" (você)":"")}).join(", ")});
     }
     const acts=$("dlActs");acts.innerHTML="";
     if(ab&&c.link_aberto&&!mata)dlBtn("Convidar","ghost",()=>openCampShare(c));
