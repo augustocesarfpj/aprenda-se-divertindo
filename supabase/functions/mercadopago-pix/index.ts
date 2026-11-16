@@ -1,18 +1,19 @@
 // Aprenda se Divertindo · Edge Function "mercadopago-pix"
-// Gera o Pix do Premium pelo Mercado Pago e libera o Premium sozinho quando o pagamento é aprovado.
+// Gera o Pix do Premium pelo Mercado Pago (API de Orders) e libera o Premium sozinho quando o pagamento é aprovado.
 //
 // Segredo (Supabase → Edge Functions → Secrets). NUNCA coloque o token no site nem no chat:
 //   MP_ACCESS_TOKEN  Access Token de PRODUÇÃO do Mercado Pago (começa com APP_USR-)
 // SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY já existem automaticamente nas Edge Functions.
 //
 // Publique com "Verify JWT" DESLIGADO: o Mercado Pago chama o aviso (webhook) sem login.
+// No painel do Mercado Pago (Sua aplicação → Webhooks), cadastre a URL desta função com ?wh=1 e marque o evento "Order".
 // Mesmo assim, ninguém consegue liberar Premium de mentira: a função sempre pergunta ao Mercado Pago,
 // com o seu token, se o pagamento foi aprovado e confere o valor antes de liberar.
 //
 // Chamadas:
 //   POST {acao:"criar", plano, cpf, nome}  (com o login do jogador)  → gera o Pix
 //   POST {acao:"verificar"}                (com o login do jogador)  → pergunta ao Mercado Pago se já pagou
-//   POST ?wh=1                             (o Mercado Pago chama)    → aviso de pagamento
+//   POST ?wh=1                             (o Mercado Pago chama)    → aviso de pedido (evento "order")
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
@@ -39,11 +40,6 @@ function cpfOk(c: string) {
   return true;
 }
 
-// data no fuso de Brasília (-03:00), no formato que o Mercado Pago aceita
-function brt(d: Date) {
-  return new Date(d.getTime() - 3 * 3600e3).toISOString().slice(0, 23) + "-03:00";
-}
-
 async function mp(path: string, init: RequestInit = {}) {
   const r = await fetch(API + path, {
     ...init,
@@ -55,13 +51,22 @@ async function mp(path: string, init: RequestInit = {}) {
   return { ok: r.ok, status: r.status, body: b };
 }
 
-async function conferir(pagId: string) {
-  if (!/^\d{1,20}$/.test(pagId)) return { ok: false, motivo: "ID" };
-  const r = await mp("/v1/payments/" + pagId);
+// soma, em centavos, o que já foi creditado nos pagamentos do pedido
+function pagoCentavos(order: any) {
+  const pays = order?.transactions?.payments ?? [];
+  const ok = pays.filter((p: any) => p?.status === "processed" || p?.status_detail === "accredited");
+  let total = ok.reduce((s: number, p: any) => s + (Number(p?.paid_amount ?? p?.amount) || 0), 0);
+  if (!total && order?.status === "processed") total = Number(order?.total_paid_amount ?? order?.total_amount) || 0;
+  return Math.round(total * 100);
+}
+
+async function conferir(orderId: string) {
+  if (!/^[A-Za-z0-9]{5,64}$/.test(orderId)) return { ok: false, motivo: "ID" };
+  const r = await mp("/v1/orders/" + orderId);
   if (!r.ok) return { ok: false, motivo: "MP_" + r.status };
-  if (r.body?.status !== "approved") return { ok: false, motivo: "NAO_PAGO", status: r.body?.status };
-  const pago = Math.round(Number(r.body?.transaction_details?.total_paid_amount ?? r.body?.transaction_amount ?? 0) * 100);
-  const { data, error } = await db.rpc("mp_confirmar", { p_pagamento: pagId, p_centavos: pago });
+  const pago = pagoCentavos(r.body);
+  if (pago <= 0) return { ok: false, motivo: "NAO_PAGO", status: r.body?.status, detalhe: r.body?.status_detail };
+  const { data, error } = await db.rpc("mp_confirmar", { p_pagamento: orderId, p_centavos: pago });
   if (error) return { ok: false, motivo: "BANCO", detalhe: error.message };
   return data;
 }
@@ -85,7 +90,7 @@ Deno.serve(async (req) => {
   if (url.searchParams.get("wh") === "1") {
     const tipo = String(body?.type ?? url.searchParams.get("type") ?? url.searchParams.get("topic") ?? "");
     const id = String(body?.data?.id ?? url.searchParams.get("data.id") ?? url.searchParams.get("id") ?? "");
-    if (tipo === "payment" && id) {
+    if (tipo === "order" && id) {
       const r = await conferir(id);
       console.log("webhook", id, JSON.stringify(r));
     }
@@ -115,36 +120,39 @@ Deno.serve(async (req) => {
       || ped.nome || String(ped.email ?? user.email ?? "Jogador").split("@")[0];
     const [primeiro, ...resto] = nome.split(" ");
     const expira = new Date(Date.now() + 30 * 60e3);
-    const r = await mp("/v1/payments", {
+    const valor = (ped.centavos / 100).toFixed(2);
+    const r = await mp("/v1/orders", {
       method: "POST",
       headers: { "X-Idempotency-Key": ped.id },
       body: JSON.stringify({
-        transaction_amount: ped.centavos / 100,
-        description: "Premium " + ped.plano + " - Aprenda se Divertindo",
-        payment_method_id: "pix",
+        type: "online",
+        processing_mode: "automatic",
+        total_amount: valor,
         external_reference: ped.id,
-        notification_url: SB_URL + "/functions/v1/mercadopago-pix?wh=1",
-        date_of_expiration: brt(expira),
+        description: "Premium " + ped.plano + " - Aprenda se Divertindo",
         payer: {
           email: ped.email ?? user.email,
           first_name: primeiro,
           last_name: resto.join(" ") || primeiro,
           identification: { type: "CPF", number: cpf },
         },
+        transactions: { payments: [{ amount: valor, payment_method: { id: "pix", type: "bank_transfer" }, expiration_time: "PT30M" }] },
       }),
     });
-    const td = r.body?.point_of_interaction?.transaction_data;
-    if (!r.ok || !td?.qr_code) {
+    const pay = r.body?.transactions?.payments?.[0];
+    const pm = pay?.payment_method;
+    if (!r.ok || !pm?.qr_code) {
       await db.from("pagamentos").update({ status: "cancelado", decidido_em: new Date().toISOString(), obs: "Mercado Pago não gerou o Pix" }).eq("id", ped.id);
-      const causas = (r.body?.cause ?? []).map((c: any) => [c.code, c.description].filter(Boolean).join(" ")).join("; ");
+      const causas = (r.body?.errors ?? r.body?.cause ?? []).map((c: any) => [c.code, c.message ?? c.description].filter(Boolean).join(" ")).join("; ");
       console.log("criar falhou", r.status, JSON.stringify(r.body));
       return json({ erro: "MERCADOPAGO", detalhe: causas || r.body?.message || "HTTP " + r.status }, 502);
     }
-    const png = td.qr_code_base64 ? "data:image/png;base64," + td.qr_code_base64 : null;
-    const exp = r.body.date_of_expiration ? new Date(r.body.date_of_expiration) : expira;
-    await db.rpc("mp_registrar", { p_id: ped.id, p_pagamento: String(r.body.id), p_copia: td.qr_code, p_qr: png, p_expira: exp.toISOString() });
+    const png = pm.qr_code_base64 ? "data:image/png;base64," + pm.qr_code_base64 : null;
+    const fim = pay?.date_of_expiration ?? r.body?.date_of_expiration;
+    const exp = fim ? new Date(fim) : expira;
+    await db.rpc("mp_registrar", { p_id: ped.id, p_pagamento: String(r.body.id), p_copia: pm.qr_code, p_qr: png, p_expira: exp.toISOString() });
     return json({ id: ped.id, plano: ped.plano, valor: ped.valor, criado_em: new Date().toISOString(),
-                  gateway: "mercadopago", pix_copia: td.qr_code, pix_qr: png, pix_expira: exp.toISOString() });
+                  gateway: "mercadopago", pix_copia: pm.qr_code, pix_qr: png, pix_expira: exp.toISOString() });
   }
 
   return json({ erro: "ACAO" }, 400);

@@ -5,14 +5,13 @@ Com isto ligado, o jogador escolhe o plano, informa nome e CPF, o Mercado Pago g
 ## Passo a passo (uma vez só)
 
 1. **Mercado Pago**: tenha uma conta com **chave Pix cadastrada** no app do Mercado Pago. Sem chave, o Pix não é gerado.
-2. **Token**: entre em mercadopago.com.br/developers → **Suas integrações** → **Criar aplicação** (tipo "Pagamentos on-line", sem plataforma pronta). Dentro da aplicação, abra **Credenciais de produção** e copie o **Access Token** (começa com `APP_USR-`). Não cole o token no chat nem no site.
+2. **Token**: entre em mercadopago.com.br/developers → **Suas integrações** → **Criar aplicação**: solução **Checkout Transparente**, tipo de API **API de Orders**. Dentro da aplicação, abra **Credenciais de produção** e copie o **Access Token** (começa com `APP_USR-`). Não cole o token no chat nem no site.
 3. **Supabase → Edge Functions → Secrets**: crie o segredo `MP_ACCESS_TOKEN` com o token.
 4. **Supabase → Edge Functions → Deploy a new function → Via editor**: nome `mercadopago-pix`, cole todo o arquivo `index.ts` desta pasta e clique em Deploy.
 5. Nas configurações da função `mercadopago-pix`, **desligue a verificação de JWT** ("Verify JWT"). O Mercado Pago avisa o pagamento sem login; a função sempre confere com o Mercado Pago antes de liberar.
 6. **SQL Editor**: rode `supabase/117-mercadopago-pix-automatico.sql`.
-7. **admin.html → Configurações → Pix automático (Mercado Pago)**: marque e salve.
-
-Não precisa cadastrar webhook no painel do Mercado Pago: cada Pix já leva o endereço do aviso.
+7. **Mercado Pago → Sua aplicação → Webhooks → Configurar notificações** (modo produtivo): URL `https://yanrzhogtthhqwsbeqnc.supabase.co/functions/v1/mercadopago-pix?wh=1`, marque o evento **Order (Mercado Pago)** e salve. Sem isso, o Premium só é liberado enquanto o jogador está com a janela do Pix aberta.
+8. **admin.html → Configurações → Pix automático (Mercado Pago)**: marque e salve.
 
 ## Teste com dinheiro de verdade (R$ 1,00)
 
