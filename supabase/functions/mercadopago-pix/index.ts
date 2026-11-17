@@ -143,7 +143,10 @@ Deno.serve(async (req) => {
     const pm = pay?.payment_method;
     if (!r.ok || !pm?.qr_code) {
       await db.from("pagamentos").update({ status: "cancelado", decidido_em: new Date().toISOString(), obs: "Mercado Pago não gerou o Pix" }).eq("id", ped.id);
-      const causas = (r.body?.errors ?? r.body?.cause ?? []).map((c: any) => [c.code, c.message ?? c.description].filter(Boolean).join(" ")).join("; ");
+      const causas = (r.body?.errors ?? r.body?.cause ?? []).map((c: any) => {
+        const det = (c.details ?? []).map((d: any) => typeof d === "string" ? d : JSON.stringify(d)).join(", ");
+        return [c.code, c.message ?? c.description, det && "(" + det + ")"].filter(Boolean).join(" ");
+      }).join("; ");
       console.log("criar falhou", r.status, JSON.stringify(r.body));
       return json({ erro: "MERCADOPAGO", detalhe: causas || r.body?.message || "HTTP " + r.status }, 502);
     }
