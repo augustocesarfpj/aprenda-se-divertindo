@@ -14040,7 +14040,11 @@ function plKey(){return "gm-uso-"+(user?user.id:"x")+"-"+dayKey()}
 function plLocal(){try{return Object.assign({provas:0,cartoes:0},JSON.parse(localStorage.getItem(plKey()))||{})}catch(e){return{provas:0,cartoes:0}}}
 function plBump(k){const u=plLocal();u[k]=(u[k]||0)+1;try{localStorage.setItem(plKey(),JSON.stringify(u))}catch(e){}renderPlan()}
 function plUsed(k){return Math.max(plLocal()[k]||0,PL.srv[k]||0)}
-function plFree(){return !!(user&&PL.loaded&&PREMIUM.cobranca&&!PL.premium)}
+function plVenceu(){return !!(PL.premium&&PL.ate&&new Date(PL.ate)<=new Date())}
+function plFree(){const v=plVenceu();if(v)setTimeout(plLoad,0);return !!(user&&PL.loaded&&PREMIUM.cobranca&&!(PL.premium&&!v))}
+/* o Premium vence com o app aberto (tablet, app instalado): confere de novo ao voltar para o app e a cada minuto */
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&plVenceu())plLoad()});
+setInterval(()=>{if(plVenceu())plLoad()},60000);
 function plCan(k){return !plFree()||plUsed(k)<LIM[k]}
 async function loadPlanoInfo(){
   if(!sb)return;
