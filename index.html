@@ -12993,7 +12993,7 @@ function renderRanking(){
   const L=RK.list,cur=L.find(r=>r.id===RK.sel),full=L.length>=RK_MAX;
   let h='';
   if(RK.err)h+='<p class="flash" role="alert">'+RK.err+'</p>';
-  if(RK.msg)h+='<p class="small" role="status" style="margin:0;color:var(--money);font-weight:700">'+RK.msg+'</p>';
+  if(RK.msg)h+='<p class="small" role="status" style="margin:0;color:var(--money);font-weight:700">'+esc(RK.msg)+'</p>';
   h+='<div class="sheet panel"><span class="eyebrow">Seus rankings · '+L.length+' de '+RK_MAX+'</span>';
   if(!L.length)h+='<p class="small" style="margin:0">Você ainda não participa de nenhum ranking. Crie um abaixo ou entre com o código que um amigo te mandou.</p>';
   else h+='<div class="rkchips" role="group" aria-label="Escolha o ranking">'+L.map(r=>'<button type="button" class="chipbtn" data-rk="'+r.id+'" aria-pressed="'+(r.id===RK.sel)+'"></button>').join("")+'</div>';
