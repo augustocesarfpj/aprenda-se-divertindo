@@ -1,0 +1,39 @@
+name: Atualizar biblioteca do Supabase
+
+# Copia o supabase-js para dentro do site (pasta vendor/), em vez de carregar de um CDN de terceiros.
+# A cópia vem do pacote oficial do npm (o npm confere a assinatura do pacote).
+# Para trocar de versão: mude VERSAO abaixo e dê commit; o workflow roda sozinho.
+
+on:
+  push:
+    branches: [main]
+    paths: [".github/workflows/biblioteca.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  VERSAO: "2.49.4"
+
+jobs:
+  copiar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Baixar do npm e copiar
+        run: |
+          set -euo pipefail
+          cd /tmp && npm pack "@supabase/supabase-js@${VERSAO}" --silent > nome.txt
+          tar -xzf "$(cat nome.txt)"
+          cd "$GITHUB_WORKSPACE" && mkdir -p vendor
+          cp /tmp/package/dist/umd/supabase.js vendor/supabase.js
+          echo "${VERSAO}" > vendor/supabase.versao.txt
+          ls -la vendor
+      - name: Salvar no repositório
+        run: |
+          git config user.name "augustocesarfpj"
+          git config user.email "augustocesarfpj@gmail.com"
+          git add vendor
+          git commit -q -m "Biblioteca do Supabase ${VERSAO} servida pelo próprio site" || echo "Nada mudou"
+          git push -q
