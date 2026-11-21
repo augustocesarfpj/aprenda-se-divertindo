@@ -2,7 +2,8 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://yanrzhogtthhqwsbeqnc.supabase.co wss://yanrzhogtthhqwsbeqnc.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://yanrzhogtthhqwsbeqnc.supabase.co wss://yanrzhogtthhqwsbeqnc.supabase.co https://challenges.cloudflare.com https://api.pwnedpasswords.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<script src="captcha.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="Jogo de perguntas de concursos públicos em 30 níveis, com trilhas Policial, Tribunais, Fiscal, Saúde, Enem e Administrativa. Grátis.">
 <meta property="og:title" content="Aprenda se Divertindo">
@@ -729,6 +730,7 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
       <label>E-mail<input id="fEmail" type="email" autocomplete="email" inputmode="email"></label>
       <label id="fPassL">Senha (mínimo 6 caracteres)<input id="fPass" type="password" autocomplete="current-password"></label>
       <p class="small" id="authHint" hidden style="margin:0">Digite o e-mail da sua conta e toque em "Pedir nova senha". Vai abrir um e-mail pronto para o suporte; é só enviar. Respondemos com uma senha provisória, que você pode trocar depois.</p>
+      <div id="authCap" hidden style="min-height:65px"></div>
       <p class="small" id="authMsg" role="alert" style="margin:0"></p>
       <div class="row"><button class="btn" id="authGo" type="submit">Entrar</button><button class="btn ghost" type="button" id="authClose">Fechar</button></div>
       <p class="small" style="margin:0"><button class="linkbtn" type="button" id="authForgot">Esqueci minha senha</button></p>
@@ -13989,6 +13991,7 @@ $("npForm").onsubmit=async ev=>{
   if(a!==b)return say("As duas senhas não são iguais.",true);
   if(!sb||!user)return say("O link expirou. Peça um novo em \"Esqueci minha senha\".",true);
   const go=$("npGo");go.disabled=true;say("Salvando…");
+  if(window.Captcha&&await Captcha.senhaVazada(a)){go.disabled=false;return say("Essa senha já apareceu em vazamentos de outros sites e é fácil de descobrir. Escolha outra.",true)}
   try{const {error}=await sb.auth.updateUser({password:a});if(error)throw error;
     say("Senha alterada!");setTimeout(()=>{$("ovNewPass").hidden=true},1600);
   }catch(e){const t=(e&&e.message||"").toLowerCase();say(t.includes("different")||t.includes("same")?"A senha nova precisa ser diferente da antiga.":authErr(e),true)}
@@ -14047,10 +14050,12 @@ function plFree(){const v=plVenceu();if(v)setTimeout(plLoad,0);return !!(user&&P
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&plVenceu())plLoad()});
 setInterval(()=>{if(plVenceu())plLoad()},60000);
 function plCan(k){return !plFree()||plUsed(k)<LIM[k]}
+let CAPTCHA_KEY="",CAP=null;
+function capMount(){if(!window.Captcha||$("ovAuth").hidden)return;Captcha.montar($("authCap"),CAPTCHA_KEY).then(w=>{CAP=w})}
 async function loadPlanoInfo(){
   if(!sb)return;
   try{const {data,error}=await sb.rpc("plano_info");if(error)throw error;const d=data||{};
-    PREMIUM.cobranca=!!d.cobranca;if(d.precos)PREMIUM.precos=Object.fromEntries(Object.entries(d.precos).map(([k,v])=>[k,+v]));
+    {const k=d.captcha||"";if(k!==CAPTCHA_KEY){CAPTCHA_KEY=k;capMount()}}PREMIUM.cobranca=!!d.cobranca;if(d.precos)PREMIUM.precos=Object.fromEntries(Object.entries(d.precos).map(([k,v])=>[k,+v]));
     if(d.pix)PREMIUM.pix=Object.assign({chave:"",nome:"",cidade:"",whats:""},d.pix);
     if(Array.isArray(d.emails)&&d.emails.length)PREMIUM.emails=d.emails;PREMIUM.pagbank=d.pagbank===true;PREMIUM.mp=d.mercadopago===true;
     if(d.indicacao)PREMIUM.ind={ativa:!!d.indicacao.ativa,fim:d.indicacao.fim||null,valor:+d.indicacao.valor||0,minimo:+d.indicacao.minimo||50};
@@ -14552,10 +14557,11 @@ function setAuthMode(m){
   $("fPass").autocomplete=up?"new-password":"current-password";
   authMsg("");
 }
-function openAuth(m){setAuthMode(m);$("ovAuth").hidden=false;(m==="up"?$("fNome"):$("fEmail")).focus()}
+function openAuth(m){setAuthMode(m);$("ovAuth").hidden=false;if(!CAP)capMount();(m==="up"?$("fNome"):$("fEmail")).focus()}
 function authMsg(t,err){const p=$("authMsg");p.textContent=t;p.className="small"+(err?" err":"")}
 function authErr(e){
   const m=(e&&e.message||"").toLowerCase();
+  if(m.includes("captcha"))return"A verificação \"Não sou um robô\" falhou ou expirou. Confirme de novo e tente outra vez.";
   if(m.includes("invalid login"))return"E-mail ou senha incorretos.";
   if(m.includes("already registered")||m.includes("already been registered"))return"Este e-mail já tem conta. Use a aba Entrar.";
   if(m.includes("email not confirmed"))return"Confirme o cadastro pelo link enviado ao seu e-mail.";
@@ -14581,20 +14587,24 @@ $("authForm").onsubmit=async ev=>{
   }
   if(password.length<6)return authMsg("A senha precisa ter pelo menos 6 caracteres.",true);
   if(authMode==="up"&&nome.length<2)return authMsg("Digite seu nome (pelo menos 2 letras).",true);
+  const captchaToken=CAPTCHA_KEY&&CAP?CAP.token():undefined;
+  if(CAPTCHA_KEY&&!captchaToken)return authMsg("Confirme a verificação acima (\"Não sou um robô\") e tente de novo.",true);
   const go=$("authGo");go.disabled=true;authMsg("Aguarde…");
   try{
     if(authMode==="up"){
-      const {data,error}=await sb.auth.signUp({email,password,options:{data:{nome},emailRedirectTo:location.origin+location.pathname}});
+      if(window.Captcha&&await Captcha.senhaVazada(password)){go.disabled=false;return authMsg("Essa senha já apareceu em vazamentos de outros sites e é fácil de descobrir. Escolha outra.",true)}
+      const {data,error}=await sb.auth.signUp({email,password,options:{data:{nome},emailRedirectTo:location.origin+location.pathname,captchaToken}});
       if(error)throw error;
       if(data.session){$("ovAuth").hidden=true;await setUser(data.session.user)}
       else if(data.user&&Array.isArray(data.user.identities)&&!data.user.identities.length)authMsg("Este e-mail já tem conta. Use a aba Entrar.",true);
       else authMsg("Conta criada. Abra o link que enviamos para "+email+" e depois entre aqui.");
     }else{
-      const {data,error}=await sb.auth.signInWithPassword({email,password});
+      const {data,error}=await sb.auth.signInWithPassword({email,password,options:{captchaToken}});
       if(error)throw error;$("ovAuth").hidden=true;await setUser(data.user);
     }
     $("fPass").value="";
   }catch(e){authMsg(authErr(e),true)}
+  if(CAP)CAP.reset();
   go.disabled=false;
 };
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("ovAuth").hidden)$("authClose").click();if(e.key==="Escape"&&!$("ovDelete").hidden)$("delNo").click()});
