@@ -2,6 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://yanrzhogtthhqwsbeqnc.supabase.co wss://yanrzhogtthhqwsbeqnc.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 <title>Administração · Aprenda se Divertindo</title>
@@ -74,7 +75,7 @@ td .btn{padding:6px 12px;font-size:.85rem}
   <div class="row"><span class="small" id="who"></span><a class="btn ghost" href="./" style="text-decoration:none">Abrir o jogo</a><button class="btn ghost" id="out" hidden>Sair</button></div>
 </header>
 <main id="app"><div class="panel"><p class="small">Carregando…</p></div></main>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
+<script src="vendor/supabase.js"></script>
 <script>
 const SB_URL="https://yanrzhogtthhqwsbeqnc.supabase.co",SB_KEY="sb_publishable_nDmaVkG52OAxZfplzIkBUQ_lDIlluzx";
 const TRACKS={"geral":{"n":"Geral","s":["port","const","adm","pen","ppen","leg","inf","rl","est","cont","dh","civ","pciv","trib","afo","gest","arq","ml","igual","prev","pcd","ia","sust","adua","eco","aud","dados"]},"policial":{"n":"Policial","s":["port","const","adm","pen","ppen","leg","dh","inf","rl","est","cont","ml","igual","pcd","ia","sust"]},"tribunais":{"n":"Tribunais","s":["port","const","adm","civ","pciv","pen","ppen","arq","inf","rl","prev","trib","gest","pcd","ia","sust"]},"fiscal":{"n":"Fiscal","s":["port","const","adm","trib","afo","cont","est","rl","inf","adua","eco","aud","dados","prev","pcd","ia","sust"]},"saude":{"n":"Saúde","s":["enf","sus","med","fisio","port","rl","inf","const","pcd","igual"]},"enem":{"n":"Enem","s":["ling","mat","fis","qui","bio","his","geo","fil"]},"administrativa":{"n":"Administrativa","s":["port","const","adm","gest","arq","afo","inf","rl","prev","pcd","ia","sust"]}},SUBJ={"port":"Português","const":"Dir. Constitucional","adm":"Dir. Administrativo","pen":"Dir. Penal","ppen":"Processo Penal","leg":"Legislação Especial","inf":"Informática","rl":"Raciocínio Lógico","est":"Estatística","cont":"Contabilidade","dh":"Direitos Humanos","civ":"Direito Civil","pciv":"Processo Civil","trib":"Dir. Tributário","afo":"AFO","gest":"Adm. Pública","arq":"Arquivologia","ml":"Medicina Legal","igual":"Igualdade Racial e de Gênero","prev":"Dir. Previdenciário","pcd":"Pessoas com Deficiência","ia":"IA e Inovação","sust":"Sustentabilidade","adua":"Leg. Aduaneira","eco":"Economia e Finanças","aud":"Auditoria","dados":"Fluência em Dados","ling":"Linguagens","mat":"Matemática","fis":"Física","qui":"Química","bio":"Biologia","his":"História","geo":"Geografia","fil":"Filosofia e Sociologia","sus":"Legislação do SUS","enf":"Enfermagem","fisio":"Fisioterapia","med":"Medicina"},NIVEIS=["Fácil","Intermediária","Difícil","Muito difícil","Desafio"];
