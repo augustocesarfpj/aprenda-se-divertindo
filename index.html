@@ -443,6 +443,7 @@ kbd{font-family:var(--f-mono);font-size:.7rem;opacity:.7;border:1px solid curren
       </div>
       <div class="sheet panel">
         <h2 id="subjTitle">Matérias da prova</h2>
+        <p class="small" style="margin:0 0 8px">Toque numa matéria para fazer a prova só com ela. Depois, toque em outras para juntar.</p>
         <div class="chips" id="chips"></div>
         <div class="row">
           <button class="iconbtn" id="allSubj">Marcar todas</button>
@@ -13881,6 +13882,7 @@ function renderStart(){
 const SUBJ_K="gm-subj-v1";
 function subjStore(){try{const o=JSON.parse(localStorage.getItem(SUBJ_K));if(o&&typeof o==="object")return o}catch(e){}return{}}
 function saveSubjSel(){try{const o=subjStore(),subs=trackSubs(),sel=selectedSubjects();o[track]=sel.length===subs.length&&subs.every(k=>sel.includes(k))?null:sel;localStorage.setItem(SUBJ_K,JSON.stringify(o))}catch(e){}}
+let SUBJ_FOCO=null;
 function updatePool(save){
   const sel=selectedSubjects(),subs=trackSubs();
   if(save)saveSubjSel();
@@ -13891,15 +13893,20 @@ function updatePool(save){
     sum.hidden=!parcial;
     if(parcial){sum.innerHTML='Prova só com <b></b> ('+sel.length+' de '+subs.length+' matérias). <button class="linkbtn" type="button">Alterar</button>';
       sum.querySelector("b").textContent=sel.map(k=>SUBJ[k]).join(", ");
-      sum.querySelector("button").onclick=()=>{const c=$("chips");if(c)c.scrollIntoView({behavior:"smooth",block:"center"})}}}
+      sum.querySelector("button").onclick=()=>{const c=$("chips");if(c)c.scrollIntoView({behavior:"smooth",block:"center"})};
+      if(SUBJ_FOCO&&sel.length===1&&sel[0]===SUBJ_FOCO){const f=SUBJ_FOCO,b=document.createElement("button");b.type="button";b.className="linkbtn";b.textContent="Prefiro todas menos "+SUBJ[f];
+        b.onclick=()=>{document.querySelectorAll("#chips input").forEach(i=>i.checked=subs.includes(i.value)&&i.value!==f);SUBJ_FOCO=null;updatePool(true)};sum.append(" · ",b)}}}
 }
 const chips=$("chips");
 Object.entries(SUBJ).forEach(([k,v])=>{
   const l=document.createElement("label");l.className="chip";
   l.innerHTML='<input type="checkbox" id="sub-'+k+'" value="'+k+'" checked><span class="dot"></span><span></span>';
-  l.lastChild.textContent=v;l.querySelector("input").onchange=()=>updatePool(true);chips.appendChild(l);
+  l.lastChild.textContent=v;l.querySelector("input").onchange=e=>{const inp=e.target,subs=trackSubs(),sel=selectedSubjects();
+    /* com todas marcadas, tocar numa matéria quer dizer "quero só esta" (antes, o toque desmarcava e a prova vinha com todas menos ela) */
+    if(!inp.checked&&sel.length===subs.length-1&&subs.length>1&&sel.every(k=>subs.includes(k))){document.querySelectorAll("#chips input").forEach(i=>i.checked=i===inp);SUBJ_FOCO=inp.value}else SUBJ_FOCO=null;
+    updatePool(true)};chips.appendChild(l);
 });
-$("allSubj").onclick=()=>{document.querySelectorAll("#chips input").forEach(i=>i.checked=!i.parentElement.hidden);updatePool(true)};
+$("allSubj").onclick=()=>{SUBJ_FOCO=null;document.querySelectorAll("#chips input").forEach(i=>i.checked=!i.parentElement.hidden);updatePool(true)};
 function applyTrack(k){
   track=k;try{localStorage.setItem("gm-track",k)}catch(e){}
   const subs=trackSubs();
@@ -14740,7 +14747,7 @@ function openStudySubj(){
     const l=document.createElement("label");l.className="chip";
     l.innerHTML='<input type="checkbox" value="'+k+'"><span class="dot"></span><span></span>';
     l.querySelector("input").checked=pk.includes(k);l.lastChild.textContent=SUBJ[k];
-    l.title=done+" de "+n+" cartões já vistos";l.querySelector("input").onchange=ssUpdate;box.appendChild(l);
+    l.title=done+" de "+n+" cartões já vistos";l.querySelector("input").onchange=e=>{const all=[...box.querySelectorAll("input")];if(!e.target.checked&&all.length>1&&all.every(i=>i===e.target||i.checked))all.forEach(i=>i.checked=i===e.target);ssUpdate(e)};box.appendChild(l);
   });
   const nd=studyToday().due.length;
   $("ssRev").textContent=nd?"Você tem "+nd+" revis"+(nd===1?"ão pendente":"ões pendentes")+" hoje, que entram antes dos cartões novos.":"Nenhuma revisão pendente hoje.";
