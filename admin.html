@@ -432,10 +432,13 @@ async function vSim(v){
   if(RK){$("smRkClose").onclick=()=>{SM.rk=null;vSim(v)};
     (async()=>{const box=$("smRkList");try{const R=await rpc("admin_simulado_ranking",{p_id:RK.id});if(!box)return;
       const tm=s=>s==null?"–":Math.floor(s/3600)+"h"+String(Math.floor(s%3600/60)).padStart(2,"0"),dt=t=>t?new Date(t).toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}):"–";
-      const ent=R.filter(r=>r.entregue_em),ab=R.filter(r=>!r.entregue_em);
-      box.innerHTML=(ent.length?'<div class="tablewrap"><table><thead><tr><th class="n">#</th><th>Nome</th><th>E-mail</th><th class="n">Acertos</th><th class="n">%</th><th class="n">Tempo</th><th>Entregou</th></tr></thead><tbody>'
-        +ent.map(r=>'<tr><td class="n">'+r.pos+'º</td><td>'+esc(r.nome)+'</td><td>'+esc(r.email||"–")+'</td><td class="n">'+r.acertos+'/'+r.total+'</td><td class="n">'+(r.total?Math.round(100*r.acertos/r.total):0)+'%</td><td class="n">'+tm(r.tempo_seg)+'</td><td>'+dt(r.entregue_em)+'</td></tr>').join("")+'</tbody></table></div>':'<p class="small">Ninguém entregou ainda.</p>')
-        +(ab.length?'<p class="small" style="margin-top:8px"><b>Começaram e não entregaram ('+ab.length+'):</b> '+ab.map(r=>esc(r.nome)+(r.email?' ('+esc(r.email)+')':'')+' · começou '+dt(r.iniciado_em)).join(" · ")+'</p>':'')}
+      const sit=r=>r.situacao||(r.entregue_em?"concluido":"fazendo"),
+        SIT={concluido:['ok','Concluído'],abandonado:['bad','Abandonado'],fazendo:['warn','Fazendo agora']},
+        cnt=k=>R.filter(r=>sit(r)===k).length;
+      box.innerHTML=R.length?'<p class="small">'+cnt("concluido")+' concluído(s) · '+cnt("abandonado")+' abandonado(s) · '+cnt("fazendo")+' fazendo agora. <b>Abandonado</b>: começou, não entregou, e o sistema fechou a prova quando o tempo acabou (a nota conta só o que respondeu).</p>'
+        +'<div class="tablewrap"><table><thead><tr><th class="n">#</th><th>Nome</th><th>E-mail</th><th>Situação</th><th class="n">Acertos</th><th class="n">%</th><th class="n">Tempo</th><th>Começou</th><th>Terminou</th></tr></thead><tbody>'
+        +R.map(r=>{const k=sit(r),p=SIT[k]||SIT.fazendo;return '<tr><td class="n">'+(r.pos?r.pos+'º':'–')+'</td><td>'+esc(r.nome)+'</td><td>'+esc(r.email||"–")+'</td><td><span class="pill '+p[0]+'">'+p[1]+'</span></td><td class="n">'+(r.total?r.acertos+'/'+r.total:'–')+'</td><td class="n">'+(r.total?Math.round(100*r.acertos/r.total)+'%':'–')+'</td><td class="n">'+tm(r.tempo_seg)+'</td><td>'+dt(r.iniciado_em)+'</td><td>'+dt(r.entregue_em)+'</td></tr>'}).join("")+'</tbody></table></div>'
+        :'<p class="small">Ninguém começou ainda.</p>'}
     catch(e){const m=String(e&&e.message||"");if(box)box.innerHTML='<p class="flash">'+(m.includes("Could not find")||m.includes("does not exist")?"Rode o arquivo 107-admin-ranking-simulado.sql no Supabase para ver o ranking.":esc(smErr(e)))+'</p>'}})()}
   v.querySelectorAll("[data-sq]").forEach(b=>b.onclick=()=>{SM.open=+b.dataset.sq;SM.qs=null;vSim(v);setTimeout(()=>{const q=$("smQ");if(q)q.scrollIntoView({behavior:"smooth"})},50)});
   v.querySelectorAll("[data-sp]").forEach(b=>b.onclick=async()=>{const x=L.find(y=>y.id===+b.dataset.sp);
