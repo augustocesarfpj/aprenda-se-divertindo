@@ -1,0 +1,11 @@
+<!-- Supabase → Authentication → Emails → Templates → "Reset password"
+     Assunto: Crie sua senha nova · Aprenda se Divertindo
+     Cole tudo abaixo no campo "Message body" (o {{ .ConfirmationURL }} é preenchido pelo Supabase). -->
+<div style="font-family:Arial,Helvetica,sans-serif;background:#16203A;color:#ffffff;padding:28px;border-radius:14px;max-width:520px;margin:auto">
+  <h2 style="margin:0 0 12px;color:#4CC98B">Aprenda se Divertindo</h2>
+  <p style="margin:0 0 14px;font-size:16px">Recebemos um pedido para criar uma senha nova para a sua conta.</p>
+  <p style="margin:0 0 22px;font-size:16px">Toque no botão abaixo. O jogo vai abrir e pedir a senha nova.</p>
+  <p style="margin:0 0 22px"><a href="{{ .ConfirmationURL }}" style="background:#E9B23B;color:#16203A;text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:10px;display:inline-block">Criar senha nova</a></p>
+  <p style="margin:0 0 8px;font-size:13px;color:#cfd6e6">O link vale por 1 hora e só funciona uma vez.</p>
+  <p style="margin:0;font-size:13px;color:#cfd6e6">Se não foi você que pediu, ignore este e-mail: sua senha continua a mesma.</p>
+</div>

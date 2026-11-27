@@ -14057,12 +14057,12 @@ function plFree(){const v=plVenceu();if(v)setTimeout(plLoad,0);return !!(user&&P
 document.addEventListener("visibilitychange",()=>{if(!document.hidden&&plVenceu())plLoad()});
 setInterval(()=>{if(plVenceu())plLoad()},60000);
 function plCan(k){return !plFree()||plUsed(k)<LIM[k]}
-let CAPTCHA_KEY="",CAP=null;
+let CAPTCHA_KEY="",CAP=null,SENHA_AUTO=false;
 function capMount(){if(!window.Captcha||$("ovAuth").hidden)return;Captcha.montar($("authCap"),CAPTCHA_KEY).then(w=>{CAP=w})}
 async function loadPlanoInfo(){
   if(!sb)return;
   try{const {data,error}=await sb.rpc("plano_info");if(error)throw error;const d=data||{};
-    {const k=d.captcha||"";if(k!==CAPTCHA_KEY){CAPTCHA_KEY=k;capMount()}}PREMIUM.cobranca=!!d.cobranca;if(d.precos)PREMIUM.precos=Object.fromEntries(Object.entries(d.precos).map(([k,v])=>[k,+v]));
+    {const k=d.captcha||"";if(k!==CAPTCHA_KEY){CAPTCHA_KEY=k;capMount()}}SENHA_AUTO=d.senha_auto===true;if(authMode==="reset")setAuthMode("reset");PREMIUM.cobranca=!!d.cobranca;if(d.precos)PREMIUM.precos=Object.fromEntries(Object.entries(d.precos).map(([k,v])=>[k,+v]));
     if(d.pix)PREMIUM.pix=Object.assign({chave:"",nome:"",cidade:"",whats:""},d.pix);
     if(Array.isArray(d.emails)&&d.emails.length)PREMIUM.emails=d.emails;PREMIUM.pagbank=d.pagbank===true;PREMIUM.mp=d.mercadopago===true;
     if(d.indicacao)PREMIUM.ind={ativa:!!d.indicacao.ativa,fim:d.indicacao.fim||null,valor:+d.indicacao.valor||0,minimo:+d.indicacao.minimo||50};
@@ -14558,7 +14558,7 @@ function setAuthMode(m){
   authMode=m;const up=m==="up",rs=m==="reset";
   $("tabIn").setAttribute("aria-selected",m==="in");$("tabUp").setAttribute("aria-selected",up);
   $("aTitle").textContent=rs?"Recuperar senha":up?"Criar sua conta":"Entrar na sua conta";
-  $("fNomeL").hidden=!up;$("fPassL").hidden=rs;$("authHint").hidden=!rs;
+  $("fNomeL").hidden=!up;$("fPassL").hidden=rs;$("authHint").hidden=!rs;$("authHint").textContent=SENHA_AUTO?"Digite o e-mail da sua conta e toque em \"Pedir nova senha\". Você vai receber um link para criar a senha nova.":"Digite o e-mail da sua conta e toque em \"Pedir nova senha\". Vai abrir um e-mail pronto para o suporte; é só enviar. Respondemos com uma senha provisória, que você pode trocar depois.";
   $("authGo").textContent=rs?"Pedir nova senha":up?"Criar conta":"Entrar";
   $("authForgot").textContent=rs?"← Voltar para entrar":"Esqueci minha senha";$("authForgot").parentElement.hidden=up;
   $("fPass").autocomplete=up?"new-password":"current-password";
@@ -14586,6 +14586,16 @@ $("authForm").onsubmit=async ev=>{
   ev.preventDefault();if(!sb)return authMsg("Sem conexão com o servidor.",true);
   const email=$("fEmail").value.trim(),password=$("fPass").value,nome=$("fNome").value.trim();
   if(!/^\S+@\S+\.\S+$/.test(email))return authMsg("Confira o e-mail digitado.",true);
+  if(authMode==="reset"&&SENHA_AUTO&&sb){
+    const captchaToken=CAPTCHA_KEY&&CAP?CAP.token():undefined;
+    if(CAPTCHA_KEY&&!captchaToken)return authMsg("Confirme a verificação acima (\"Não sou um robô\") e tente de novo.",true);
+    const go=$("authGo");go.disabled=true;authMsg("Enviando…");
+    try{const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname,captchaToken});
+      if(error)throw error;
+      authMsg("Pronto! Se houver uma conta com "+email+", enviamos um link para criar a senha nova. Confira também a caixa de spam. O link vale por 1 hora.")}
+    catch(e){authMsg(/rate|limit|security purposes/i.test(String(e&&e.message))?"Muitos pedidos seguidos. Espere alguns minutos e tente de novo.":authErr(e),true)}
+    if(CAP)CAP.reset();go.disabled=false;return;
+  }
   if(authMode==="reset"){
     const body="Olá! Esqueci a senha da minha conta no Aprenda se Divertindo.\n\nE-mail da conta: "+email+"\n\nPode me enviar uma senha provisória?";
     location.href="mailto:"+CONTATO+"?subject="+encodeURIComponent("Recuperar senha · Aprenda se Divertindo")+"&body="+encodeURIComponent(body);
